@@ -1,0 +1,5 @@
+Pokemon type SVG icons from:
+https://github.com/duiker101/pokemon-type-svg-icons
+
+README: "Very simple set of SVG icons for Pokemon types for any use."
+Original design source linked from that repo (Dribbble Pokedex iOS shot).
