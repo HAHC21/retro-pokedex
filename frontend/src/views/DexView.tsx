@@ -1,10 +1,12 @@
 import { Blueprint } from "../components/Blueprint";
+import { DexToolbar } from "../components/DexToolbar";
 import { GameKeyTag } from "../components/GameTag";
+import { MarkToggles } from "../components/MarkToggles";
 import { TypeTag } from "../components/TypeTag";
-import { gameByKey, genById, introducedIdsForGame, nationalIdsForGame } from "../catalog";
-import { dexNum, pillStyle, spriteUrl } from "../format";
+import { dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
+import { dexNum, spriteUrl } from "../format";
 import type { RegionalDex } from "../pokeapi";
-import { gameLabel, unionFor, unionSets } from "../progress";
+import { gameLabel, unionFor } from "../progress";
 import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
 
 type DexViewProps = {
@@ -27,15 +29,6 @@ type DexViewProps = {
   onToggleShiny: (id: number) => void;
 };
 
-const STATUSES: Array<[StatusFilter, string]> = [
-  ["all", "All"],
-  ["missing", "Missing"],
-  ["missing-normal", "Missing Normal"],
-  ["missing-shiny", "Missing Shiny"],
-  ["normal", "Owned Normal"],
-  ["shiny", "Owned Shiny"],
-];
-
 export function DexView({
   index,
   indexLoading,
@@ -55,99 +48,17 @@ export function DexView({
   onToggleCaught,
   onToggleShiny,
 }: DexViewProps) {
-  const gameMeta = gameByKey(game);
-  const nativeGen = gameMeta && gameMeta.g > 0 ? genById(gameMeta.g) : null;
-  const activeScope: DexScope = scope === "generation" && !nativeGen ? "national" : scope;
-  const needle = q.trim().toLowerCase();
-  const { caught: uCaught, shiny: uShiny, any: uAny } = unionSets(prog);
-
-  const candidateIds: number[] =
-    activeScope === "regional"
-      ? regional?.ids || []
-      : activeScope === "generation"
-        ? introducedIdsForGame(game)
-        : nationalIdsForGame(game);
-
-  const grid: number[] = [];
-  candidateIds.forEach((id) => {
-    const name = index.names[id];
-    if (!name) {
-      return;
-    }
-    if (status === "missing" && uAny[id]) {
-      return;
-    }
-    if (status === "missing-normal" && uCaught[id]) {
-      return;
-    }
-    if (status === "missing-shiny" && uShiny[id]) {
-      return;
-    }
-    if (status === "normal" && !uCaught[id]) {
-      return;
-    }
-    if (status === "shiny" && !uShiny[id]) {
-      return;
-    }
-    if (needle && name.toLowerCase().indexOf(needle) === -1 && String(id).indexOf(needle) === -1) {
-      return;
-    }
-    grid.push(id);
-  });
-
-  const scopes: Array<[DexScope, string]> = [
-    ["regional", "Regional"],
-    ["national", "National"],
-  ];
-  if (nativeGen) {
-    scopes.push(["generation", `GEN ${nativeGen.roman}`]);
-  }
-
-  const headTitle =
-    activeScope === "regional"
-      ? `Regional Dex · ${gameLabel(game)}`
-      : activeScope === "generation" && nativeGen
-        ? `GEN ${nativeGen.roman} · ${gameLabel(game)}`
-        : `National Dex · ${gameLabel(game)}`;
-  const headMeta =
-    activeScope === "regional"
-      ? `Regional · ${grid.length} of ${candidateIds.length || "…"} shown`
-      : activeScope === "generation" && nativeGen
-        ? `New in GEN ${nativeGen.roman} · ${grid.length} of ${candidateIds.length} shown`
-        : `National · ${grid.length} of ${candidateIds.length} shown`;
+  const candidateIds = dexCandidateIds(scope, game, regional);
+  const grid = filterDexIds(candidateIds, index, prog, status, q);
+  const head = dexHeadCopy(scope, game, grid.length, candidateIds.length, "dex");
 
   return (
     <div className="pk-page pk-dex">
-      <div className="pk-toolbar">
-        <div className="seg pk-scope-seg">
-          {scopes.map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className="seg-opt pk-toggle"
-              style={pillStyle(activeScope === id, false, { padding: "8px 12px" })}
-              onClick={() => onScope(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <label className="field pk-field pk-search">
-          <span>Search</span>
-          <input className="input" type="search" placeholder="Name or number" value={q} onChange={(event) => onQuery(event.target.value)} />
-        </label>
-        <div className="seg">
-          {STATUSES.map(([id, label]) => (
-            <button key={id} type="button" className="seg-opt pk-toggle" style={pillStyle(status === id, false, { padding: "8px 12px" })} onClick={() => onStatus(id)}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <DexToolbar game={game} q={q} status={status} scope={scope} onQuery={onQuery} onStatus={onStatus} onScope={onScope} />
 
       <div className="pk-dex-head">
-        <h2>{headTitle}</h2>
-        <span>{headMeta}</span>
+        <h2>{head.title}</h2>
+        <span>{head.meta}</span>
       </div>
 
       {indexLoading || (scope === "regional" && regionalLoading) ? (
@@ -190,20 +101,14 @@ export function DexView({
                   ))}
                 </span>
               ) : null}
-              {available === true ? (
-                <span className="pk-toggles">
-                  <button type="button" className="pk-toggle" style={pillStyle(!!marks.caught, false)} onClick={() => onToggleCaught(id)}>
-                    Normal
-                  </button>
-                  <button type="button" className="pk-toggle" style={pillStyle(!!marks.shiny, true)} onClick={() => onToggleShiny(id)}>
-                    Shiny
-                  </button>
-                </span>
-              ) : available === false ? (
-                <span className="pk-unavailable">Not In {gameLabel(game)}</span>
-              ) : (
-                <span className="pk-unavailable">Checking obtainability…</span>
-              )}
+              <MarkToggles
+                caught={!!marks.caught}
+                shiny={!!marks.shiny}
+                available={available}
+                unavailableLabel={`Not In ${gameLabel(game)}`}
+                onCaught={() => onToggleCaught(id)}
+                onShiny={() => onToggleShiny(id)}
+              />
             </Blueprint>
           );
         })}

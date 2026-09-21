@@ -102,6 +102,15 @@ async def poke_obtain(pokemon_id: int, service: PokeProxyService = Depends(get_p
     return await service.obtain_meta(pokemon_id)
 
 
+@router.get("/pokemon/{pokemon_id}/acquisition")
+async def poke_acquisition(
+    pokemon_id: int,
+    game: str = "home",
+    service: PokeProxyService = Depends(get_poke_proxy_service),
+) -> dict:
+    return await service.acquisition(pokemon_id, game)
+
+
 @router.get("/regional/{game_key}")
 async def poke_regional(game_key: str, service: PokeProxyService = Depends(get_poke_proxy_service)) -> dict:
     try:

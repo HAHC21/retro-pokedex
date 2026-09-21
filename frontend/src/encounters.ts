@@ -1,5 +1,5 @@
 import { GENS, versionGen, versionLabel, versionsForGame } from "./catalog";
-import { title } from "./format";
+import { placeLabel, title } from "./format";
 import { graphsFromEncounters } from "./maps";
 import type { RegionGraph } from "./routeGraph";
 
@@ -125,7 +125,7 @@ export function filterEncountersForGame(encounters: WildEncounter[], gameKey: st
 export function groupEncounters(encounters: WildEncounter[]): EncounterRegion[] {
   const byRegion: Record<string, { region: string; spots: Record<string, { place: string; games: Record<string, true>; gens: Record<number, true>; rate: number }> }> = {};
   encounters.forEach((entry) => {
-    const place = title(entry.location_area.name.replace(/-area$/, ""));
+    const place = placeLabel(entry.location_area.name);
     const key = entry.region || "Other";
     (entry.version_details || []).forEach((detail) => {
       const gen = versionGen(detail.version.name);

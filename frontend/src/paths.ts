@@ -44,6 +44,25 @@ const DEFAULT_PATH: AppPath = {
 };
 
 const DEX_PREFS_KEY = "pk-dex-prefs";
+const LIST_VIEW_KEY = "pk-list-view";
+
+export type ListView = "dex" | "checklist";
+
+export function loadListView(): ListView {
+  try {
+    return localStorage.getItem(LIST_VIEW_KEY) === "checklist" ? "checklist" : "dex";
+  } catch {
+    return "dex";
+  }
+}
+
+export function saveListView(view: ListView) {
+  try {
+    localStorage.setItem(LIST_VIEW_KEY, view);
+  } catch {
+    /* ignore quota */
+  }
+}
 
 type DexPrefs = { gen: number; scope: DexScope };
 
@@ -154,12 +173,12 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
     };
   }
 
-  if (parts[1] === "dex") {
+  if (parts[1] === "dex" || parts[1] === "checklist") {
     const gen =
       parts[2] === "gen" ? parseGen(parts[3]) : clampGen(Number(params.get("gen")) || 1);
     return {
       ...DEFAULT_PATH,
-      view: "dex",
+      view: parts[1] === "checklist" ? "checklist" : "dex",
       game,
       gen,
       q,
@@ -254,9 +273,9 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
   if (path.view === "dash") {
     return `/${game}`;
   }
-  if (path.view === "dex") {
-    return `/${game}/dex/gen/${gen}${dexSearch({
-      view: "dex",
+  if (path.view === "dex" || path.view === "checklist") {
+    return `/${game}/${path.view}/gen/${gen}${dexSearch({
+      view: path.view,
       game,
       gen,
       id: null,

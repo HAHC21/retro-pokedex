@@ -18,6 +18,12 @@ def _title(value: str) -> str:
     return "-".join(part[:1].upper() + part[1:] for part in value.split("-") if part)
 
 
+def _pretty(value: str) -> str:
+    if not value:
+        return ""
+    return " ".join(part[:1].upper() + part[1:] for part in value.split("-") if part)
+
+
 def _id_from_url(url: str) -> int:
     return int(url.rstrip("/").split("/")[-1] or "0")
 
@@ -30,10 +36,10 @@ def _cond_text(detail: dict[str, Any] | None) -> str:
         parts.append(f"Level {detail['min_level']}")
     item = detail.get("item")
     if item:
-        parts.append(_title(item.get("name", "")))
+        parts.append(_pretty(item.get("name", "")))
     held = detail.get("held_item")
     if held:
-        parts.append(f"Holding {_title(held.get('name', ''))}")
+        parts.append(f"Holding {_pretty(held.get('name', ''))}")
     if detail.get("min_happiness"):
         parts.append(f"Friendship {detail['min_happiness']}")
     time_of_day = detail.get("time_of_day")
@@ -51,6 +57,66 @@ def _cond_text(detail: dict[str, Any] | None) -> str:
     if not parts and trigger.get("name"):
         parts.append(_title(trigger["name"]))
     return " · ".join(parts) if parts else "—"
+
+
+def _place_label(area_name: str) -> str:
+    name = re.sub(r"-area$", "", area_name or "", flags=re.I)
+    name = REGION_PREFIX.sub("", name)
+    safari = re.match(r"^friend-safari(?:-(.+))?$", name, re.I)
+    if safari:
+        kind = safari.group(1)
+        return f"Friend Safari ({_pretty(kind)})" if kind else "Friend Safari"
+    route = re.match(r"^route-(\d+[a-z]?)$", name, re.I)
+    if route:
+        return f"Route {route.group(1)}"
+    return _pretty(name) or "Unknown"
+
+
+def _encounter_kind(method_name: str) -> str:
+    name = method_name or ""
+    if re.search(r"trade", name):
+        return "trade"
+    if re.search(r"starter", name):
+        return "starter"
+    if re.search(r"gift", name):
+        return "gift"
+    if re.search(r"only-one", name):
+        return "static"
+    return "wild"
+
+
+def _kind_label(kind: str, place: str) -> str:
+    if kind == "wild":
+        return f"Wild Encounter at {place}"
+    if kind == "starter":
+        return f"Starter at {place}"
+    if kind == "gift":
+        return f"Gift at {place}"
+    if kind == "static":
+        return f"Static Encounter at {place}"
+    if kind == "trade":
+        return "In-game trade"
+    return place
+
+
+def _evolve_label(parent: str, detail: dict[str, Any] | None) -> str:
+    if not detail:
+        return f"Evolve {parent}"
+    trigger = (detail.get("trigger") or {}).get("name") or ""
+    item = (detail.get("item") or {}).get("name")
+    held = (detail.get("held_item") or {}).get("name")
+    if trigger == "trade":
+        if held:
+            return f"Trade {parent} while holding {_pretty(held)}"
+        return f"Trade {parent}"
+    if trigger == "use-item" and item:
+        return f"Evolve {parent} using {_pretty(item)}"
+    if detail.get("min_level"):
+        return f"Evolve {parent} at Level {detail['min_level']}"
+    cond = _cond_text(detail)
+    if cond and cond != "—":
+        return f"Evolve {parent} ({cond})"
+    return f"Evolve {parent}"
 
 
 def obtain_versions_from_raw(raw: list[dict[str, Any]]) -> list[str]:
@@ -86,6 +152,35 @@ def filter_wild_encounters(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
             filtered.append({**entry, "version_details": versions})
     return filtered
 
+
+# PokéAPI version names that belong to each save slot. HOME → all versions.
+GAME_VERSIONS: dict[str, list[str] | None] = {
+    "rb": ["red", "blue"],
+    "y": ["yellow"],
+    "gs": ["gold", "silver"],
+    "c": ["crystal"],
+    "rs": ["ruby", "sapphire"],
+    "e": ["emerald"],
+    "frlg": ["firered", "leafgreen"],
+    "dp": ["diamond", "pearl"],
+    "pt": ["platinum"],
+    "hgss": ["heartgold", "soulsilver"],
+    "bw": ["black", "white"],
+    "b2w2": ["black-2", "white-2"],
+    "xy": ["x", "y"],
+    "oras": ["omega-ruby", "alpha-sapphire"],
+    "sm": ["sun", "moon"],
+    "usum": ["ultra-sun", "ultra-moon"],
+    "swsh": ["sword", "shield"],
+    "bdsp": ["brilliant-diamond", "shining-pearl"],
+    "pla": ["legends-arceus"],
+    "sv": ["scarlet", "violet"],
+    "home": None,
+}
+
+REGION_PREFIX = re.compile(
+    r"^(kanto|johto|hoenn|sinnoh|unova|kalos|alola|galar|paldea|hisui|kitakami|blueberry)-"
+)
 
 # PokéAPI pokedex names that make up each save's regional dex.
 GAME_REGIONAL_POKEDEXES: dict[str, list[str]] = {
@@ -130,6 +225,21 @@ def _english_ability_effect(payload: dict[str, Any] | None) -> str | None:
     if not flavors:
         return None
     return " ".join(str(flavors[-1]["flavor_text"]).split()) or None
+
+
+def _evolution_detail_for(chain: dict[str, Any], pokemon_id: int) -> dict[str, Any] | None:
+    def walk(node: dict[str, Any]) -> dict[str, Any] | None:
+        for nxt in node.get("evolves_to") or []:
+            species_node = nxt.get("species") or {}
+            if _id_from_url(species_node.get("url") or "") == pokemon_id:
+                details = nxt.get("evolution_details") or []
+                return details[0] if details else None
+            found = walk(nxt)
+            if found is not None:
+                return found
+        return None
+
+    return walk(chain.get("chain") or {})
 
 
 class PokeProxyService:
@@ -197,6 +307,53 @@ class PokeProxyService:
             "versions": obtain_versions_from_raw(raw),
             "evolves_from": parent,
         }
+
+    async def acquisition(self, pokemon_id: int, game_key: str) -> dict[str, Any]:
+        if game_key == "home":
+            return {"text": "Pokémon HOME", "methods": ["home"]}
+        raw, species = await asyncio.gather(
+            self._client.get_encounters(pokemon_id),
+            self._client.get_species(pokemon_id),
+        )
+        labels = self._labels_from_encounters(raw or [], game_key)
+        evo_label = await self._evolution_label(species or {}, pokemon_id)
+        if evo_label:
+            labels.append(evo_label)
+        return {"text": " / ".join(labels), "methods": labels}
+
+    def _labels_from_encounters(self, raw: list[dict[str, Any]], game_key: str) -> list[str]:
+        allowed = GAME_VERSIONS.get(game_key, [])
+        allowed_set = None if allowed is None else set(allowed)
+        best: dict[str, tuple[int, str]] = {}
+        for entry in raw:
+            area = (entry.get("location_area") or {}).get("name") or ""
+            if POKECENTER.search(area):
+                continue
+            place = _place_label(area)
+            for detail in entry.get("version_details") or []:
+                version = (detail.get("version") or {}).get("name") or ""
+                if allowed_set is not None and version not in allowed_set:
+                    continue
+                for item in detail.get("encounter_details") or []:
+                    kind = _encounter_kind((item.get("method") or {}).get("name") or "")
+                    chance = int(item.get("chance") or 0)
+                    prev = best.get(kind)
+                    if not prev or chance > prev[0]:
+                        best[kind] = (chance, _kind_label(kind, place))
+        order = ("wild", "starter", "gift", "static", "trade")
+        return [best[kind][1] for kind in order if kind in best]
+
+    async def _evolution_label(self, species: dict[str, Any], pokemon_id: int) -> str | None:
+        parent_ref = species.get("evolves_from_species") or {}
+        parent_name = _title(parent_ref.get("name") or "")
+        if not parent_name:
+            return None
+        chain_url = (species.get("evolution_chain") or {}).get("url") or ""
+        if not chain_url:
+            return f"Evolve {parent_name}"
+        chain = await self._client.get_evolution_chain(_id_from_url(chain_url))
+        detail = _evolution_detail_for(chain or {}, pokemon_id)
+        return _evolve_label(parent_name, detail)
 
     async def pokemon_detail(self, pokemon_id: int) -> dict[str, Any] | None:
         data, raw = await asyncio.gather(

@@ -19,7 +19,7 @@ import { dexNum, idFromUrl, navBtnStyle, pillStyle, spriteUrl, title } from "../
 import { defensiveGroups, offensiveGroups } from "../matchups";
 import { NATURES, natureModifierLabel } from "../natures";
 import { baseStatsFromPokeApi } from "../ownedStats";
-import { DETAIL_SECTIONS, type DetailSection } from "../paths";
+import { DETAIL_SECTIONS, type DetailSection, type ListView } from "../paths";
 import {
   fetchAiMovesets,
   fetchSmogonMovesets,
@@ -47,6 +47,7 @@ type DetailViewProps = {
   obtainable?: boolean;
   authUser?: AuthUser | null;
   section: DetailSection;
+  listView?: ListView;
   onSection: (section: DetailSection) => void;
   onBack: () => void;
   onPrev: () => void;
@@ -71,6 +72,7 @@ export function DetailView({
   obtainable,
   authUser = null,
   section,
+  listView = "dex",
   onSection,
   onBack,
   onPrev,
@@ -89,7 +91,7 @@ export function DetailView({
     <div className="pk-page pk-detail">
       <div className="pk-detail-actions">
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onBack}>
-          ← Back to Pokédex
+          ← Back to {listView === "checklist" ? "Checklist" : "Pokédex"}
         </button>
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onPrev}>
           ← {dexNum(prevId)} {names[prevId] || ""}

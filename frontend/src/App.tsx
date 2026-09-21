@@ -17,11 +17,12 @@ import {
   type LearnsetGroup,
   type RegionalDex,
 } from "./pokeapi";
-import { buildAppPath, parseAppPath, saveDexPrefs, type DetailSection } from "./paths";
+import { buildAppPath, parseAppPath, saveDexPrefs, loadListView, saveListView, type DetailSection, type ListView } from "./paths";
 import { entryFor, loadProgress, mergeProgress, saveProgress, clearProgress, isProgressEmpty, toggleMark } from "./progress";
 import type { DexIndex, DexScope, MarkKey, MonPayload, Progress } from "./types";
 import { AuthView } from "./views/AuthView";
 import { DashboardView } from "./views/DashboardView";
+import { ChecklistView } from "./views/ChecklistView";
 import { DexView } from "./views/DexView";
 import { DetailView } from "./views/DetailView";
 
@@ -47,14 +48,19 @@ export default function App() {
   const [learnset, setLearnset] = useState<LearnsetGroup[]>([]);
   const [learnsetLoading, setLearnsetLoading] = useState(false);
   const [obtainable, setObtainable] = useState<Record<number, boolean>>({});
+  const [listView, setListView] = useState<ListView>(() => loadListView());
   const openIdRef = useRef<number | null>(null);
   const obtainGameRef = useRef(route.game);
 
   const { view, game, gen, id, section, q, status, scope } = route;
 
   useEffect(() => {
-    if (view === "dex" || view === "mon") {
+    if (view === "dex" || view === "checklist" || view === "mon") {
       saveDexPrefs(game, gen, scope);
+    }
+    if (view === "dex" || view === "checklist") {
+      saveListView(view);
+      setListView(view);
     }
   }, [view, game, gen, scope]);
 
@@ -383,6 +389,10 @@ export default function App() {
       go({ view: "dex", game: gameKey, gen: next.gen, q, status, scope: next.scope });
       return;
     }
+    if (view === "checklist") {
+      go({ view: "checklist", game: gameKey, gen: next.gen, q, status, scope: next.scope });
+      return;
+    }
     go({ view: "dash", game: gameKey, gen: next.gen });
   }
 
@@ -414,11 +424,24 @@ export default function App() {
       game={game}
       view={view}
       authUser={authUser}
+      listView={listView}
       onGame={selectGame}
       onDash={goDash}
       onDex={() => {
+        if (view === "checklist" || view === "mon") {
+          go({ view: "dex", game, gen, q, status, scope });
+          return;
+        }
         const next = dexContextForGame(game, gen);
         go({ view: "dex", game, gen: next.gen, q: "", status: "all", scope: next.scope });
+      }}
+      onChecklist={() => {
+        if (view === "dex" || view === "mon") {
+          go({ view: "checklist", game, gen, q, status, scope });
+          return;
+        }
+        const next = dexContextForGame(game, gen);
+        go({ view: "checklist", game, gen: next.gen, q: "", status: "all", scope: next.scope });
       }}
       onSignIn={() => go({ view: "signin", game })}
       onLogIn={() => go({ view: "login", game })}
@@ -494,6 +517,34 @@ export default function App() {
           }}
         />
       ) : null}
+      {view === "checklist" ? (
+        <ChecklistView
+          index={index}
+          indexLoading={indexLoading}
+          prog={prog}
+          game={game}
+          q={q}
+          status={status}
+          scope={scope}
+          regional={regional}
+          regionalLoading={regionalLoading}
+          obtainable={obtainable}
+          onQuery={(nextQ) => go({ view: "checklist", game, gen, q: nextQ, status, scope }, true)}
+          onStatus={(nextStatus) => go({ view: "checklist", game, gen, q, status: nextStatus, scope })}
+          onScope={(nextScope) => {
+            const next = nextScope === "generation" ? dexContextForGame(game, gen) : { gen, scope: nextScope };
+            go({ view: "checklist", game, gen: next.gen, q, status, scope: next.scope });
+          }}
+          onOpen={open}
+          onSpawns={(pokemonId) => open(pokemonId, "spawns")}
+          onToggleCaught={(pokemonId) => {
+            void toggle(pokemonId, "caught");
+          }}
+          onToggleShiny={(pokemonId) => {
+            void toggle(pokemonId, "shiny");
+          }}
+        />
+      ) : null}
       {view === "mon" && id ? (
         <DetailView
           id={id}
@@ -509,8 +560,9 @@ export default function App() {
           obtainable={obtainable[id]}
           authUser={authUser}
           section={section}
+          listView={listView}
           onSection={(nextSection) => go({ view: "mon", game, id, section: nextSection, gen, q, status, scope })}
-          onBack={() => go({ view: "dex", game, gen, q, status, scope })}
+          onBack={() => go({ view: listView, game, gen, q, status, scope })}
           onPrev={() => open(Math.max(1, id - 1), section)}
           onNext={() => open(Math.min(1025, id + 1), section)}
           onOpen={open}

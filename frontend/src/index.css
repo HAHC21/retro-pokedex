@@ -631,6 +631,110 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.pk-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pk-check-row {
+  display: grid;
+  grid-template-columns: 4.6rem 48px minmax(7rem, 12rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.pk-check-row.is-marked {
+  border-color: var(--color-accent-600);
+  background: var(--color-accent-100);
+}
+
+.pk-check-id,
+.pk-check-name,
+.pk-check-sprite-btn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pk-check-id {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-neutral-700);
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-check-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pk-check-method {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--color-neutral-700);
+  min-width: 0;
+}
+
+.pk-check-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: end;
+}
+
+.pk-check-action-rule {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 2px;
+  background: var(--color-divider);
+}
+
+.pk-check-actions .pk-toggles {
+  display: flex;
+}
+
+.pk-check-actions .pk-unavailable {
+  margin-top: 0;
+  min-height: 0;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.pk-check-sprite {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.pk-check-sprite.is-dim {
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+
+.pk-check-spawns {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
 .pk-mon {
   padding: var(--space-4);
   display: flex;
@@ -2391,6 +2495,20 @@
 
   .pk-detail-overview {
     grid-template-columns: 1fr;
+  }
+
+  .pk-check-row {
+    grid-template-columns: 4.2rem 40px minmax(0, 1fr);
+  }
+
+  .pk-check-method,
+  .pk-check-actions {
+    grid-column: 1 / -1;
+  }
+
+  .pk-check-actions {
+    justify-self: stretch;
+    justify-content: space-between;
   }
 
   .pk-map-wrap {

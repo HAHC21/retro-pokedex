@@ -3,6 +3,7 @@ import { GAMES } from "../catalog";
 import type { AuthUser } from "../auth";
 import { navBtnStyle } from "../format";
 import type { View } from "../types";
+import type { ListView } from "../paths";
 import { LegalFooter } from "./LegalFooter";
 import { Wordmark } from "./Wordmark";
 
@@ -13,6 +14,8 @@ type AppShellProps = {
   onGame: (game: string) => void;
   onDash: () => void;
   onDex: () => void;
+  onChecklist: () => void;
+  listView?: ListView;
   onSignIn: () => void;
   onLogIn: () => void;
   onLogout: () => void;
@@ -26,12 +29,15 @@ export function AppShell({
   onGame,
   onDash,
   onDex,
+  onChecklist,
+  listView = "dex",
   onSignIn,
   onLogIn,
   onLogout,
   children,
 }: AppShellProps) {
-  const dexActive = view === "dex" || view === "mon";
+  const dexActive = view === "dex" || (view === "mon" && listView !== "checklist");
+  const checklistActive = view === "checklist" || (view === "mon" && listView === "checklist");
   const showGamePicker = view !== "signin" && view !== "login";
   return (
     <div className="pk-app">
@@ -44,6 +50,9 @@ export function AppShell({
             </button>
             <button type="button" className="btn pk-nav" style={navBtnStyle(dexActive)} onClick={onDex}>
               Pokédex
+            </button>
+            <button type="button" className="btn pk-nav" style={navBtnStyle(checklistActive)} onClick={onChecklist}>
+              Checklist
             </button>
           </span>
           <span className="pk-header-nav pk-header-auth">

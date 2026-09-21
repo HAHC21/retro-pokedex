@@ -16,7 +16,7 @@ export type DexIndex = {
   types: Record<number, string[]>;
 };
 
-export type View = "dash" | "dex" | "mon" | "signin" | "login";
+export type View = "dash" | "dex" | "checklist" | "mon" | "signin" | "login";
 
 export type StatusFilter = "all" | "missing" | "missing-normal" | "missing-shiny" | "normal" | "shiny";
 

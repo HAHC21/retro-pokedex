@@ -11,6 +11,23 @@ export function title(value: string) {
     .join(" ");
 }
 
+const REGION_PREFIX = /^(kanto|johto|hoenn|sinnoh|unova|kalos|alola|galar|paldea|hisui|kitakami|blueberry)-/;
+
+/** PokéAPI area slugs → display names (Route 22, Friend Safari (Ice)). */
+export function placeLabel(areaName: string) {
+  let name = (areaName || "").replace(/-area$/i, "");
+  name = name.replace(REGION_PREFIX, "");
+  const safari = name.match(/^friend-safari(?:-(.+))?$/i);
+  if (safari) {
+    return safari[1] ? `Friend Safari (${title(safari[1])})` : "Friend Safari";
+  }
+  const route = name.match(/^route-(\d+[a-z]?)$/i);
+  if (route) {
+    return `Route ${route[1]}`;
+  }
+  return title(name) || "Unknown";
+}
+
 export function idFromUrl(url: string) {
   return parseInt(url.replace(/\/$/, "").split("/").pop() || "0", 10);
 }
