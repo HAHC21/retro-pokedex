@@ -245,7 +245,6 @@ export const UNOVA_MAP: RegionMapDef = {
   height: 300,
   originX: -90,
   originY: -60,
-  routeR: 3.6,
   nodes: NODES,
   edges: EDGES,
   aliases: ALIASES,

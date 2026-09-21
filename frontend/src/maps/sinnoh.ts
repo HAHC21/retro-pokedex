@@ -13,7 +13,6 @@ import type { RegionMapDef, RegionNode } from "../routeGraph";
  */
 const SCALE_X = 1.28;
 const SCALE_Y = 1.28 * 1.25; // +25% vertical stretch
-const ROUTE_R = 3.6;
 
 function n(x: number, y: number, label: string, kind: 0 | 1 | 2): RegionNode {
   return [x * SCALE_X, y * SCALE_Y, label, kind];
@@ -283,7 +282,6 @@ export const SINNOH_MAP: RegionMapDef = {
   height: 172 * SCALE_Y,
   originX: -5 * SCALE_X,
   originY: -66 * SCALE_Y,
-  routeR: ROUTE_R,
   nodes: NODES,
   edges: EDGES,
   aliases: ALIASES,

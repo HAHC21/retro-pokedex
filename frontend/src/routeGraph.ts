@@ -13,8 +13,6 @@ export type RegionMapDef = {
   height: number;
   originX: number;
   originY: number;
-  /** Optional route-circle radius in viewBox units (default ROUTE_R). */
-  routeR?: number;
   /** All locations; nodes may have zero edges (isolated landmarks). */
   nodes: Record<string, RegionNode>;
   edges: Array<[string, string]>;
@@ -64,8 +62,18 @@ export type RegionGraph = {
   edges: RegionGraphEdge[];
 };
 
-const ROUTE_R = 1.6;
-const BOX = 2.4;
+/** Unova's viewBox width; node/line sizes are scaled so every map matches this on screen. */
+const VISUAL_REF_WIDTH = 380;
+const ROUTE_R = 3.6;
+const BOX = ROUTE_R * 1.5;
+const NODE_SW_ON = 0.55;
+const NODE_SW_OFF = 0.4;
+const EDGE_SW_ON = 0.85;
+const EDGE_SW_OFF = 0.55;
+
+function mapUnit(def: RegionMapDef, refSize: number) {
+  return (refSize / VISUAL_REF_WIDTH) * def.width;
+}
 
 export function resolveRegionId(def: RegionMapDef, raw: string | null | undefined): string | null {
   if (!raw) {
@@ -222,8 +230,12 @@ function pickLabelSide(
 export function buildRegionGraph(def: RegionMapDef, hits: Record<string, number>): RegionGraph {
   const lit = (id: string) => hits[id] !== undefined;
   const segments = collectEdgeSegments(def);
-  const routeR = def.routeR ?? ROUTE_R;
-  const box = def.routeR ? def.routeR * 1.5 : BOX;
+  const routeR = mapUnit(def, ROUTE_R);
+  const box = mapUnit(def, BOX);
+  const nodeSwOn = mapUnit(def, NODE_SW_ON);
+  const nodeSwOff = mapUnit(def, NODE_SW_OFF);
+  const edgeSwOn = mapUnit(def, EDGE_SW_ON);
+  const edgeSwOff = mapUnit(def, EDGE_SW_OFF);
   const nodes = Object.keys(def.nodes).map((id) => {
     const [cx, cy, label, kind] = def.nodes[id];
     const on = lit(id);
@@ -232,12 +244,12 @@ export function buildRegionGraph(def: RegionMapDef, hits: Record<string, number>
     const fill = on
       ? "var(--color-accent)"
       : isCity
-        ? "#5c4a7a"
+        ? "#e4dcee"
         : "var(--color-neutral-300)";
     const stroke = on
       ? "var(--color-accent-900)"
       : isCity
-        ? "#3a2d52"
+        ? "#a898bc"
         : "var(--color-neutral-400)";
     return {
       id,
@@ -252,7 +264,7 @@ export function buildRegionGraph(def: RegionMapDef, hits: Record<string, number>
       h: box,
       fill,
       stroke,
-      sw: on ? 0.55 : 0.4,
+      sw: on ? nodeSwOn : nodeSwOff,
       num: kind === 0 ? numMatch?.[0] || "" : "",
       name: on && kind !== 0 ? `${label}${hits[id] ? ` ${hits[id]}%` : ""}` : "",
       left: `${((cx - def.originX) / def.width) * 100}%`,
@@ -270,7 +282,7 @@ export function buildRegionGraph(def: RegionMapDef, hits: Record<string, number>
       return {
         pts: manhattan(a[0], a[1], b[0], b[1]),
         stroke: on ? "var(--color-accent)" : "var(--color-neutral-300)",
-        sw: on ? 0.85 : 0.55,
+        sw: on ? edgeSwOn : edgeSwOff,
       };
     });
   return {

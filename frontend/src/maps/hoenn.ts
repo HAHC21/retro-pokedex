@@ -166,7 +166,6 @@ export const HOENN_MAP: RegionMapDef = {
   height: 108,
   originX: 0,
   originY: 0,
-  routeR: 2.4,
   nodes: NODES,
   edges: EDGES,
   aliases: ALIASES,
