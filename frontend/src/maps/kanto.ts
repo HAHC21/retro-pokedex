@@ -126,7 +126,7 @@ export const KANTO_MAP: RegionMapDef = {
   height: 92,
   originX: -4,
   originY: 6,
-  routeR: 2.4,
+  routeR: 1.0,
   nodes: NODES,
   edges: EDGES,
   aliases: ALIASES,

@@ -124,7 +124,7 @@ export const JOHTO_MAP: RegionMapDef = {
   height: 100,
   originX: -12,
   originY: -6,
-  routeR: 2.4,
+  routeR: 1.25,
   nodes: NODES,
   edges: EDGES,
   aliases: ALIASES,

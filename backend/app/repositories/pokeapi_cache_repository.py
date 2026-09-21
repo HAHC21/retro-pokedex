@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -5,6 +6,8 @@ from typing import Any
 from mongoengine.errors import NotUniqueError
 
 from app.db.documents import PokeApiCacheEntry
+
+_IN_CHUNK = 500
 
 
 @dataclass(frozen=True)
@@ -28,6 +31,16 @@ class PokeApiCacheRepository:
             fetched_at=entry.fetched_at,
             etag=entry.etag,
         )
+
+    def existing_paths(self, paths: Sequence[str]) -> set[str]:
+        found: set[str] = set()
+        unique = list(dict.fromkeys(paths))
+        for index in range(0, len(unique), _IN_CHUNK):
+            chunk = unique[index : index + _IN_CHUNK]
+            found.update(
+                str(entry.path) for entry in PokeApiCacheEntry.objects(path__in=chunk).only("path")
+            )
+        return found
 
     def upsert(self, path: str, payload: Any, *, etag: str | None = None) -> CacheRecord:
         now = datetime.now(timezone.utc)

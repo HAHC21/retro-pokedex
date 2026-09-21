@@ -1,9 +1,10 @@
 import { Blueprint } from "../components/Blueprint";
+import { GameKeyTag } from "../components/GameTag";
 import { TypeTag } from "../components/TypeTag";
-import { gameByKey, genById, gensForGame } from "../catalog";
+import { gameByKey, genById, introducedIdsForGame, nationalIdsForGame } from "../catalog";
 import { dexNum, pillStyle, spriteUrl } from "../format";
 import type { RegionalDex } from "../pokeapi";
-import { entryFor, gameLabel, unionSets } from "../progress";
+import { gameLabel, unionFor, unionSets } from "../progress";
 import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
 
 type DexViewProps = {
@@ -11,7 +12,6 @@ type DexViewProps = {
   indexLoading: boolean;
   prog: Progress;
   game: string;
-  gen: number;
   q: string;
   status: StatusFilter;
   scope: DexScope;
@@ -19,7 +19,6 @@ type DexViewProps = {
   regionalLoading: boolean;
   dimUncaught?: boolean;
   obtainable: Record<number, boolean>;
-  onGen: (gen: number) => void;
   onQuery: (q: string) => void;
   onStatus: (status: StatusFilter) => void;
   onScope: (scope: DexScope) => void;
@@ -37,17 +36,11 @@ const STATUSES: Array<[StatusFilter, string]> = [
   ["shiny", "Owned Shiny"],
 ];
 
-const SCOPES: Array<[DexScope, string]> = [
-  ["regional", "Regional"],
-  ["national", "National"],
-];
-
 export function DexView({
   index,
   indexLoading,
   prog,
   game,
-  gen,
   q,
   status,
   scope,
@@ -55,7 +48,6 @@ export function DexView({
   regionalLoading,
   dimUncaught = true,
   obtainable,
-  onGen,
   onQuery,
   onStatus,
   onScope,
@@ -63,24 +55,18 @@ export function DexView({
   onToggleCaught,
   onToggleShiny,
 }: DexViewProps) {
-  const regions = gensForGame(game);
-  const g = genById(gen);
   const gameMeta = gameByKey(game);
+  const nativeGen = gameMeta && gameMeta.g > 0 ? genById(gameMeta.g) : null;
+  const activeScope: DexScope = scope === "generation" && !nativeGen ? "national" : scope;
   const needle = q.trim().toLowerCase();
-  const activeProg = prog[game] || {};
-  const { caught: uCaught } = unionSets(prog);
-  const nationalMax = gameMeta && gameMeta.g > 0 ? genById(gameMeta.g).to : 1025;
+  const { caught: uCaught, shiny: uShiny, any: uAny } = unionSets(prog);
 
   const candidateIds: number[] =
-    scope === "regional"
+    activeScope === "regional"
       ? regional?.ids || []
-      : (() => {
-          const ids: number[] = [];
-          for (let i = g.from; i <= Math.min(g.to, nationalMax); i++) {
-            ids.push(i);
-          }
-          return ids;
-        })();
+      : activeScope === "generation"
+        ? introducedIdsForGame(game)
+        : nationalIdsForGame(game);
 
   const grid: number[] = [];
   candidateIds.forEach((id) => {
@@ -88,20 +74,19 @@ export function DexView({
     if (!name) {
       return;
     }
-    const entry = activeProg[String(id)] || {};
-    if (status === "missing" && (entry.caught || entry.shiny)) {
+    if (status === "missing" && uAny[id]) {
       return;
     }
-    if (status === "missing-normal" && entry.caught) {
+    if (status === "missing-normal" && uCaught[id]) {
       return;
     }
-    if (status === "missing-shiny" && entry.shiny) {
+    if (status === "missing-shiny" && uShiny[id]) {
       return;
     }
-    if (status === "normal" && !entry.caught) {
+    if (status === "normal" && !uCaught[id]) {
       return;
     }
-    if (status === "shiny" && !entry.shiny) {
+    if (status === "shiny" && !uShiny[id]) {
       return;
     }
     if (needle && name.toLowerCase().indexOf(needle) === -1 && String(id).indexOf(needle) === -1) {
@@ -110,38 +95,37 @@ export function DexView({
     grid.push(id);
   });
 
+  const scopes: Array<[DexScope, string]> = [
+    ["regional", "Regional"],
+    ["national", "National"],
+  ];
+  if (nativeGen) {
+    scopes.push(["generation", `GEN ${nativeGen.roman}`]);
+  }
+
   const headTitle =
-    scope === "regional" ? `Regional Dex · ${gameLabel(game)}` : `${g.region} · ${gameLabel(game)}`;
+    activeScope === "regional"
+      ? `Regional Dex · ${gameLabel(game)}`
+      : activeScope === "generation" && nativeGen
+        ? `GEN ${nativeGen.roman} · ${gameLabel(game)}`
+        : `National Dex · ${gameLabel(game)}`;
   const headMeta =
-    scope === "regional"
+    activeScope === "regional"
       ? `Regional · ${grid.length} of ${candidateIds.length || "…"} shown`
-      : `National · ${g.games} · ${grid.length} of ${candidateIds.length} shown`;
+      : activeScope === "generation" && nativeGen
+        ? `New in GEN ${nativeGen.roman} · ${grid.length} of ${candidateIds.length} shown`
+        : `National · ${grid.length} of ${candidateIds.length} shown`;
 
   return (
     <div className="pk-page pk-dex">
       <div className="pk-toolbar">
-        <label className="field pk-field">
-          <span>Region / Generation</span>
-          <select
-            className="input"
-            value={String(gen)}
-            disabled={scope === "regional"}
-            onChange={(event) => onGen(parseInt(event.target.value, 10))}
-          >
-            {regions.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.region} · Gen {entry.roman}
-              </option>
-            ))}
-          </select>
-        </label>
         <div className="seg pk-scope-seg">
-          {SCOPES.map(([id, label]) => (
+          {scopes.map(([id, label]) => (
             <button
               key={id}
               type="button"
               className="seg-opt pk-toggle"
-              style={pillStyle(scope === id, false, { padding: "8px 12px" })}
+              style={pillStyle(activeScope === id, false, { padding: "8px 12px" })}
               onClick={() => onScope(id)}
             >
               {label}
@@ -172,8 +156,8 @@ export function DexView({
 
       <div className="pk-grid">
         {grid.map((id) => {
-          const entry = entryFor(prog, game, id);
-          const marked = !!(entry.caught || entry.shiny);
+          const marks = unionFor(prog, id);
+          const marked = !!(marks.caught || marks.shiny);
           const types = index.types[id] || [];
           const available = obtainable[id];
           const numberLabel = scope === "regional" && regional?.numbers[id] ? dexNum(regional.numbers[id]) : dexNum(id);
@@ -183,11 +167,11 @@ export function DexView({
                 <span className="pk-mon-top">
                   <span>{numberLabel}</span>
                   <span className="pk-mon-mark">
-                    {entry.caught && entry.shiny ? "NORMAL + SHINY" : entry.shiny ? "SHINY" : entry.caught ? "NORMAL" : ""}
+                    {marks.caught && marks.shiny ? "NORMAL + SHINY" : marks.shiny ? "SHINY" : marks.caught ? "NORMAL" : ""}
                   </span>
                 </span>
                 <img
-                  src={spriteUrl(id, !!entry.shiny)}
+                  src={spriteUrl(id, !!marks.shiny)}
                   alt={index.names[id]}
                   loading="lazy"
                   className={marked || !dimUncaught ? "pk-mon-sprite" : "pk-mon-sprite is-dim"}
@@ -198,14 +182,20 @@ export function DexView({
                     <TypeTag key={type} type={type} />
                   ))}
                 </span>
-                <span className="pk-alt">{!entry.caught && uCaught[id] ? "In another game" : ""}</span>
               </button>
+              {marks.where.length ? (
+                <span className="pk-mon-games">
+                  {marks.where.map((gameKey) => (
+                    <GameKeyTag key={gameKey} gameKey={gameKey} />
+                  ))}
+                </span>
+              ) : null}
               {available === true ? (
                 <span className="pk-toggles">
-                  <button type="button" className="pk-toggle" style={pillStyle(!!entry.caught, false)} onClick={() => onToggleCaught(id)}>
+                  <button type="button" className="pk-toggle" style={pillStyle(!!marks.caught, false)} onClick={() => onToggleCaught(id)}>
                     Normal
                   </button>
-                  <button type="button" className="pk-toggle" style={pillStyle(!!entry.shiny, true)} onClick={() => onToggleShiny(id)}>
+                  <button type="button" className="pk-toggle" style={pillStyle(!!marks.shiny, true)} onClick={() => onToggleShiny(id)}>
                     Shiny
                   </button>
                 </span>

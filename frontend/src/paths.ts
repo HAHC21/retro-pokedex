@@ -1,13 +1,13 @@
-import { GAMES, clampGenForGame, gameByKey } from "./catalog";
+import { GAMES, clampGen, gameByKey } from "./catalog";
 import type { DexScope, StatusFilter, View } from "./types";
 
-export type DetailSection = "home" | "basic" | "spawns" | "moves";
+export type DetailSection = "home" | "spawns" | "specimens" | "moves";
 
 export const DETAIL_SECTIONS: Array<{ id: DetailSection; label: string }> = [
   { id: "home", label: "Home" },
-  { id: "basic", label: "Basic" },
   { id: "spawns", label: "Spawns" },
   { id: "moves", label: "Moves" },
+  { id: "specimens", label: "My Specimens" },
 ];
 
 const GAME_KEYS = new Set(GAMES.map((entry) => entry.k));
@@ -55,11 +55,13 @@ function loadDexPrefs(game: string): DexPrefs | null {
       return null;
     }
     const gen = Number((entry as DexPrefs).gen);
-    const scope = (entry as DexPrefs).scope === "regional" ? "regional" : "national";
+    const scope = (entry as DexPrefs).scope;
+    const nextScope: DexScope =
+      scope === "regional" ? "regional" : scope === "generation" ? "generation" : "national";
     if (!Number.isFinite(gen) || gen < 1) {
       return null;
     }
-    return { gen: Math.floor(gen), scope };
+    return { gen: Math.floor(gen), scope: nextScope };
   } catch {
     return null;
   }
@@ -69,19 +71,19 @@ function loadDexPrefs(game: string): DexPrefs | null {
 export function saveDexPrefs(game: string, gen: number, scope: DexScope) {
   try {
     const raw = JSON.parse(localStorage.getItem(DEX_PREFS_KEY) || "{}") as Record<string, DexPrefs>;
-    raw[game] = { gen: clampGenForGame(gen, game), scope };
+    raw[game] = { gen: clampGen(gen), scope };
     localStorage.setItem(DEX_PREFS_KEY, JSON.stringify(raw));
   } catch {
     /* ignore quota */
   }
 }
 
-function parseGen(raw: string | undefined, game: string): number {
+function parseGen(raw: string | undefined): number {
   const value = Number(raw);
   if (!Number.isFinite(value) || value < 1) {
-    return clampGenForGame(1, game);
+    return 1;
   }
-  return clampGenForGame(Math.floor(value), game);
+  return clampGen(Math.floor(value));
 }
 
 function parsePokemonId(raw: string | undefined): number | null {
@@ -107,7 +109,10 @@ function parseStatus(raw: string | null): StatusFilter {
 }
 
 function parseScope(raw: string | null): DexScope {
-  return raw === "regional" ? "regional" : "national";
+  if (raw === "regional" || raw === "generation") {
+    return raw;
+  }
+  return "national";
 }
 
 /** Parse the browser location into app navigation state. */
@@ -142,7 +147,7 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
       ...DEFAULT_PATH,
       view: "dash",
       game,
-      gen: clampGenForGame(1, game),
+      gen: 1,
       q,
       status,
       scope,
@@ -151,7 +156,7 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
 
   if (parts[1] === "dex") {
     const gen =
-      parts[2] === "gen" ? parseGen(parts[3], game) : clampGenForGame(Number(params.get("gen")) || 1, game);
+      parts[2] === "gen" ? parseGen(parts[3]) : clampGen(Number(params.get("gen")) || 1);
     return {
       ...DEFAULT_PATH,
       view: "dex",
@@ -166,7 +171,7 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
   if (parts[1] === "pokemon") {
     const id = parsePokemonId(parts[2]);
     const stored = loadDexPrefs(game);
-    const gen = clampGenForGame(Number(params.get("gen")) || stored?.gen || 1, game);
+    const gen = clampGen(Number(params.get("gen")) || stored?.gen || 1);
     const scope = params.has("scope")
       ? parseScope(params.get("scope"))
       : params.has("gen")
@@ -200,7 +205,7 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
     ...DEFAULT_PATH,
     view: "dash",
     game,
-    gen: clampGenForGame(1, game),
+    gen: 1,
   };
 }
 
@@ -212,8 +217,8 @@ function dexSearch(path: AppPath): string {
   if (path.status !== "all") {
     params.set("status", path.status);
   }
-  if (path.scope === "regional") {
-    params.set("scope", "regional");
+  if (path.scope === "regional" || path.scope === "generation") {
+    params.set("scope", path.scope);
   }
   const query = params.toString();
   return query ? `?${query}` : "";
@@ -222,15 +227,15 @@ function dexSearch(path: AppPath): string {
 /** Persist dex context on detail URLs so Back / Prev / Next keep region + scope. */
 function detailSearch(path: AppPath): string {
   const params = new URLSearchParams();
-  params.set("gen", String(clampGenForGame(path.gen ?? 1, path.game)));
+  params.set("gen", String(clampGen(path.gen ?? 1)));
   if (path.q.trim()) {
     params.set("q", path.q.trim());
   }
   if (path.status !== "all") {
     params.set("status", path.status);
   }
-  if (path.scope === "regional") {
-    params.set("scope", "regional");
+  if (path.scope === "regional" || path.scope === "generation") {
+    params.set("scope", path.scope);
   }
   return `?${params.toString()}`;
 }
@@ -238,7 +243,7 @@ function detailSearch(path: AppPath): string {
 /** Build a pathname (+ optional query) from navigation state. */
 export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "game">): string {
   const game = GAME_KEYS.has(path.game) ? path.game : "home";
-  const gen = clampGenForGame(path.gen ?? 1, game);
+  const gen = clampGen(path.gen ?? 1);
 
   if (path.view === "signin") {
     return "/signin";

@@ -2,12 +2,15 @@ from datetime import datetime
 
 from mongoengine import DateTimeField, Document, StringField
 
+from app.domain.roles import ROLE_USER
+
 
 class UserDocument(Document):
     meta = {
         "collection": "users",
         "indexes": [
             {"fields": ["email"]},
+            {"fields": ["role"]},
         ],
     }
 
@@ -17,6 +20,7 @@ class UserDocument(Document):
     avatar_url = StringField(null=True)
     password_hash = StringField(null=True)
     email_verified_at = DateTimeField(null=True)
+    role = StringField(required=True, default=ROLE_USER)
     created_at = DateTimeField(required=True)
     last_login_at = DateTimeField(required=True)
 
@@ -39,6 +43,20 @@ class IdentityDocument(Document):
 class EmailConfirmationDocument(Document):
     meta = {
         "collection": "email_confirmations",
+        "indexes": [
+            {"fields": ["user_id"]},
+            {"fields": ["expires_at"]},
+        ],
+    }
+
+    token_hash = StringField(primary_key=True)
+    user_id = StringField(required=True)
+    expires_at = DateTimeField(required=True)
+
+
+class PasswordResetDocument(Document):
+    meta = {
+        "collection": "password_resets",
         "indexes": [
             {"fields": ["user_id"]},
             {"fields": ["expires_at"]},

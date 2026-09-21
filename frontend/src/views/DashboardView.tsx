@@ -1,4 +1,5 @@
 import { Blueprint } from "../components/Blueprint";
+import { PkBulkImport } from "../components/PkBulkImport";
 import { ProgressBar } from "../components/ProgressBar";
 import { GAMES, GENS, gameTotal, genById } from "../catalog";
 import { dexNum, kindStyle, spriteUrl, whenText } from "../format";
@@ -10,6 +11,8 @@ type DashboardViewProps = {
   prog: Progress;
   game: string;
   gen: number;
+  isStaff: boolean;
+  onImported: () => void;
   onOpen: (id: number) => void;
   onOpenGen: (genId: number) => void;
   onOpenGame: (gameKey: string, genId: number) => void;
@@ -23,6 +26,8 @@ export function DashboardView({
   prog,
   game,
   gen,
+  isStaff,
+  onImported,
   onOpen,
   onOpenGen,
   onOpenGame,
@@ -80,6 +85,8 @@ export function DashboardView({
           </Blueprint>
         ))}
       </div>
+
+      <PkBulkImport isStaff={isStaff} game={game} onImported={onImported} />
 
       <section className="pk-section">
         <div className="pk-section-head">

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.domain.roles import ROLE_USER, normalize_role
 from app.domain.user import User
 
 
@@ -22,6 +23,7 @@ class UserRead(BaseModel):
     name: str | None
     avatar_url: str | None
     email_verified: bool
+    role: str = ROLE_USER
     created_at: datetime
     last_login_at: datetime
 
@@ -33,6 +35,7 @@ class UserRead(BaseModel):
             name=user.name,
             avatar_url=user.avatar_url,
             email_verified=user.email_verified,
+            role=normalize_role(user.role),
             created_at=user.created_at,
             last_login_at=user.last_login_at,
         )
@@ -51,6 +54,15 @@ class LoginRequest(BaseModel):
 
 class ResendConfirmationRequest(BaseModel):
     email: EmailStr
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=8, max_length=256)
+    password: str = Field(min_length=8, max_length=128)
 
 
 class RegisterResponse(BaseModel):

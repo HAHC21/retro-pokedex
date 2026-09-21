@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.dependencies import get_poke_proxy_service
+from app.dependencies import get_moveset_service, get_poke_proxy_service, require_staff
+from app.domain.user import User
+from app.services.moveset_service import MovesetService
 from app.services.poke_proxy_service import PokeProxyService
 
 router = APIRouter(prefix="/poke", tags=["poke"])
@@ -41,6 +43,58 @@ async def poke_moves(
         return await service.pokemon_learnset(pokemon_id, game)
     except KeyError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pokémon not found") from exc
+
+
+@router.get("/pokemon/{pokemon_id}/movesets/smogon")
+async def poke_smogon_movesets(
+    pokemon_id: int,
+    game: str = "home",
+    service: MovesetService = Depends(get_moveset_service),
+) -> dict:
+    try:
+        return await service.smogon_movesets(pokemon_id, game)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pokémon not found") from exc
+
+
+@router.get("/pokemon/{pokemon_id}/movesets/ai")
+async def poke_ai_movesets(
+    pokemon_id: int,
+    game: str = "home",
+    service: MovesetService = Depends(get_moveset_service),
+) -> dict:
+    try:
+        return await service.ai_movesets(pokemon_id, game, force=False)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pokémon not found") from exc
+    except Exception:
+        return {
+            "game": game,
+            "pokemon_id": pokemon_id,
+            "available": False,
+            "provider": None,
+            "message": "We apologize, AI suggestions by Gemini is not available right now.",
+            "sets": [],
+            "cached": False,
+        }
+
+
+@router.post("/pokemon/{pokemon_id}/movesets/ai/refresh")
+async def poke_refresh_ai_movesets(
+    pokemon_id: int,
+    game: str = "home",
+    _staff: User = Depends(require_staff),
+    service: MovesetService = Depends(get_moveset_service),
+) -> dict:
+    try:
+        return await service.ai_movesets(pokemon_id, game, force=True)
+    except KeyError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pokémon not found") from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="We apologize, AI suggestions by Gemini is not available right now.",
+        ) from exc
 
 
 @router.get("/pokemon/{pokemon_id}/obtain")

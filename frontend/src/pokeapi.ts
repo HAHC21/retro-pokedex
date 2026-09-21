@@ -45,6 +45,7 @@ export async function fetchMon(id: number): Promise<MonPayload> {
     species: payload.species,
     evo: (payload.evo || []) as EvolutionStep[],
     enc: [],
+    overview: typeof payload.overview === "string" ? payload.overview : null,
   };
 }
 
@@ -83,6 +84,96 @@ export async function fetchLearnset(id: number, gameKey: string): Promise<Learns
     game: payload.game || gameKey,
     groups: (payload.groups || []) as LearnsetGroup[],
     catalog_count: Number(payload.catalog_count) || 0,
+  };
+}
+
+export type MovesetCard = {
+  name: string;
+  role?: string | null;
+  moves: string[];
+  notes?: string | null;
+  format?: string;
+  source: string;
+};
+
+export type SmogonMovesetsPayload = {
+  game: string;
+  sets: MovesetCard[];
+  attribution: string;
+  attribution_url: string;
+  format: string | null;
+};
+
+export type AiMovesetsPayload = {
+  game: string;
+  available: boolean;
+  provider: string | null;
+  message: string | null;
+  sets: MovesetCard[];
+};
+
+export async function fetchSmogonMovesets(id: number, gameKey: string): Promise<SmogonMovesetsPayload> {
+  const payload = await (await fetch(`${API}/pokemon/${id}/movesets/smogon?game=${encodeURIComponent(gameKey)}`)).json();
+  return {
+    game: payload.game || gameKey,
+    sets: (payload.sets || []) as MovesetCard[],
+    attribution: payload.attribution || "Smogon University",
+    attribution_url: payload.attribution_url || "https://www.smogon.com/",
+    format: payload.format ?? null,
+  };
+}
+
+export const GEMINI_UNAVAILABLE_MESSAGE =
+  "We apologize, AI suggestions by Gemini is not available right now.";
+
+export async function fetchAiMovesets(id: number, gameKey: string): Promise<AiMovesetsPayload> {
+  try {
+    const response = await fetch(`${API}/pokemon/${id}/movesets/ai?game=${encodeURIComponent(gameKey)}`);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        game: gameKey,
+        available: false,
+        provider: null,
+        message: GEMINI_UNAVAILABLE_MESSAGE,
+        sets: [],
+      };
+    }
+    return {
+      game: payload.game || gameKey,
+      available: payload.available !== false,
+      provider: payload.provider ?? null,
+      message: payload.available === false ? GEMINI_UNAVAILABLE_MESSAGE : payload.message ?? null,
+      sets: (payload.sets || []) as MovesetCard[],
+    };
+  } catch {
+    return {
+      game: gameKey,
+      available: false,
+      provider: null,
+      message: GEMINI_UNAVAILABLE_MESSAGE,
+      sets: [],
+    };
+  }
+}
+
+export async function refreshAiMovesets(id: number, gameKey: string): Promise<AiMovesetsPayload> {
+  const response = await fetch(
+    `${API}/pokemon/${id}/movesets/ai/refresh?game=${encodeURIComponent(gameKey)}`,
+    { method: "POST", credentials: "include" },
+  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      typeof payload.detail === "string" ? payload.detail : GEMINI_UNAVAILABLE_MESSAGE,
+    );
+  }
+  return {
+    game: payload.game || gameKey,
+    available: payload.available !== false,
+    provider: payload.provider ?? null,
+    message: payload.available === false ? GEMINI_UNAVAILABLE_MESSAGE : payload.message ?? null,
+    sets: (payload.sets || []) as MovesetCard[],
   };
 }
 

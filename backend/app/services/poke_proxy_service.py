@@ -5,6 +5,7 @@ from typing import Any
 from app.integrations.pokeapi.client import PokeApiClient
 from app.repositories.move_repository import MoveRepository
 from app.repositories.pokedex_entry_repository import PokedexEntryRepository
+from app.repositories.pokemon_overview_repository import PokemonOverviewRepository
 from app.services.learnset_service import build_learnset
 
 NOT_WILD = re.compile(r"gift|only-one|trade|starter|squirt-bottle|wailmer-pail")
@@ -112,6 +113,25 @@ GAME_REGIONAL_POKEDEXES: dict[str, list[str]] = {
 }
 
 
+def _english_ability_effect(payload: dict[str, Any] | None) -> str | None:
+    if not payload:
+        return None
+    for entry in payload.get("effect_entries") or []:
+        if (entry.get("language") or {}).get("name") != "en":
+            continue
+        text = str(entry.get("short_effect") or entry.get("effect") or "").strip()
+        if text:
+            return " ".join(text.split())
+    flavors = [
+        entry
+        for entry in payload.get("flavor_text_entries") or []
+        if (entry.get("language") or {}).get("name") == "en" and entry.get("flavor_text")
+    ]
+    if not flavors:
+        return None
+    return " ".join(str(flavors[-1]["flavor_text"]).split()) or None
+
+
 class PokeProxyService:
     """Compose SPA-facing PokéAPI payloads; all upstream reads go through the cached client."""
 
@@ -120,16 +140,19 @@ class PokeProxyService:
         client: PokeApiClient,
         pokedex_entries: PokedexEntryRepository | None = None,
         moves: MoveRepository | None = None,
+        overviews: PokemonOverviewRepository | None = None,
     ) -> None:
         self._client = client
         self._pokedex_entries = pokedex_entries or PokedexEntryRepository()
         self._moves = moves or MoveRepository()
+        self._overviews = overviews or PokemonOverviewRepository()
         self._area_region: dict[str, str | None] = {}
         self._loc_region: dict[str, str | None] = {}
         self._area_loc: dict[str, str] = {}
 
     async def name_index(self, limit: int = 1025) -> dict[str, str]:
-        payload = await self._client.list_pokemon(limit=limit, offset=0)
+        # Species list keeps base names (Giratina, Pumpkaboo) without form suffixes.
+        payload = await self._client.list_species(limit=limit, offset=0)
         names: dict[str, str] = {}
         for index, entry in enumerate(payload.get("results") or []):
             names[str(index + 1)] = _title(entry.get("name") or "")
@@ -189,12 +212,15 @@ class PokeProxyService:
         parent = None
         if species.get("evolves_from_species"):
             parent = _id_from_url(species["evolves_from_species"].get("url") or "")
+        overview_doc = await asyncio.to_thread(self._overviews.get, species_id)
+        abilities = await self._abilities_with_descriptions(data.get("abilities") or [])
         return {
-            "data": data,
+            "data": {**data, "abilities": abilities},
             "species": species,
             "evo": evo,
             "obtain_versions": obtain_versions_from_raw(raw),
             "evolves_from": parent,
+            "overview": overview_doc.overview if overview_doc else None,
         }
 
     async def pokemon_spawns(self, pokemon_id: int) -> dict[str, Any]:
@@ -241,6 +267,16 @@ class PokeProxyService:
 
         walk(chain.get("chain") or {}, "Base")
         return steps
+
+    async def _abilities_with_descriptions(self, abilities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        names: list[str] = []
+        for entry in abilities:
+            name = (entry.get("ability") or {}).get("name") or ""
+            if name and name not in names:
+                names.append(name)
+        payloads = await asyncio.gather(*(self._client.get_ability(name) for name in names))
+        effects = {name: _english_ability_effect(payload) for name, payload in zip(names, payloads)}
+        return [{**entry, "description": effects.get((entry.get("ability") or {}).get("name") or "")} for entry in abilities]
 
     async def _resolve_regions(self, encounters: list[dict[str, Any]]) -> list[dict[str, Any]]:
         pending_areas: dict[str, int] = {}

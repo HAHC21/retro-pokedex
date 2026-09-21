@@ -1,7 +1,7 @@
 export const API = "/api/poke";
 export const SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 export const PROG_KEY = "pokedex-progress-v2";
-export const IDX_KEY = "pokedex-index-v3";
+export const IDX_KEY = "pokedex-index-v4";
 export const NATIONAL_TOTAL = 1025;
 
 export const TYPES = [
@@ -192,6 +192,51 @@ export const VERSIONS: Record<string, [number, string]> = {
   violet: [9, "Violet"],
 };
 
+/** Soft background + ink for version tags (box-art inspired). */
+export const VERSION_COLORS: Record<string, [string, string]> = {
+  red: ["#f8e3e1", "#9a382d"],
+  blue: ["#e2edfb", "#2f5d9e"],
+  yellow: ["#fff4b0", "#9a7800"],
+  gold: ["#f6e7b8", "#8a6a10"],
+  silver: ["#e9edf0", "#4a5864"],
+  crystal: ["#dff3f7", "#2a6b78"],
+  ruby: ["#f8e0de", "#8f2a28"],
+  sapphire: ["#dde8f8", "#254f92"],
+  emerald: ["#dff3e6", "#1f6b45"],
+  firered: ["#fde6d8", "#a84818"],
+  leafgreen: ["#e4f3df", "#2f6a24"],
+  colosseum: ["#efe8df", "#6a5330"],
+  xd: ["#e8e6f4", "#4a3f86"],
+  diamond: ["#ddeff8", "#2a6a8e"],
+  pearl: ["#f8e6f0", "#8a3a68"],
+  platinum: ["#e8ebee", "#4a5560"],
+  heartgold: ["#f5e4b0", "#8a6810"],
+  soulsilver: ["#e6eaee", "#4a5560"],
+  black: ["#e8e6e4", "#2c2c2c"],
+  white: ["#f4f4f2", "#5c5c52"],
+  "black-2": ["#e4e2e8", "#242028"],
+  "white-2": ["#f2f0f4", "#4a4650"],
+  x: ["#dde8f8", "#2f5d9e"],
+  y: ["#fce6ee", "#a4365f"],
+  "omega-ruby": ["#f6d8d4", "#8f2420"],
+  "alpha-sapphire": ["#d6e4f6", "#1f4f8e"],
+  sun: ["#fde8c8", "#9a5a10"],
+  moon: ["#e2e6f6", "#3a4588"],
+  "ultra-sun": ["#f8dcc0", "#8a4810"],
+  "ultra-moon": ["#d8def4", "#2f3a7a"],
+  "lets-go-pikachu": ["#fff4b0", "#9a7800"],
+  "lets-go-eevee": ["#f4e8d8", "#7a5530"],
+  sword: ["#dde8f8", "#2f5d9e"],
+  shield: ["#f8e3e1", "#9a382d"],
+  "brilliant-diamond": ["#d8ecf6", "#286a8e"],
+  "shining-pearl": ["#f6e4ee", "#8a3a68"],
+  "legends-arceus": ["#efe6d8", "#6a5330"],
+  scarlet: ["#f8e0de", "#9a2828"],
+  violet: ["#eee4f6", "#6a2a8e"],
+};
+
+export type VersionGame = { key: string; label: string };
+
 /** Active-game key → PokéAPI version names that belong to that save slot. */
 export const GAME_VERSIONS: Record<string, string[]> = {
   rb: ["red", "blue"],
@@ -269,6 +314,18 @@ export function versionGen(name: string) {
   return VERSIONS[name]?.[0];
 }
 
+export function versionTagStyle(versionKey: string): { background: string; color: string; borderColor: string } | undefined {
+  const colors = VERSION_COLORS[versionKey];
+  if (!colors) {
+    return undefined;
+  }
+  return {
+    background: colors[0],
+    color: colors[1],
+    borderColor: colors[1],
+  };
+}
+
 export function gameByKey(key: string) {
   return GAMES.find((game) => game.k === key);
 }
@@ -286,6 +343,15 @@ export function gensForGame(gameKey: string) {
   return GENS.filter((gen) => gen.id <= game.g);
 }
 
+/** Keep a generation id inside National Dex I–IX. */
+export function clampGen(genId: number) {
+  const id = Math.floor(Number(genId));
+  if (!Number.isFinite(id) || id < 1) {
+    return 1;
+  }
+  return GENS.some((gen) => gen.id === id) ? id : GENS[GENS.length - 1].id;
+}
+
 /** Keep the active gen inside the selected game's allowed regions. */
 export function clampGenForGame(genId: number, gameKey: string) {
   const allowed = gensForGame(gameKey);
@@ -298,6 +364,36 @@ export function clampGenForGame(genId: number, gameKey: string) {
 /** National-dex generation this Pokémon was introduced in. */
 export function introGenForId(pokemonId: number) {
   return GENS.find((gen) => pokemonId >= gen.from && pokemonId <= gen.to)?.id ?? 1;
+}
+
+/** National Dex numbers introduced in this generation. */
+export function idsIntroducedInGen(genId: number): number[] {
+  const gen = genById(genId);
+  const ids: number[] = [];
+  for (let id = gen.from; id <= gen.to; id += 1) {
+    ids.push(id);
+  }
+  return ids;
+}
+
+/** National Dex numbers through this save's generation (HOME → full National Dex). */
+export function nationalIdsForGame(gameKey: string): number[] {
+  const game = gameByKey(gameKey);
+  const last = !game || game.g === 0 ? NATIONAL_TOTAL : genById(game.g).to;
+  const ids: number[] = [];
+  for (let id = 1; id <= last; id += 1) {
+    ids.push(id);
+  }
+  return ids;
+}
+
+/** New species introduced in this save's generation. */
+export function introducedIdsForGame(gameKey: string): number[] {
+  const game = gameByKey(gameKey);
+  if (!game || game.g === 0) {
+    return nationalIdsForGame(gameKey);
+  }
+  return idsIntroducedInGen(game.g);
 }
 
 /**
@@ -348,8 +444,11 @@ function groupVersionNames(names: string[]) {
   return GENS.map((gen) => {
     const games = [...new Set(names)]
       .filter((name) => versionGen(name) === gen.id)
-      .map((name) => versionLabel(name))
-      .filter((label): label is string => Boolean(label));
+      .map((name) => {
+        const label = versionLabel(name);
+        return label ? { key: name, label } : null;
+      })
+      .filter((entry): entry is VersionGame => Boolean(entry));
     return { gen: `Gen ${gen.roman}`, games, count: games.length };
   }).filter((row) => row.count > 0);
 }

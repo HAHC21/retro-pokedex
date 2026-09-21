@@ -7,14 +7,17 @@ from fastapi.responses import RedirectResponse
 from app.core.config import settings
 from app.dependencies import SESSION_USER_KEY, get_auth_service, get_current_user, get_oidc_registry
 from app.domain.user import User
+from app.integrations.email.sender import EmailSendError
 from app.integrations.oidc import PROVIDERS, IncompleteOidcClaimsError, OidcClientRegistry, claims_from_token
 from app.schemas.auth import (
     AuthProvidersRead,
+    ForgotPasswordRequest,
     LoginRequest,
     ProviderStatus,
     RegisterRequest,
     RegisterResponse,
     ResendConfirmationRequest,
+    ResetPasswordRequest,
     UserRead,
 )
 from app.services.auth_service import AuthError, AuthService
@@ -46,6 +49,8 @@ async def register(
         result = await auth_service.register(str(body.email), body.password, body.name)
     except AuthError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except EmailSendError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return RegisterResponse(email=result.email, message=result.message, confirm_url=result.confirm_url)
 
 
@@ -69,8 +74,37 @@ async def resend_confirmation(
     body: ResendConfirmationRequest,
     auth_service: AuthService = Depends(get_auth_service),
 ) -> RegisterResponse:
-    result = await auth_service.resend_confirmation(str(body.email))
+    try:
+        result = await auth_service.resend_confirmation(str(body.email))
+    except EmailSendError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return RegisterResponse(email=result.email, message=result.message, confirm_url=result.confirm_url)
+
+
+@router.post("/forgot-password", response_model=RegisterResponse)
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> RegisterResponse:
+    try:
+        result = await auth_service.request_password_reset(str(body.email))
+    except EmailSendError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    return RegisterResponse(email=result.email, message=result.message, confirm_url=result.confirm_url)
+
+
+@router.post("/reset-password", response_model=UserRead)
+def reset_password(
+    body: ResetPasswordRequest,
+    request: Request,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> UserRead:
+    try:
+        user = auth_service.reset_password(body.token, body.password)
+    except AuthError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    request.session[SESSION_USER_KEY] = user.id
+    return UserRead.from_domain(user)
 
 
 @router.get("/confirm")

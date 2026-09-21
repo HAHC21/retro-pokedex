@@ -20,7 +20,7 @@ export type View = "dash" | "dex" | "mon" | "signin" | "login";
 
 export type StatusFilter = "all" | "missing" | "missing-normal" | "missing-shiny" | "normal" | "shiny";
 
-export type DexScope = "regional" | "national";
+export type DexScope = "regional" | "national" | "generation";
 
 export type EvolutionStep = {
   id: number;
@@ -35,6 +35,12 @@ export type MonPayload = {
     height: number;
     weight: number;
     types: Array<{ type: { name: string } }>;
+    abilities?: Array<{
+      ability: { name: string; url?: string };
+      is_hidden?: boolean;
+      slot?: number;
+      description?: string | null;
+    }>;
     stats: Array<{ base_stat: number; stat: { name: string } }>;
     game_indices: Array<{ version: { name: string } }>;
     species: { url: string };
@@ -49,13 +55,17 @@ export type MonPayload = {
     }>;
   };
   species: {
-    varieties: Array<{ is_default: boolean; pokemon: { name: string } }>;
+    name?: string;
+    names?: Array<{ name: string; language: { name: string } }>;
+    varieties: Array<{ is_default: boolean; pokemon: { name: string; url?: string } }>;
     evolution_chain?: { url: string };
     flavor_text_entries?: Array<{
+      flavor_text?: string;
       language: { name: string };
       version: { name: string };
     }>;
   };
   evo: EvolutionStep[];
   enc: WildEncounter[];
+  overview?: string | null;
 };

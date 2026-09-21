@@ -104,6 +104,7 @@ class SqliteUserRepository(UserRepository):
         name: str | None,
         avatar_url: str | None,
         last_login_at: datetime,
+        role: str | None = None,
     ) -> User:
         current = self.get(user_id)
         if current is None:
@@ -123,6 +124,18 @@ class SqliteUserRepository(UserRepository):
         updated = self.get(user_id)
         if updated is None:
             raise LookupError(f"Unknown user {user_id}")
+        if role is not None:
+            return User(
+                id=updated.id,
+                email=updated.email,
+                name=updated.name,
+                avatar_url=updated.avatar_url,
+                created_at=updated.created_at,
+                last_login_at=updated.last_login_at,
+                email_verified=updated.email_verified,
+                has_password=updated.has_password,
+                role=role,
+            )
         return updated
 
     def _connect(self) -> sqlite3.Connection:

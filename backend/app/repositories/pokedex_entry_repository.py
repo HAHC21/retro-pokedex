@@ -20,6 +20,9 @@ class PokedexEntryRepository:
         age = (datetime.now(timezone.utc) - when).total_seconds()
         return age >= settings.pokeapi_cache_ttl_seconds
 
+    def has_entries(self, pokedex: str) -> bool:
+        return PokedexEntryDocument.objects(pokedex=pokedex).only("id").first() is not None
+
     def sync_from_payload(self, pokedex: str, payload: dict[str, Any] | None) -> int:
         PokedexEntryDocument.objects(pokedex=pokedex).delete()
         docs: list[PokedexEntryDocument] = []

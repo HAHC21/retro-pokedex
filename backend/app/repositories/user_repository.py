@@ -41,11 +41,20 @@ class UserRepository(ABC):
         name: str | None,
         avatar_url: str | None,
         last_login_at: datetime,
+        role: str | None = None,
     ) -> User:
         raise NotImplementedError
 
     @abstractmethod
     def get_password_hash(self, user_id: str) -> str | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_password_hash(self, user_id: str, password_hash: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_user(self, user_id: str) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -62,4 +71,12 @@ class UserRepository(ABC):
 
     @abstractmethod
     def clear_email_confirmations(self, user_id: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_password_reset(self, token_hash: str, user_id: str, expires_at: datetime) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def consume_password_reset(self, token_hash: str, now: datetime) -> str | None:
         raise NotImplementedError

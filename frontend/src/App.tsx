@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { TYPES, clampGenForGame, genById, gensForGame } from "./catalog";
-import { fetchMe } from "./auth";
+import { TYPES, clampGen, gameByKey, introducedIdsForGame, nationalIdsForGame } from "./catalog";
+import { fetchMe, isStaffRole, logout, type AuthUser } from "./auth";
+import { fetchCollectionProgress, syncCollectionProgress, upsertCollectionMark } from "./collectionApi";
 import { isObtainableInGame, rememberRegionalDex, resolveObtainabilityForIds } from "./obtainability";
 import {
   fetchMon,
@@ -17,8 +18,8 @@ import {
   type RegionalDex,
 } from "./pokeapi";
 import { buildAppPath, parseAppPath, saveDexPrefs, type DetailSection } from "./paths";
-import { loadProgress, saveProgress, toggleMark } from "./progress";
-import type { DexIndex, MarkKey, MonPayload, Progress } from "./types";
+import { entryFor, loadProgress, mergeProgress, saveProgress, clearProgress, isProgressEmpty, toggleMark } from "./progress";
+import type { DexIndex, DexScope, MarkKey, MonPayload, Progress } from "./types";
 import { AuthView } from "./views/AuthView";
 import { DashboardView } from "./views/DashboardView";
 import { DexView } from "./views/DexView";
@@ -33,6 +34,7 @@ export default function App() {
   );
 
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [regional, setRegional] = useState<RegionalDex | null>(null);
   const [regionalLoading, setRegionalLoading] = useState(false);
   const [index, setIndex] = useState<DexIndex>({ names: {}, types: {} });
@@ -68,8 +70,44 @@ export default function App() {
   );
 
   useEffect(() => {
-    setProg(loadProgress());
-  }, []);
+    if (!authUser) {
+      setProg(loadProgress());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const local = loadProgress();
+      const remote = await fetchCollectionProgress();
+      if (cancelled) {
+        return;
+      }
+      if (remote === null) {
+        setProg(local);
+        return;
+      }
+      if (isProgressEmpty(local)) {
+        setProg(remote);
+        clearProgress();
+        return;
+      }
+      const merged = mergeProgress(local, remote);
+      try {
+        const synced = await syncCollectionProgress(merged, "merge");
+        if (cancelled) {
+          return;
+        }
+        setProg(synced || merged);
+        clearProgress();
+      } catch {
+        if (!cancelled) {
+          setProg(merged);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.id]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -82,7 +120,7 @@ export default function App() {
       }
       navigate(error ? "/login" : "/home", { replace: true });
     }
-    fetchMe();
+    void fetchMe().then(setAuthUser);
   }, [navigate]);
 
   useEffect(() => {
@@ -183,14 +221,9 @@ export default function App() {
     const ids =
       scope === "regional"
         ? regional?.ids || []
-        : (() => {
-            const range = genById(gen);
-            const next: number[] = [];
-            for (let pokemonId = range.from; pokemonId <= range.to; pokemonId += 1) {
-              next.push(pokemonId);
-            }
-            return next;
-          })();
+        : scope === "generation"
+          ? introducedIdsForGame(game)
+          : nationalIdsForGame(game);
     if (!ids.length) {
       return;
     }
@@ -279,10 +312,39 @@ export default function App() {
     };
   }, [id, view]);
 
-  const persist = useCallback((next: Progress) => {
-    setProg(next);
-    saveProgress(next);
-  }, []);
+  const persist = useCallback(
+    (next: Progress, mark?: { game: string; pokemonId: number }) => {
+      setProg(next);
+      if (authUser) {
+        if (!mark) {
+          return;
+        }
+        const entry = entryFor(next, mark.game, mark.pokemonId);
+        void upsertCollectionMark(mark.game, mark.pokemonId, entry).catch(() => {
+          void fetchCollectionProgress().then((remote) => {
+            if (remote) {
+              setProg(remote);
+            }
+          });
+        });
+        return;
+      }
+      saveProgress(next);
+    },
+    [authUser],
+  );
+
+  const refreshProgressFromServer = useCallback(() => {
+    if (!authUser) {
+      return;
+    }
+    void fetchCollectionProgress().then((remote) => {
+      if (!remote) {
+        return;
+      }
+      setProg(remote);
+    });
+  }, [authUser]);
 
   const open = useCallback(
     (pokemonId: number, nextSection: DetailSection = "home") => {
@@ -300,20 +362,28 @@ export default function App() {
     if (known === undefined) {
       setObtainable((prev) => ({ ...prev, [pokemonId]: true }));
     }
-    persist(toggleMark(prog, game, pokemonId, key));
+    persist(toggleMark(prog, game, pokemonId, key), { game, pokemonId });
+  }
+
+  function dexContextForGame(gameKey: string, fallbackGen = 1): { gen: number; scope: DexScope } {
+    const meta = gameByKey(gameKey);
+    if (meta && meta.g > 0) {
+      return { gen: meta.g, scope: "generation" };
+    }
+    return { gen: fallbackGen, scope: "national" };
   }
 
   function selectGame(gameKey: string) {
-    const nextGen = clampGenForGame(gen, gameKey);
+    const next = dexContextForGame(gameKey);
     if (view === "mon" && id) {
-      go({ view: "mon", game: gameKey, id, section, gen: nextGen, q, status, scope });
+      go({ view: "mon", game: gameKey, id, section, gen: next.gen, q, status, scope: next.scope });
       return;
     }
     if (view === "dex") {
-      go({ view: "dex", game: gameKey, gen: nextGen, q, status, scope });
+      go({ view: "dex", game: gameKey, gen: next.gen, q, status, scope: next.scope });
       return;
     }
-    go({ view: "dash", game: gameKey, gen: nextGen });
+    go({ view: "dash", game: gameKey, gen: next.gen });
   }
 
   function goDash() {
@@ -343,11 +413,21 @@ export default function App() {
     <AppShell
       game={game}
       view={view}
+      authUser={authUser}
       onGame={selectGame}
       onDash={goDash}
-      onDex={() => go({ view: "dex", game, gen, q: "", status: "all", scope })}
+      onDex={() => {
+        const next = dexContextForGame(game, gen);
+        go({ view: "dex", game, gen: next.gen, q: "", status: "all", scope: next.scope });
+      }}
       onSignIn={() => go({ view: "signin", game })}
       onLogIn={() => go({ view: "login", game })}
+      onLogout={() => {
+        void logout().finally(() => {
+          setAuthUser(null);
+          go({ view: "dash", game: game || "home", gen });
+        });
+      }}
     >
       {view === "dash" ? (
         <DashboardView
@@ -355,26 +435,34 @@ export default function App() {
           prog={prog}
           game={game}
           gen={gen}
+          isStaff={isStaffRole(authUser?.role)}
+          onImported={refreshProgressFromServer}
           onOpen={open}
           onOpenGen={(genId) => {
-            const allowed = gensForGame(game).some((entry) => entry.id === genId);
-            if (!allowed) {
-              go({ view: "dex", game: "home", gen: genId, q: "", status: "all", scope: "national" });
-              return;
-            }
-            go({ view: "dex", game, gen: genId, q: "", status: "all", scope: "national" });
+            go({ view: "dex", game, gen: clampGen(genId), q: "", status: "all", scope: "national" });
           }}
           onOpenGame={(gameKey, genId) => {
+            const next = dexContextForGame(gameKey, clampGen(genId));
             go({
               view: "dex",
               game: gameKey,
-              gen: clampGenForGame(genId, gameKey),
+              gen: next.gen,
               q: "",
               status: "all",
-              scope: "national",
+              scope: next.scope,
             });
           }}
-          onOpenDex={() => go({ view: "dex", game, gen, q: "", status: "all", scope: "national" })}
+          onOpenDex={() => {
+            const next = dexContextForGame(game, gen);
+            go({
+              view: "dex",
+              game,
+              gen: next.gen,
+              q: "",
+              status: "all",
+              scope: next.scope,
+            });
+          }}
           onOpenMissing={() => go({ view: "dex", game, gen, q: "", status: "missing", scope: "national" })}
           onOpenShinies={() => go({ view: "dex", game, gen, q: "", status: "shiny", scope: "national" })}
         />
@@ -385,17 +473,18 @@ export default function App() {
           indexLoading={indexLoading}
           prog={prog}
           game={game}
-          gen={gen}
           q={q}
           status={status}
           scope={scope}
           regional={regional}
           regionalLoading={regionalLoading}
           obtainable={obtainable}
-          onGen={(nextGen) => go({ view: "dex", game, gen: nextGen, q, status, scope })}
           onQuery={(nextQ) => go({ view: "dex", game, gen, q: nextQ, status, scope }, true)}
           onStatus={(nextStatus) => go({ view: "dex", game, gen, q, status: nextStatus, scope })}
-          onScope={(nextScope) => go({ view: "dex", game, gen, q, status, scope: nextScope })}
+          onScope={(nextScope) => {
+            const next = nextScope === "generation" ? dexContextForGame(game, gen) : { gen, scope: nextScope };
+            go({ view: "dex", game, gen: next.gen, q, status, scope: next.scope });
+          }}
           onOpen={open}
           onToggleCaught={(pokemonId) => {
             void toggle(pokemonId, "caught");
@@ -418,6 +507,7 @@ export default function App() {
           game={game}
           names={index.names}
           obtainable={obtainable[id]}
+          authUser={authUser}
           section={section}
           onSection={(nextSection) => go({ view: "mon", game, id, section: nextSection, gen, q, status, scope })}
           onBack={() => go({ view: "dex", game, gen, q, status, scope })}
@@ -430,6 +520,7 @@ export default function App() {
           onToggleShiny={(pokemonId) => {
             void toggle(pokemonId, "shiny");
           }}
+          onProgressRefresh={refreshProgressFromServer}
         />
       ) : null}
       {view === "signin" || view === "login" ? (
@@ -440,7 +531,10 @@ export default function App() {
             setAuthError(null);
             go({ view: view === "signin" ? "login" : "signin", game: "home" });
           }}
-          onContinue={goDash}
+          onContinue={() => {
+            void fetchMe().then(setAuthUser);
+            goDash();
+          }}
         />
       ) : null}
     </AppShell>

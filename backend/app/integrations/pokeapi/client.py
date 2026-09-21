@@ -33,6 +33,12 @@ class PokeApiClient:
             return {"count": 0, "results": []}
         return payload
 
+    async def list_species(self, limit: int, offset: int) -> dict[str, Any]:
+        payload = await self._get_json("pokemon-species", {"limit": limit, "offset": offset})
+        if payload is None:
+            return {"count": 0, "results": []}
+        return payload
+
     async def get_pokemon(self, pokemon_id: int) -> dict[str, Any] | None:
         return await self._get_json(f"pokemon/{pokemon_id}")
 
@@ -74,8 +80,39 @@ class PokeApiClient:
     async def get_move(self, name_or_id: str | int) -> dict[str, Any] | None:
         return await self._get_json(f"move/{name_or_id}")
 
+    async def get_ability(self, name_or_id: str | int) -> dict[str, Any] | None:
+        return await self._get_json(f"ability/{name_or_id}")
+
     async def aclose(self) -> None:
         await self._http.aclose()
+
+    def cache_key(self, path: str, params: dict[str, Any] | None = None) -> str:
+        return self._cache_key(path, params)
+
+    async def get_cached(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        """Return Mongo payload if present, ignoring TTL. Does not hit PokéAPI."""
+        record = await asyncio.to_thread(self._cache.get, self._cache_key(path, params))
+        return None if record is None else record.payload
+
+    async def cache_if_absent(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        *,
+        force: bool = False,
+    ) -> str:
+        """Write PokéAPI JSON into Mongo when the path is missing.
+
+        Ignores TTL: existing rows are left alone unless ``force`` is set.
+        Returns ``skip``, ``fetched``, or ``missing`` (HTTP 404, still cached).
+        """
+        cache_key = self._cache_key(path, params)
+        if not force:
+            record = await asyncio.to_thread(self._cache.get, cache_key)
+            if record is not None:
+                return "skip"
+        payload = await self._fetch_into_cache(path, params)
+        return "missing" if payload is None else "fetched"
 
     async def _get_json(self, path: str, params: dict[str, Any] | None = None) -> Any:
         cache_key = self._cache_key(path, params)
@@ -84,19 +121,23 @@ class PokeApiClient:
             return record.payload
 
         try:
-            response = await self._http.get(path, params=params)
-            if response.status_code == 404:
-                await asyncio.to_thread(self._cache.upsert, cache_key, None)
-                return None
-            response.raise_for_status()
-            payload = response.json()
-            etag = response.headers.get("ETag")
-            await asyncio.to_thread(self._cache.upsert, cache_key, payload, etag=etag)
-            return payload
+            return await self._fetch_into_cache(path, params)
         except Exception:
             if record is not None:
                 return record.payload
             raise
+
+    async def _fetch_into_cache(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        cache_key = self._cache_key(path, params)
+        response = await self._http.get(path, params=params)
+        if response.status_code == 404:
+            await asyncio.to_thread(self._cache.upsert, cache_key, None)
+            return None
+        response.raise_for_status()
+        payload = response.json()
+        etag = response.headers.get("ETag")
+        await asyncio.to_thread(self._cache.upsert, cache_key, payload, etag=etag)
+        return payload
 
     def _is_fresh(self, fetched_at: datetime) -> bool:
         when = fetched_at if fetched_at.tzinfo else fetched_at.replace(tzinfo=timezone.utc)

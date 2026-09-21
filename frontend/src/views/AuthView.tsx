@@ -4,9 +4,12 @@ import {
   fetchProviders,
   loginWithEmail,
   registerWithEmail,
+  requestPasswordReset,
   resendConfirmation,
+  resetPassword,
   type AuthProviders,
 } from "../auth";
+import { useSearchParams } from "react-router-dom";
 
 type AuthViewProps = {
   mode: "signin" | "login";
@@ -43,6 +46,8 @@ const COPY: Record<
 
 export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
   const copy = COPY[mode];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const resetToken = searchParams.get("reset_token");
   const [providers, setProviders] = useState<AuthProviders | null>(null);
   const [notice, setNotice] = useState<string | null>(error || null);
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
@@ -76,13 +81,36 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
     window.location.assign(url);
   }
 
+  async function onForgotPassword() {
+    if (!email.trim()) {
+      setNotice("Enter your email above, then click Forgot password.");
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    setConfirmUrl(null);
+    try {
+      const result = await requestPasswordReset(email);
+      setNotice(result.message);
+      setConfirmUrl(result.confirm_url);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Could not start password reset.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onEmail(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setNotice(null);
     setConfirmUrl(null);
     try {
-      if (mode === "signin") {
+      if (resetToken && mode === "login") {
+        await resetPassword(resetToken, password);
+        setSearchParams({}, { replace: true });
+        onContinue();
+      } else if (mode === "signin") {
         const result = await registerWithEmail(email, password);
         setNotice(result.message);
         setConfirmUrl(result.confirm_url);
@@ -93,7 +121,7 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong.";
       setNotice(message);
-      if (mode === "login" && /confirm your email/i.test(message)) {
+      if (mode === "login" && !resetToken && /confirm your email/i.test(message)) {
         try {
           const resent = await resendConfirmation(email);
           if (resent.confirm_url) {
@@ -109,47 +137,55 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
     }
   }
 
+  const resetting = Boolean(resetToken && mode === "login");
+
   return (
     <div className="pk-page pk-auth">
       <Blueprint className="pk-auth-card">
         <div className="pk-auth-intro">
-          <span className="pk-kicker">{copy.kicker}</span>
-          <h1>{copy.title}</h1>
-          <p>{copy.body}</p>
+          <span className="pk-kicker">{resetting ? "Password reset" : copy.kicker}</span>
+          <h1>{resetting ? "Choose a new password" : copy.title}</h1>
+          <p>{resetting ? "Enter a new password for your account." : copy.body}</p>
         </div>
 
-        <div className="pk-auth-providers">
-          <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("google")}>
-            <GoogleMark />
-            {copy.google}
-          </button>
-          <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("microsoft")}>
-            <MicrosoftMark />
-            {copy.microsoft}
-          </button>
-        </div>
+        {!resetting ? (
+          <div className="pk-auth-providers">
+            <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("google")}>
+              <GoogleMark />
+              {copy.google}
+            </button>
+            <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("microsoft")}>
+              <MicrosoftMark />
+              {copy.microsoft}
+            </button>
+          </div>
+        ) : null}
 
-        <div className="pk-auth-rule">
-          <span />
-          <span>or with email</span>
-          <span />
-        </div>
+        {!resetting ? (
+          <div className="pk-auth-rule">
+            <span />
+            <span>or with email</span>
+            <span />
+          </div>
+        ) : null}
 
         <form className="pk-auth-form" onSubmit={onEmail}>
+          {!resetting ? (
+            <label className="field pk-field">
+              <span>Email</span>
+              <input
+                className="input"
+                type="email"
+                placeholder="trainer@example.com"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </label>
+          ) : null}
           <label className="field pk-field">
-            <span>Email</span>
-            <input
-              className="input"
-              type="email"
-              placeholder="trainer@example.com"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
-          <label className="field pk-field">
-            <span>Password</span>
+            <span>{resetting ? "New password" : "Password"}</span>
             <input
               className="input"
               type="password"
@@ -162,16 +198,22 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
             />
           </label>
           <button type="submit" className="btn pk-nav pk-auth-submit" disabled={busy}>
-            {busy ? "Please wait…" : copy.submit}
+            {busy ? "Please wait…" : resetting ? "Save new password" : copy.submit}
           </button>
         </form>
+
+        {mode === "login" && !resetting ? (
+          <button type="button" className="btn btn-ghost pk-nav" disabled={busy} onClick={() => void onForgotPassword()}>
+            Forgot password?
+          </button>
+        ) : null}
 
         {notice ? <p className="pk-auth-notice">{notice}</p> : null}
         {confirmUrl ? (
           <p className="pk-auth-notice">
-            Confirmation link (dev / console mail):{" "}
+            Link (dev / console mail):{" "}
             <a href={confirmUrl} className="pk-auth-confirm-link">
-              Confirm email
+              Open link
             </a>
           </p>
         ) : null}
