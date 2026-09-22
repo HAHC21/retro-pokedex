@@ -231,7 +231,55 @@ async function mapPool<T>(items: T[], limit: number, worker: (item: T) => Promis
   await Promise.all(agents);
 }
 
-/** Warm obtainability for a dex range (and evolution parents). Returns id → obtainable. */
+/** If this save is a version pair, the PokéAPI version this species is exclusive to. */
+export async function exclusiveVersionForGame(pokemonId: number, gameKey: string): Promise<string | null> {
+  const pair = versionsForGame(gameKey);
+  if (!pair || pair.length < 2) {
+    return null;
+  }
+  const allowed = new Set(pair);
+  const visiting = new Set<number>();
+  async function versionsInPair(id: number): Promise<Set<string>> {
+    if (visiting.has(id)) {
+      return new Set();
+    }
+    visiting.add(id);
+    const meta = await fetchObtainMeta(id);
+    const have = new Set(meta.versions.filter((name) => allowed.has(name)));
+    if (!meta.evolves_from) {
+      return have;
+    }
+    const parent = await versionsInPair(meta.evolves_from);
+    parent.forEach((name) => have.add(name));
+    return have;
+  }
+  const have = await versionsInPair(pokemonId);
+  return have.size === 1 ? [...have][0] : null;
+}
+
+/** Warm version-exclusivity for visible checklist rows. */
+export async function resolveExclusiveVersionsForIds(
+  ids: number[],
+  gameKey: string,
+  onProgress?: (id: number, version: string | null) => void,
+): Promise<Record<number, string | null>> {
+  const results: Record<number, string | null> = {};
+  const pair = versionsForGame(gameKey);
+  if (!pair || pair.length < 2) {
+    ids.forEach((id) => {
+      results[id] = null;
+      onProgress?.(id, null);
+    });
+    return results;
+  }
+  await mapPool(ids, 6, async (id) => {
+    const version = await exclusiveVersionForGame(id, gameKey);
+    results[id] = version;
+    onProgress?.(id, version);
+  });
+  return results;
+}
+
 export async function resolveObtainabilityForIds(
   ids: number[],
   gameKey: string,

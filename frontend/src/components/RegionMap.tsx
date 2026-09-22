@@ -72,7 +72,12 @@ export function RegionMap({ graph, regions, onSelectRegion }: RegionMapProps) {
         )}
         {graph.nodes.map((node) =>
           node.name ? (
-            <span key={`${node.id}-name`} className="pk-map-label pk-map-name" data-side={node.labelSide} style={{ left: node.left, top: node.top }}>
+            <span
+              key={`${node.id}-name`}
+              className={node.isRoute ? "pk-map-label pk-map-name pk-map-rate" : "pk-map-label pk-map-name"}
+              data-side={node.labelSide}
+              style={{ left: node.left, top: node.top }}
+            >
               {node.name}
             </span>
           ) : null,

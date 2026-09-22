@@ -3,8 +3,10 @@ import { Blueprint } from "../components/Blueprint";
 import { DexToolbar } from "../components/DexToolbar";
 import { MarkToggles } from "../components/MarkToggles";
 import { acquisitionFallback, resolveAcquisitionForIds } from "../acquisition";
-import { dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
+import { versionLabel } from "../catalog";
+import { CHECKLIST_STATUSES, dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
 import { dexNum, navBtnStyle, spriteUrl } from "../format";
+import { resolveExclusiveVersionsForIds } from "../obtainability";
 import type { RegionalDex } from "../pokeapi";
 import { gameLabel, unionFor } from "../progress";
 import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
@@ -49,12 +51,19 @@ export function ChecklistView({
   onToggleShiny,
 }: ChecklistViewProps) {
   const [methods, setMethods] = useState<Record<number, string>>({});
+  const [exclusives, setExclusives] = useState<Record<number, string | null>>({});
   const candidateIds = dexCandidateIds(scope, game, regional);
-  const rows = filterDexIds(candidateIds, index, prog, status, q);
+  const listed = filterDexIds(candidateIds, index, prog, status, q);
+  const rows = status === "exclusives" ? listed.filter((id) => exclusives[id]) : listed;
+  const exclusivesPending = status === "exclusives" && listed.some((id) => exclusives[id] === undefined);
   const head = dexHeadCopy(scope, game, rows.length, candidateIds.length, "checklist");
 
   useEffect(() => {
     setMethods({});
+    setExclusives({});
+  }, [game, q, scope, regional, index]);
+
+  useEffect(() => {
     const ids = filterDexIds(dexCandidateIds(scope, game, regional), index, prog, status, q);
     if (!ids.length) {
       return;
@@ -68,6 +77,14 @@ export function ChecklistView({
     }).catch(() => {
       /* ignore */
     });
+    resolveExclusiveVersionsForIds(ids, game, (pokemonId, version) => {
+      if (cancelled) {
+        return;
+      }
+      setExclusives((prev) => (prev[pokemonId] === version ? prev : { ...prev, [pokemonId]: version }));
+    }).catch(() => {
+      /* ignore */
+    });
     return () => {
       cancelled = true;
     };
@@ -75,7 +92,16 @@ export function ChecklistView({
 
   return (
     <div className="pk-page pk-dex pk-checklist">
-      <DexToolbar game={game} q={q} status={status} scope={scope} onQuery={onQuery} onStatus={onStatus} onScope={onScope} />
+      <DexToolbar
+        game={game}
+        q={q}
+        status={status}
+        scope={scope}
+        statuses={CHECKLIST_STATUSES}
+        onQuery={onQuery}
+        onStatus={onStatus}
+        onScope={onScope}
+      />
 
       <div className="pk-dex-head">
         <h2>{head.title}</h2>
@@ -95,6 +121,8 @@ export function ChecklistView({
           const raw = methods[id];
           const method =
             raw === undefined ? "Checking…" : acquisitionFallback(id, game, available, raw);
+          const exclusiveKey = exclusives[id];
+          const exclusiveName = exclusiveKey ? versionLabel(exclusiveKey) : null;
           return (
             <Blueprint key={id} className={marked ? "pk-check-row is-marked" : "pk-check-row"}>
               <button type="button" className="pk-nav pk-check-id" onClick={() => onOpen(id)}>
@@ -111,7 +139,10 @@ export function ChecklistView({
               <button type="button" className="pk-nav pk-check-name" onClick={() => onOpen(id)}>
                 {index.names[id]}
               </button>
-              <span className="pk-check-method">{method}</span>
+              <span className="pk-check-method">
+                {exclusiveName ? <span className="pk-check-exclusive">Exclusive to {exclusiveName}</span> : null}
+                <span className="pk-check-method-text">{method}</span>
+              </span>
               <span className="pk-check-actions">
                 <button type="button" className="btn pk-nav pk-check-spawns" style={navBtnStyle(false)} onClick={() => onSpawns(id)}>
                   SPAWNS
@@ -131,7 +162,11 @@ export function ChecklistView({
         })}
       </div>
 
-      {!indexLoading && !(scope === "regional" && regionalLoading) && rows.length === 0 ? (
+      {!indexLoading && !(scope === "regional" && regionalLoading) && exclusivesPending && rows.length === 0 ? (
+        <div className="pk-status">Finding version exclusives…</div>
+      ) : null}
+
+      {!indexLoading && !(scope === "regional" && regionalLoading) && !exclusivesPending && rows.length === 0 ? (
         <div className="pk-status">No results for these filters</div>
       ) : null}
     </div>

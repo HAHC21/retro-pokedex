@@ -14,6 +14,7 @@ const GAME_KEYS = new Set(GAMES.map((entry) => entry.k));
 const DETAIL_SECTION_IDS = new Set<string>(DETAIL_SECTIONS.map((entry) => entry.id));
 const STATUS_VALUES = new Set<string>([
   "all",
+  "exclusives",
   "missing",
   "missing-normal",
   "missing-shiny",

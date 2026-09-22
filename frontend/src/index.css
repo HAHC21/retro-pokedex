@@ -683,10 +683,34 @@
 }
 
 .pk-check-method {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
   font-size: 13px;
   line-height: 1.35;
   color: var(--color-neutral-700);
+}
+
+.pk-check-method-text {
   min-width: 0;
+}
+
+.pk-check-exclusive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  padding: 4px 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid #000;
+  white-space: nowrap;
 }
 
 .pk-check-actions {
@@ -2007,6 +2031,31 @@
 
 .pk-map-name[data-side="bottom"] {
   transform: translate(-50%, 10px);
+}
+
+.pk-map-rate {
+  box-sizing: border-box;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.pk-map-rate[data-side="right"] {
+  transform: translate(0.875rem, -50%);
+}
+
+.pk-map-rate[data-side="left"] {
+  transform: translate(calc(-100% - 0.875rem), -50%);
+}
+
+.pk-map-rate[data-side="top"] {
+  transform: translate(-50%, calc(-100% - 0.875rem));
+}
+
+.pk-map-rate[data-side="bottom"] {
+  transform: translate(-50%, 0.875rem);
 }
 
 .pk-enc-grid {

@@ -2,11 +2,12 @@ import type { RegionGraph, RegionMapDef } from "../routeGraph";
 import { buildRegionGraph, resolveRegionId } from "../routeGraph";
 import { HOENN_MAP } from "./hoenn";
 import { JOHTO_MAP } from "./johto";
+import { KALOS_MAP } from "./kalos";
 import { KANTO_MAP } from "./kanto";
 import { SINNOH_MAP } from "./sinnoh";
 import { UNOVA_MAP } from "./unova";
 
-export const REGION_MAPS: RegionMapDef[] = [KANTO_MAP, JOHTO_MAP, HOENN_MAP, SINNOH_MAP, UNOVA_MAP];
+export const REGION_MAPS: RegionMapDef[] = [KANTO_MAP, JOHTO_MAP, HOENN_MAP, SINNOH_MAP, UNOVA_MAP, KALOS_MAP];
 
 export function regionHits(def: RegionMapDef, encounters: Array<{ loc: string | null; version_details: Array<{ encounter_details: Array<{ chance?: number }> }> }>): Record<string, number> {
   const hits: Record<string, number> = {};

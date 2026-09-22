@@ -18,7 +18,14 @@ export type DexIndex = {
 
 export type View = "dash" | "dex" | "checklist" | "mon" | "signin" | "login";
 
-export type StatusFilter = "all" | "missing" | "missing-normal" | "missing-shiny" | "normal" | "shiny";
+export type StatusFilter =
+  | "all"
+  | "exclusives"
+  | "missing"
+  | "missing-normal"
+  | "missing-shiny"
+  | "normal"
+  | "shiny";
 
 export type DexScope = "regional" | "national" | "generation";
 

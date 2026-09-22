@@ -12,6 +12,12 @@ export const DEX_STATUSES: Array<[StatusFilter, string]> = [
   ["shiny", "Owned Shiny"],
 ];
 
+export const CHECKLIST_STATUSES: Array<[StatusFilter, string]> = [
+  ["all", "All"],
+  ["exclusives", "Exclusives"],
+  ...DEX_STATUSES.slice(1),
+];
+
 export function activeDexScope(scope: DexScope, game: string): DexScope {
   const meta = gameByKey(game);
   if (scope === "generation" && !(meta && meta.g > 0)) {

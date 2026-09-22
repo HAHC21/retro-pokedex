@@ -7,13 +7,16 @@ type DexToolbarProps = {
   q: string;
   status: StatusFilter;
   scope: DexScope;
+  statuses?: Array<[StatusFilter, string]>;
   onQuery: (q: string) => void;
   onStatus: (status: StatusFilter) => void;
   onScope: (scope: DexScope) => void;
 };
 
-export function DexToolbar({ game, q, status, scope, onQuery, onStatus, onScope }: DexToolbarProps) {
+export function DexToolbar({ game, q, status, scope, statuses = DEX_STATUSES, onQuery, onStatus, onScope }: DexToolbarProps) {
   const activeScope = activeDexScope(scope, game);
+  const known = new Set(statuses.map(([id]) => id));
+  const activeStatus = known.has(status) ? status : "all";
   return (
     <div className="pk-toolbar">
       <div className="seg pk-scope-seg">
@@ -34,8 +37,14 @@ export function DexToolbar({ game, q, status, scope, onQuery, onStatus, onScope 
         <input className="input" type="search" placeholder="Name or number" value={q} onChange={(event) => onQuery(event.target.value)} />
       </label>
       <div className="seg">
-        {DEX_STATUSES.map(([id, label]) => (
-          <button key={id} type="button" className="seg-opt pk-toggle" style={pillStyle(status === id, false, { padding: "8px 12px" })} onClick={() => onStatus(id)}>
+        {statuses.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className="seg-opt pk-toggle"
+            style={pillStyle(activeStatus === id, false, { padding: "8px 12px" })}
+            onClick={() => onStatus(id)}
+          >
             {label}
           </button>
         ))}

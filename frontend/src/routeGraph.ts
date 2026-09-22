@@ -3,6 +3,9 @@ export type NodeKind = 0 | 1 | 2;
 /** [x, y, label, kind] — kind 0 route, 1 city/town, 2 landmark */
 export type RegionNode = [number, number, string, NodeKind];
 
+/** Optional third slot: "straight" draws a diagonal; omitted = Manhattan. */
+export type RegionEdge = [string, string] | [string, string, "straight"];
+
 export type RegionMapDef = {
   id: string;
   title: string;
@@ -15,7 +18,7 @@ export type RegionMapDef = {
   originY: number;
   /** All locations; nodes may have zero edges (isolated landmarks). */
   nodes: Record<string, RegionNode>;
-  edges: Array<[string, string]>;
+  edges: RegionEdge[];
   aliases: Record<string, string>;
 };
 
@@ -83,11 +86,21 @@ export function resolveRegionId(def: RegionMapDef, raw: string | null | undefine
     return raw;
   }
   const alias = def.aliases[raw];
-  return alias && def.nodes[alias] ? alias : null;
+  if (alias && def.nodes[alias]) {
+    return alias;
+  }
+  if (raw.startsWith("friend-safari-") && def.nodes["friend-safari"]) {
+    return "friend-safari";
+  }
+  return null;
 }
 
 function isRouteId(def: RegionMapDef, id: string) {
   return def.nodes[id][3] === 0;
+}
+
+function isStraight(edge: RegionEdge) {
+  return edge[2] === "straight";
 }
 
 function manhattan(ax: number, ay: number, bx: number, by: number) {
@@ -98,6 +111,10 @@ function manhattan(ax: number, ay: number, bx: number, by: number) {
   }
   const mid = dy > dx ? [ax, by] : [bx, ay];
   return `${ax},${ay} ${mid[0]},${mid[1]} ${bx},${by}`;
+}
+
+function straightPath(ax: number, ay: number, bx: number, by: number) {
+  return `${ax},${ay} ${bx},${by}`;
 }
 
 function manhattanSegments(ax: number, ay: number, bx: number, by: number): Array<[number, number, number, number]> {
@@ -114,13 +131,21 @@ function manhattanSegments(ax: number, ay: number, bx: number, by: number): Arra
   ];
 }
 
+function edgePath(ax: number, ay: number, bx: number, by: number, straight: boolean) {
+  return straight ? straightPath(ax, ay, bx, by) : manhattan(ax, ay, bx, by);
+}
+
+function edgeSegments(ax: number, ay: number, bx: number, by: number, straight: boolean): Array<[number, number, number, number]> {
+  return straight ? [[ax, ay, bx, by]] : manhattanSegments(ax, ay, bx, by);
+}
+
 type LabelBox = { x0: number; y0: number; x1: number; y1: number };
 
-function labelBox(cx: number, cy: number, side: LabelSide): LabelBox {
-  // Approximate name-tag footprint in map units (long city names need width).
-  const w = 22;
-  const h = 5;
-  const gap = 2.5;
+function labelBox(cx: number, cy: number, side: LabelSide, kind: NodeKind, def: RegionMapDef): LabelBox {
+  const rate = kind === 0;
+  const w = rate ? mapUnit(def, 9.5) : 22;
+  const h = rate ? mapUnit(def, 9.5) : 5;
+  const gap = rate ? mapUnit(def, 4) : 2.5;
   if (side === "right") {
     return { x0: cx + gap, y0: cy - h / 2, x1: cx + gap + w, y1: cy + h / 2 };
   }
@@ -155,10 +180,10 @@ function segmentHitsBox(x1: number, y1: number, x2: number, y2: number, box: Lab
 
 function collectEdgeSegments(def: RegionMapDef): Array<[number, number, number, number]> {
   const segments: Array<[number, number, number, number]> = [];
-  for (const [from, to] of def.edges) {
-    const a = def.nodes[from];
-    const b = def.nodes[to];
-    segments.push(...manhattanSegments(a[0], a[1], b[0], b[1]));
+  for (const edge of def.edges) {
+    const a = def.nodes[edge[0]];
+    const b = def.nodes[edge[1]];
+    segments.push(...edgeSegments(a[0], a[1], b[0], b[1], isStraight(edge)));
   }
   return segments;
 }
@@ -168,6 +193,7 @@ function pickLabelSide(
   nodeId: string,
   cx: number,
   cy: number,
+  kind: NodeKind,
   segments: Array<[number, number, number, number]>,
 ): LabelSide {
   const sides: LabelSide[] = ["right", "left", "top", "bottom"];
@@ -194,7 +220,7 @@ function pickLabelSide(
   }
 
   for (const side of sides) {
-    const box = labelBox(cx, cy, side);
+    const box = labelBox(cx, cy, side, kind, def);
     if (box.x0 < def.originX + 1 || box.x1 > def.originX + def.width - 1) {
       scores[side] -= 6;
     }
@@ -225,6 +251,17 @@ function pickLabelSide(
     }
   }
   return best;
+}
+
+function spawnTag(kind: NodeKind, label: string, rate: number | undefined, on: boolean): string {
+  if (!on) {
+    return "";
+  }
+  const pct = rate ? `${rate}%` : "";
+  if (kind === 0) {
+    return pct;
+  }
+  return pct ? `${label} ${pct}` : label;
 }
 
 export function buildRegionGraph(def: RegionMapDef, hits: Record<string, number>): RegionGraph {
@@ -266,21 +303,23 @@ export function buildRegionGraph(def: RegionMapDef, hits: Record<string, number>
       stroke,
       sw: on ? nodeSwOn : nodeSwOff,
       num: kind === 0 ? numMatch?.[0] || "" : "",
-      name: on && kind !== 0 ? `${label}${hits[id] ? ` ${hits[id]}%` : ""}` : "",
+      name: spawnTag(kind, label, hits[id], on),
       left: `${((cx - def.originX) / def.width) * 100}%`,
       top: `${((cy - def.originY) / def.height) * 100}%`,
       on,
-      labelSide: pickLabelSide(def, id, cx, cy, segments),
+      labelSide: pickLabelSide(def, id, cx, cy, kind, segments),
     };
   });
   const edges = def.edges
-    .filter(([from, to]) => def.nodes[from] && def.nodes[to])
-    .map(([from, to]) => {
+    .filter((edge) => def.nodes[edge[0]] && def.nodes[edge[1]])
+    .map((edge) => {
+      const from = edge[0];
+      const to = edge[1];
       const a = def.nodes[from];
       const b = def.nodes[to];
       const on = (isRouteId(def, from) && lit(from)) || (isRouteId(def, to) && lit(to));
       return {
-        pts: manhattan(a[0], a[1], b[0], b[1]),
+        pts: edgePath(a[0], a[1], b[0], b[1], isStraight(edge)),
         stroke: on ? "var(--color-accent)" : "var(--color-neutral-300)",
         sw: on ? edgeSwOn : edgeSwOff,
       };

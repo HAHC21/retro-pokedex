@@ -429,7 +429,7 @@ export default function App() {
       onDash={goDash}
       onDex={() => {
         if (view === "checklist" || view === "mon") {
-          go({ view: "dex", game, gen, q, status, scope });
+          go({ view: "dex", game, gen, q, status: status === "exclusives" ? "all" : status, scope });
           return;
         }
         const next = dexContextForGame(game, gen);
