@@ -5,6 +5,7 @@ import { navBtnStyle } from "../format";
 import type { View } from "../types";
 import type { ListView } from "../paths";
 import { LegalFooter } from "./LegalFooter";
+import { InfoTip } from "./InfoTip";
 import { Wordmark } from "./Wordmark";
 
 type AppShellProps = {
@@ -199,7 +200,19 @@ export function AppShell({
       {showGamePicker ? (
         <div className="pk-game-picker">
           <label className="pk-game-label">
-            <span>Game</span>
+            <span className="pk-game-label-row">
+              <span>Game</span>
+              <InfoTip label="About the game selector" wide>
+                <p>
+                  Chooses which save you are tracking. Caught/shiny marks, My Specimens, wild spawn maps, and move
+                  learnsets are scoped to this game.
+                </p>
+                <p>
+                  <strong>HOME</strong> is the global collection view across every game. Other options (e.g. HeartGold /
+                  SoulSilver) represent that specific cartridge or title.
+                </p>
+              </InfoTip>
+            </span>
             <select className="input" value={game} onChange={(event) => onGame(event.target.value)}>
               {GAMES.map((entry) => (
                 <option key={entry.k} value={entry.k}>

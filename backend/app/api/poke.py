@@ -102,6 +102,16 @@ async def poke_obtain(pokemon_id: int, service: PokeProxyService = Depends(get_p
     return await service.obtain_meta(pokemon_id)
 
 
+@router.get("/obtainability")
+async def poke_obtainability(
+    limit: int = 1025,
+    service: PokeProxyService = Depends(get_poke_proxy_service),
+) -> dict:
+    """Bulk National Dex obtain versions + evolves_from from Mongo (no per-id PokéAPI calls)."""
+    capped = max(1, min(limit, 1025))
+    return await service.obtain_index(limit=capped)
+
+
 @router.get("/pokemon/{pokemon_id}/acquisition")
 async def poke_acquisition(
     pokemon_id: int,

@@ -4,7 +4,7 @@ import { AppShell } from "./components/AppShell";
 import { TYPES, clampGen, gameByKey, introducedIdsForGame, nationalIdsForGame } from "./catalog";
 import { fetchMe, isStaffRole, logout, type AuthUser } from "./auth";
 import { fetchCollectionProgress, syncCollectionProgress, upsertCollectionMark } from "./collectionApi";
-import { isObtainableInGame, rememberRegionalDex, resolveObtainabilityForIds } from "./obtainability";
+import { ensureObtainIndex, isObtainableInGame, rememberRegionalDex, resolveObtainabilityForIds } from "./obtainability";
 import {
   fetchMon,
   fetchNameIndex,
@@ -128,6 +128,12 @@ export default function App() {
     }
     void fetchMe().then(setAuthUser);
   }, [navigate]);
+
+  useEffect(() => {
+    void ensureObtainIndex().catch(() => {
+      /* per-id obtain fallback remains */
+    });
+  }, []);
 
   useEffect(() => {
     const cached = loadCachedIndex();

@@ -32,6 +32,16 @@ class PokeApiCacheRepository:
             etag=entry.etag,
         )
 
+    def get_many(self, paths: Sequence[str]) -> dict[str, Any]:
+        """Return path → payload for every cached row in ``paths`` (missing keys omitted)."""
+        payloads: dict[str, Any] = {}
+        unique = list(dict.fromkeys(paths))
+        for index in range(0, len(unique), _IN_CHUNK):
+            chunk = unique[index : index + _IN_CHUNK]
+            for entry in PokeApiCacheEntry.objects(path__in=chunk).only("path", "body"):
+                payloads[str(entry.path)] = entry.body.get("data")
+        return payloads
+
     def existing_paths(self, paths: Sequence[str]) -> set[str]:
         found: set[str] = set()
         unique = list(dict.fromkeys(paths))

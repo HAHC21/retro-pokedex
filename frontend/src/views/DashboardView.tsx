@@ -76,6 +76,42 @@ export function DashboardView({
 
   return (
     <div className="pk-page pk-dash">
+      <Blueprint className="pk-welcome">
+        <div className="pk-welcome-head">
+          <h2>Welcome to Retro Pokédex</h2>
+          <span className="pk-kicker">Collection tracker · encyclopedia · spawn guide</span>
+        </div>
+        <p className="pk-welcome-lead">
+          Retro Pokédex helps you track every Pokémon you catch across games — normals and shinies separately — then dig
+          into stats, abilities, natures, spawn maps, learnsets, and competitive movesets.
+        </p>
+        <ul className="pk-welcome-list">
+          <li>
+            <strong>Game selector</strong> — pick the save you are playing; marks, specimens, spawns, and learnsets
+            follow that game.
+          </li>
+          <li>
+            <strong>Pokédex &amp; Checklist</strong> — browse or tick off the list with Regional, National, or generation
+            scopes, plus missing/owned filters.
+          </li>
+          <li>
+            <strong>Species pages</strong> — overviews, Pokédex entries, base stats, abilities &amp; natures, defensive
+            matchups, wild spawns, and Smogon / Gemini movesets.
+          </li>
+          <li>
+            <strong>My Specimens</strong> — when signed in, log multiple catches of the same species (manual or PK file
+            upload) with ability, nature, IVs, and EVs.
+          </li>
+        </ul>
+        <p className="pk-welcome-note">
+          Look for the{" "}
+          <span className="pk-info-tip-btn is-static" aria-hidden="true">
+            i
+          </span>{" "}
+          icons next to the game selector and dex filters for quick explainers.
+        </p>
+      </Blueprint>
+
       <div className="pk-kpi-grid">
         {kpis.map((kpi) => (
           <Blueprint key={kpi.label} className="pk-kpi">

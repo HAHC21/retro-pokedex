@@ -2,6 +2,7 @@ import { API, gameByKey, introGenForId, isAvailableInGame, isEventObtainableInGa
 
 const OBTAIN_VERSIONS_KEY = "pokedex-obtain-versions-v1";
 const EVOLVES_FROM_KEY = "pokedex-evolves-from-v1";
+const OBTAIN_INDEX_META_KEY = "pokedex-obtain-index-meta-v1";
 
 /** Version names where this species can be obtained (wild, gift, NPC trade, starter, etc.). */
 const obtainVersions = new Map<number, string[]>();
@@ -10,6 +11,9 @@ const evolvesFrom = new Map<number, number | null>();
 const metaInflight = new Map<number, Promise<{ versions: string[]; evolves_from: number | null }>>();
 /** Species present in each game's regional Pokédex (from /api/poke/regional). */
 const regionalIdsByGame = new Map<string, Set<number>>();
+
+let indexHydrated = false;
+let indexInflight: Promise<void> | null = null;
 
 function loadMap(key: string): Record<string, unknown> {
   try {
@@ -45,6 +49,14 @@ function hydrateCaches() {
       evolvesFrom.set(Number(id), value);
     }
   });
+  try {
+    const meta = JSON.parse(localStorage.getItem(OBTAIN_INDEX_META_KEY) || "null") as { count?: number } | null;
+    if (meta && Number(meta.count) >= 100 && obtainVersions.size >= 100 && evolvesFrom.size >= 100) {
+      indexHydrated = true;
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 hydrateCaches();
@@ -58,6 +70,62 @@ function schedulePersist() {
     persistMap(OBTAIN_VERSIONS_KEY, obtainVersions);
     persistMap(EVOLVES_FROM_KEY, evolvesFrom);
   }, 400);
+}
+
+function markIndexHydrated(count: number) {
+  indexHydrated = count > 0;
+  try {
+    localStorage.setItem(OBTAIN_INDEX_META_KEY, JSON.stringify({ count, at: Date.now() }));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** True when the National Dex obtain index has been loaded for this session. */
+export function isObtainIndexReady() {
+  return indexHydrated;
+}
+
+/**
+ * One bulk fetch of encounter versions + evolves_from for the whole National Dex
+ * (served from Mongo). Replaces N× `/pokemon/{id}/obtain` calls.
+ */
+export async function ensureObtainIndex(limit = 1025): Promise<void> {
+  if (indexHydrated && obtainVersions.size >= Math.min(limit, 100)) {
+    return;
+  }
+  if (indexInflight) {
+    await indexInflight;
+    return;
+  }
+  indexInflight = (async () => {
+    try {
+      const response = await fetch(`${API}/obtainability?limit=${limit}`);
+      if (!response.ok) {
+        throw new Error("Could not load obtainability index.");
+      }
+      const payload = (await response.json()) as {
+        versions?: Record<string, string[]>;
+        evolves_from?: Record<string, number | null>;
+        count?: number;
+      };
+      Object.entries(payload.versions || {}).forEach(([id, versions]) => {
+        if (Array.isArray(versions)) {
+          obtainVersions.set(Number(id), versions);
+        }
+      });
+      Object.entries(payload.evolves_from || {}).forEach(([id, parent]) => {
+        if (parent === null || typeof parent === "number") {
+          evolvesFrom.set(Number(id), parent);
+        }
+      });
+      markIndexHydrated(Number(payload.count) || obtainVersions.size);
+      schedulePersist();
+    } finally {
+      indexInflight = null;
+    }
+  })();
+  await indexInflight;
 }
 
 /** Record obtain versions from a backend detail/obtain response. */
@@ -81,6 +149,19 @@ export function isRegionalDexMember(pokemonId: number, gameKey: string) {
 }
 
 async function fetchObtainMeta(pokemonId: number): Promise<{ versions: string[]; evolves_from: number | null }> {
+  if (obtainVersions.has(pokemonId) && evolvesFrom.has(pokemonId)) {
+    return {
+      versions: obtainVersions.get(pokemonId) || [],
+      evolves_from: evolvesFrom.get(pokemonId) ?? null,
+    };
+  }
+  if (!indexHydrated) {
+    try {
+      await ensureObtainIndex();
+    } catch {
+      /* fall through to per-id endpoint */
+    }
+  }
   if (obtainVersions.has(pokemonId) && evolvesFrom.has(pokemonId)) {
     return {
       versions: obtainVersions.get(pokemonId) || [],
@@ -218,19 +299,6 @@ export function isObtainableInGameCached(pokemonId: number, gameKey: string): bo
   return walk(pokemonId);
 }
 
-async function mapPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
-  let next = 0;
-  async function run() {
-    while (next < items.length) {
-      const index = next;
-      next += 1;
-      await worker(items[index]);
-    }
-  }
-  const agents = Array.from({ length: Math.min(limit, Math.max(1, items.length)) }, () => run());
-  await Promise.all(agents);
-}
-
 /** If this save is a version pair, the PokéAPI version this species is exclusive to. */
 export async function exclusiveVersionForGame(pokemonId: number, gameKey: string): Promise<string | null> {
   const pair = versionsForGame(gameKey);
@@ -272,11 +340,16 @@ export async function resolveExclusiveVersionsForIds(
     });
     return results;
   }
-  await mapPool(ids, 6, async (id) => {
+  try {
+    await ensureObtainIndex();
+  } catch {
+    /* per-id fallback */
+  }
+  for (const id of ids) {
     const version = await exclusiveVersionForGame(id, gameKey);
     results[id] = version;
     onProgress?.(id, version);
-  });
+  }
   return results;
 }
 
@@ -285,11 +358,17 @@ export async function resolveObtainabilityForIds(
   gameKey: string,
   onProgress?: (id: number, obtainable: boolean) => void,
 ): Promise<Record<number, boolean>> {
+  try {
+    await ensureObtainIndex();
+  } catch {
+    /* per-id fallback inside isObtainableInGame */
+  }
   const results: Record<number, boolean> = {};
-  await mapPool(ids, 6, async (id) => {
+  // After the bulk index load, resolution is local/cache-only — no need to throttle.
+  for (const id of ids) {
     const obtainable = await isObtainableInGame(id, gameKey);
     results[id] = obtainable;
     onProgress?.(id, obtainable);
-  });
+  }
   return results;
 }

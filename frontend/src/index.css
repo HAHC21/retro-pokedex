@@ -125,7 +125,13 @@
   gap: var(--space-2);
 }
 
-.pk-game-label span,
+.pk-game-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pk-game-label-row > span:first-child,
 .pk-field > span,
 .pk-kicker {
   font-size: 10px;
@@ -676,6 +682,152 @@
 
 .pk-scope-seg {
   align-self: flex-end;
+}
+
+.pk-scope-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pk-scope-label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pk-welcome {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pk-welcome-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pk-welcome-head h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pk-welcome-lead,
+.pk-welcome-list,
+.pk-welcome-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-neutral-800);
+}
+
+.pk-welcome-list {
+  padding-left: 1.15rem;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.pk-welcome-list strong {
+  font-family: var(--font-heading);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.pk-welcome-note {
+  color: var(--color-neutral-600);
+}
+
+.pk-info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.pk-info-tip.is-wide .pk-info-tip-panel {
+  width: min(22rem, calc(100vw - 2rem));
+}
+
+.pk-info-tip-btn {
+  appearance: none;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--color-neutral-500);
+  border-radius: 0;
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pk-info-tip-btn.is-static {
+  cursor: default;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+.pk-info-tip-btn.is-open,
+.pk-info-tip-btn:hover {
+  border-color: var(--color-accent-800, #1d4ed8);
+  color: var(--color-accent-800, #1d4ed8);
+  background: color-mix(in srgb, var(--color-accent) 12%, #fff);
+}
+
+.pk-info-tip-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.pk-info-tip-panel {
+  position: absolute;
+  z-index: 45;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(18rem, calc(100vw - 2rem));
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-divider);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--color-neutral-800);
+  text-align: left;
+}
+
+.pk-info-tip-panel p,
+.pk-info-tip-panel ul {
+  margin: 0;
+}
+
+.pk-info-tip-panel ul {
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 6px;
+}
+
+.pk-game-picker .pk-info-tip-panel {
+  left: auto;
+  right: 0;
 }
 
 .pk-dex-head {

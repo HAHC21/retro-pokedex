@@ -259,6 +259,7 @@ class PokeProxyService:
         self._area_region: dict[str, str | None] = {}
         self._loc_region: dict[str, str | None] = {}
         self._area_loc: dict[str, str] = {}
+        self._obtain_index: dict[str, Any] | None = None
 
     async def name_index(self, limit: int = 1025) -> dict[str, str]:
         # Species list keeps base names (Giratina, Pumpkaboo) without form suffixes.
@@ -307,6 +308,37 @@ class PokeProxyService:
             "versions": obtain_versions_from_raw(raw),
             "evolves_from": parent,
         }
+
+    async def obtain_index(self, *, limit: int = 1025) -> dict[str, Any]:
+        """National Dex obtain versions + evolves_from from Mongo cache (one bulk read)."""
+        if self._obtain_index is not None and int(self._obtain_index.get("count") or 0) >= limit:
+            return self._obtain_index
+
+        encounter_paths = [f"pokemon/{pokemon_id}/encounters" for pokemon_id in range(1, limit + 1)]
+        species_paths = [f"pokemon-species/{pokemon_id}" for pokemon_id in range(1, limit + 1)]
+        cached = await self._client.get_cached_many(encounter_paths + species_paths)
+
+        versions: dict[str, list[str]] = {}
+        evolves_from: dict[str, int | None] = {}
+        for pokemon_id in range(1, limit + 1):
+            key = str(pokemon_id)
+            raw = cached.get(f"pokemon/{pokemon_id}/encounters")
+            if not isinstance(raw, list):
+                raw = []
+            versions[key] = obtain_versions_from_raw(raw)
+            species = cached.get(f"pokemon-species/{pokemon_id}")
+            parent = None
+            if isinstance(species, dict) and species.get("evolves_from_species"):
+                parent = _id_from_url(species["evolves_from_species"].get("url") or "") or None
+            evolves_from[key] = parent
+
+        payload = {
+            "count": limit,
+            "versions": versions,
+            "evolves_from": evolves_from,
+        }
+        self._obtain_index = payload
+        return payload
 
     async def acquisition(self, pokemon_id: int, game_key: str) -> dict[str, Any]:
         if game_key == "home":

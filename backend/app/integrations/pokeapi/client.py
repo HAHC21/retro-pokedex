@@ -94,6 +94,12 @@ class PokeApiClient:
         record = await asyncio.to_thread(self._cache.get, self._cache_key(path, params))
         return None if record is None else record.payload
 
+    async def get_cached_many(self, paths: list[str]) -> dict[str, Any]:
+        """Bulk Mongo read by cache path; missing paths are omitted. No PokéAPI calls."""
+        if not paths:
+            return {}
+        return await asyncio.to_thread(self._cache.get_many, paths)
+
     async def cache_if_absent(
         self,
         path: str,
