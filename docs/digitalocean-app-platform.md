@@ -301,6 +301,7 @@ This adds one web service to the team’s existing App Platform bill. The static
 | Google or Microsoft says `redirect_uri_mismatch` | The provider URI must be exactly `https://api.retropokedex.com/api/auth/{google\|microsoft}/callback`. `AUTH_REDIRECT_BASE_URL` must be `https://api.retropokedex.com` with no trailing slash. |
 | Sign-in returns to the site and the session is missing | `FRONTEND_ORIGIN` must be `https://www.retropokedex.com`. The session cookie is set by `api.retropokedex.com`; the UI sends it with `credentials: "include"`. |
 | Password sign-up never sends mail | `EMAIL_DELIVERY=console` only logs the link. Set `smtp` or `resend` and a verified `EMAIL_FROM`. |
+| Confirmation or reset emails contain `localhost` | On the **api** component set `FRONTEND_ORIGIN=https://www.retropokedex.com` and `AUTH_REDIRECT_BASE_URL=https://api.retropokedex.com` (no trailing slash), then redeploy. Do not run local SMTP against production while those stay on localhost. |
 | UI build fails on Node | Pin `"engines": { "node": "22.x" }` in `frontend/package.json`. |
 
 The session cookie is `pokedex_session` (HTTP-only, SameSite=Lax, 14 days). It is a signed cookie, so more than one API instance can serve the same session as long as they share `SECRET_KEY`. In `backend/app/main.py` the cookie is created with `https_only=False`, so browsers do not get the Secure flag. Traffic on App Platform is HTTPS either way. Set `https_only=True` in that middleware before you treat the deployment as production.

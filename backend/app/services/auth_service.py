@@ -135,7 +135,14 @@ class AuthService:
             email_verified_at=now,
         )
 
-    async def register(self, email: str, password: str, name: str | None) -> RegisterResult:
+    async def register(
+        self,
+        email: str,
+        password: str,
+        name: str | None,
+        *,
+        public_api_base: str,
+    ) -> RegisterResult:
         normalized = email.strip().lower()
         if not normalized:
             raise AuthError("invalid_email", "Email is required.")
@@ -155,7 +162,9 @@ class AuthService:
                         avatar_url=existing.avatar_url,
                         last_login_at=existing.last_login_at,
                     )
-                confirm_url = await self._issue_confirmation(existing.id, normalized)
+                confirm_url = await self._issue_confirmation(
+                    existing.id, normalized, public_api_base=public_api_base
+                )
                 return self._register_result(normalized, confirm_url)
             raise AuthError("email_taken", "An account with that email already exists.")
 
@@ -184,7 +193,9 @@ class AuthService:
             email_verified_at=None,
         )
         try:
-            confirm_url = await self._issue_confirmation(user_id, normalized)
+            confirm_url = await self._issue_confirmation(
+                user_id, normalized, public_api_base=public_api_base
+            )
         except Exception:
             # Don't leave an account that can't confirm when outbound mail fails.
             self._users.delete_user(user_id)
@@ -224,7 +235,7 @@ class AuthService:
             raise AuthError("invalid_token", "This confirmation link is invalid or expired.")
         return self._users.mark_email_verified(user_id, now)
 
-    async def resend_confirmation(self, email: str) -> RegisterResult:
+    async def resend_confirmation(self, email: str, *, public_api_base: str) -> RegisterResult:
         normalized = email.strip().lower()
         user = self._users.find_by_email(normalized)
         if user is None or not user.has_password:
@@ -240,7 +251,9 @@ class AuthService:
                 message="That email is already confirmed. You can log in.",
                 confirm_url=None,
             )
-        confirm_url = await self._issue_confirmation(user.id, normalized)
+        confirm_url = await self._issue_confirmation(
+            user.id, normalized, public_api_base=public_api_base
+        )
         expose_link = not uses_outbound_email()
         return RegisterResult(
             email=normalized,
@@ -254,7 +267,7 @@ class AuthService:
             return None
         return self._sync_allowlist_role(user)
 
-    async def request_password_reset(self, email: str) -> RegisterResult:
+    async def request_password_reset(self, email: str, *, public_frontend_origin: str) -> RegisterResult:
         normalized = email.strip().lower()
         generic = RegisterResult(
             email=normalized,
@@ -267,10 +280,7 @@ class AuthService:
         token = new_confirmation_token()
         expires = datetime.now(timezone.utc) + CONFIRMATION_TTL
         self._users.save_password_reset(hash_token(token), user.id, expires)
-        reset_url = (
-            f"{settings.frontend_origin.rstrip('/')}/login"
-            f"?reset_token={token}"
-        )
+        reset_url = f"{public_frontend_origin.rstrip('/')}/login?reset_token={token}"
         await self._mailer.send(
             to=normalized,
             subject="Reset your Pokédex password",
@@ -306,12 +316,12 @@ class AuthService:
             last_login_at=now,
         )
 
-    async def _issue_confirmation(self, user_id: str, email: str) -> str:
+    async def _issue_confirmation(self, user_id: str, email: str, *, public_api_base: str) -> str:
         token = new_confirmation_token()
         expires = datetime.now(timezone.utc) + CONFIRMATION_TTL
         self._users.save_email_confirmation(hash_token(token), user_id, expires)
         confirm_url = (
-            f"{settings.auth_redirect_base_url.rstrip('/')}{settings.api_prefix}/auth/confirm"
+            f"{public_api_base.rstrip('/')}{settings.api_prefix}/auth/confirm"
             f"?token={token}"
         )
         await self._mailer.send(

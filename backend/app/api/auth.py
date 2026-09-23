@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 
 from app.core.config import settings
+from app.core.public_urls import auth_public_base, frontend_public_origin
 from app.dependencies import SESSION_USER_KEY, get_auth_service, get_current_user, get_oidc_registry
 from app.domain.user import User
 from app.integrations.email.sender import EmailSendError
@@ -43,10 +44,16 @@ def read_me(user: User = Depends(get_current_user)) -> UserRead:
 @router.post("/register", response_model=RegisterResponse)
 async def register(
     body: RegisterRequest,
+    request: Request,
     auth_service: AuthService = Depends(get_auth_service),
 ) -> RegisterResponse:
     try:
-        result = await auth_service.register(str(body.email), body.password, body.name)
+        result = await auth_service.register(
+            str(body.email),
+            body.password,
+            body.name,
+            public_api_base=auth_public_base(request),
+        )
     except AuthError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
     except EmailSendError as exc:
@@ -72,10 +79,14 @@ def login(
 @router.post("/resend-confirmation", response_model=RegisterResponse)
 async def resend_confirmation(
     body: ResendConfirmationRequest,
+    request: Request,
     auth_service: AuthService = Depends(get_auth_service),
 ) -> RegisterResponse:
     try:
-        result = await auth_service.resend_confirmation(str(body.email))
+        result = await auth_service.resend_confirmation(
+            str(body.email),
+            public_api_base=auth_public_base(request),
+        )
     except EmailSendError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return RegisterResponse(email=result.email, message=result.message, confirm_url=result.confirm_url)
@@ -84,10 +95,14 @@ async def resend_confirmation(
 @router.post("/forgot-password", response_model=RegisterResponse)
 async def forgot_password(
     body: ForgotPasswordRequest,
+    request: Request,
     auth_service: AuthService = Depends(get_auth_service),
 ) -> RegisterResponse:
     try:
-        result = await auth_service.request_password_reset(str(body.email))
+        result = await auth_service.request_password_reset(
+            str(body.email),
+            public_frontend_origin=frontend_public_origin(request),
+        )
     except EmailSendError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return RegisterResponse(email=result.email, message=result.message, confirm_url=result.confirm_url)
@@ -176,7 +191,8 @@ def _client(provider: str, registry: OidcClientRegistry):
 
 
 def _callback_url(provider: str) -> str:
-    return f"{settings.auth_redirect_base_url}{settings.api_prefix}/auth/{provider}/callback"
+    # OAuth redirect URIs are registered in the provider console; always use config.
+    return f"{settings.auth_redirect_base_url.rstrip('/')}{settings.api_prefix}/auth/{provider}/callback"
 
 
 def _frontend_redirect(**query: str) -> RedirectResponse:
