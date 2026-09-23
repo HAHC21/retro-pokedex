@@ -3,12 +3,124 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Retro Pokédex</title>
+    <title>Retro Pokédex | Complete Pokémon Collection Tracker</title>
+    <meta
+      name="description"
+      content="The most comprehensive Pokémon collection tracker and complete Pokédex. Look up stats, types, and spawn locations across every generation and game."
+    />
+    <meta
+      name="keywords"
+      content="Retro Pokédex, Pokémon, Pokédex, collection tracker, Pokémon stats, Pokémon types, spawn locations, National Pokédex, shiny tracker, Kanto, Johto, Hoenn, Sinnoh, Unova, Kalos, Alola, Galar, Paldea"
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+    <meta name="application-name" content="Retro Pokédex" />
+    <meta name="apple-mobile-web-app-title" content="Retro Pokédex" />
+    <meta name="theme-color" content="#f2f2f3" />
+    <meta name="color-scheme" content="light" />
+    <link rel="canonical" id="canonical" href="/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Retro Pokédex" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Retro Pokédex | Complete Pokémon Collection Tracker" />
+    <meta
+      property="og:description"
+      content="The most comprehensive Pokémon collection tracker and complete Pokédex. Look up stats, types, and spawn locations across every generation and game."
+    />
+    <meta property="og:url" content="/" />
+    <meta property="og:image" content="/apple-touch-icon.png" />
+    <meta property="og:image:alt" content="Retro Pokédex logo" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Retro Pokédex | Complete Pokémon Collection Tracker" />
+    <meta
+      name="twitter:description"
+      content="The most comprehensive Pokémon collection tracker and complete Pokédex. Look up stats, types, and spawn locations across every generation and game."
+    />
+    <meta name="twitter:image" content="/apple-touch-icon.png" />
+    <meta name="twitter:image:alt" content="Retro Pokédex logo" />
+
+    <script type="application/ld+json" id="site-jsonld">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "#website",
+            "name": "Retro Pokédex",
+            "alternateName": ["Retro Pokedex"],
+            "inLanguage": "en",
+            "description": "The most comprehensive Pokémon collection tracker and a complete Pokédex, with stats, types, and spawn locations across every generation and game."
+          },
+          {
+            "@type": "WebApplication",
+            "name": "Retro Pokédex",
+            "alternateName": ["Retro Pokedex"],
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Web",
+            "browserRequirements": "Requires JavaScript and a modern browser.",
+            "isAccessibleForFree": true,
+            "inLanguage": "en",
+            "isPartOf": { "@id": "#website" },
+            "description": "Retro Pokédex is the most comprehensive Pokémon collection tracker and a complete Pokédex. Track caught and shiny Pokémon, and look up base stats, types, abilities, moves, and wild spawn locations across every generation and game, from Kanto through Paldea.",
+            "keywords": "Pokémon collection tracker, Pokédex, Pokémon stats, Pokémon types, spawn locations, National Pokédex, shiny tracker",
+            "featureList": [
+              "Collection tracking for caught and shiny Pokémon across every main-series game, from Red and Blue through Scarlet and Violet, plus Pokémon HOME",
+              "National Pokédex coverage for generations I–IX, from Kanto through Paldea",
+              "Base stats, types, and abilities for each Pokémon",
+              "Wild spawn locations by game",
+              "Move learnsets and type matchups"
+            ]
+          }
+        ]
+      }
+    </script>
+    <script>
+      (function () {
+        var origin = location.origin;
+        var pageUrl = origin + location.pathname;
+        var imageUrl = origin + "/apple-touch-icon.png";
+        var canonical = document.getElementById("canonical");
+        if (canonical) canonical.setAttribute("href", pageUrl);
+
+        function setContent(selector, value) {
+          var node = document.querySelector(selector);
+          if (node) node.setAttribute("content", value);
+        }
+
+        setContent('meta[property="og:url"]', pageUrl);
+        setContent('meta[property="og:image"]', imageUrl);
+        setContent('meta[name="twitter:image"]', imageUrl);
+
+        var structured = document.getElementById("site-jsonld");
+        if (!structured || !structured.textContent) return;
+        try {
+          var data = JSON.parse(structured.textContent);
+          var nodes = data["@graph"] || [];
+          nodes.forEach(function (node) {
+            node.url = pageUrl;
+          });
+          structured.textContent = JSON.stringify(data);
+        } catch (error) {
+          /* Leave the static description in place if the block cannot be parsed. */
+        }
+      })();
+    </script>
   </head>
   <body>
+    <noscript>
+      <h1>Retro Pokédex</h1>
+      <p>
+        The most comprehensive Pokémon collection tracker and a complete Pokédex. Browse stats, types,
+        abilities, moves, and wild spawn locations across every generation and game, from Kanto through
+        Paldea.
+      </p>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
