@@ -14,6 +14,7 @@ type DexViewProps = {
   indexLoading: boolean;
   prog: Progress;
   game: string;
+  gen: number;
   q: string;
   status: StatusFilter;
   scope: DexScope;
@@ -34,6 +35,7 @@ export function DexView({
   indexLoading,
   prog,
   game,
+  gen,
   q,
   status,
   scope,
@@ -48,13 +50,22 @@ export function DexView({
   onToggleCaught,
   onToggleShiny,
 }: DexViewProps) {
-  const candidateIds = dexCandidateIds(scope, game, regional);
+  const candidateIds = dexCandidateIds(scope, game, regional, gen);
   const grid = filterDexIds(candidateIds, index, prog, status, q);
-  const head = dexHeadCopy(scope, game, grid.length, candidateIds.length, "dex");
+  const head = dexHeadCopy(scope, game, grid.length, candidateIds.length, "dex", gen);
 
   return (
     <div className="pk-page pk-dex">
-      <DexToolbar game={game} q={q} status={status} scope={scope} onQuery={onQuery} onStatus={onStatus} onScope={onScope} />
+      <DexToolbar
+        game={game}
+        gen={gen}
+        q={q}
+        status={status}
+        scope={scope}
+        onQuery={onQuery}
+        onStatus={onStatus}
+        onScope={onScope}
+      />
 
       <div className="pk-dex-head">
         <h2>{head.title}</h2>

@@ -1,4 +1,4 @@
-import { DEX_STATUSES, activeDexScope, dexScopeButtons } from "../dexList";
+import { DEX_STATUSES, activeDexScope, dexScopeButtons, isRegionBrowseMode, regionBrowseLabel } from "../dexList";
 import { gameByKey, genById } from "../catalog";
 import { pillStyle } from "../format";
 import type { DexScope, StatusFilter } from "../types";
@@ -6,6 +6,7 @@ import { InfoTip } from "./InfoTip";
 
 type DexToolbarProps = {
   game: string;
+  gen: number;
   q: string;
   status: StatusFilter;
   scope: DexScope;
@@ -15,12 +16,24 @@ type DexToolbarProps = {
   onScope: (scope: DexScope) => void;
 };
 
-export function DexToolbar({ game, q, status, scope, statuses = DEX_STATUSES, onQuery, onStatus, onScope }: DexToolbarProps) {
+export function DexToolbar({
+  game,
+  gen,
+  q,
+  status,
+  scope,
+  statuses = DEX_STATUSES,
+  onQuery,
+  onStatus,
+  onScope,
+}: DexToolbarProps) {
   const activeScope = activeDexScope(scope, game);
   const known = new Set(statuses.map(([id]) => id));
   const activeStatus = known.has(status) ? status : "all";
   const meta = gameByKey(game);
   const nativeGen = meta && meta.g > 0 ? genById(meta.g) : null;
+  const regionBrowse = isRegionBrowseMode(game, activeScope);
+  const scopeOptions = dexScopeButtons(game, gen, activeScope);
 
   return (
     <div className="pk-toolbar">
@@ -28,41 +41,56 @@ export function DexToolbar({ game, q, status, scope, statuses = DEX_STATUSES, on
         <div className="pk-scope-label-row">
           <span className="pk-kicker">Dex scope</span>
           <InfoTip label="About Regional, National, and generation filters" wide>
-            <p>
-              These buttons change <strong>which Pokémon appear in the list</strong> for the selected game — they do not
-              change your marks.
-            </p>
-            <ul>
-              <li>
-                <strong>Regional</strong> — only species in this game&apos;s regional Pokédex (e.g. Johto dex for
-                HeartGold / SoulSilver), using regional numbers when available.
-              </li>
-              <li>
-                <strong>National</strong> — the full National Dex available up through this game&apos;s era (every
-                species you could transfer or encounter in that generation of titles).
-              </li>
-              {nativeGen ? (
-                <li>
-                  <strong>GEN {nativeGen.roman}</strong> — only species <em>introduced</em> in {nativeGen.region} (new
-                  in Gen {nativeGen.roman}), not earlier-generation Pokémon that also appear in this game.
-                </li>
-              ) : (
-                <li>
-                  <strong>GEN</strong> — only species newly introduced in this game&apos;s native generation (shown for
-                  cartridge titles, not HOME).
-                </li>
-              )}
-            </ul>
+            {regionBrowse ? (
+              <p>
+                You opened a generation from the homepage. This list shows only species{" "}
+                <strong>newly introduced</strong> in {genById(gen).region} ({regionBrowseLabel(gen)}), using Global
+                Collection marks. Switch games in the header to return to Regional / National scopes.
+              </p>
+            ) : (
+              <>
+                <p>
+                  These buttons change <strong>which Pokémon appear in the list</strong> for the selected game — they do
+                  not change your marks.
+                </p>
+                <ul>
+                  <li>
+                    <strong>Regional</strong> — only species in this game&apos;s regional Pokédex (e.g. Johto dex for
+                    HeartGold / SoulSilver), using regional numbers when available.
+                  </li>
+                  <li>
+                    <strong>National</strong> — the full National Dex available up through this game&apos;s era (every
+                    species you could transfer or encounter in that generation of titles).
+                  </li>
+                  {nativeGen ? (
+                    <li>
+                      <strong>GEN {nativeGen.roman}</strong> — only species <em>introduced</em> in {nativeGen.region}{" "}
+                      (new in Gen {nativeGen.roman}), not earlier-generation Pokémon that also appear in this game.
+                    </li>
+                  ) : (
+                    <li>
+                      <strong>GEN</strong> — only species newly introduced in this game&apos;s native generation (shown
+                      for cartridge titles, not HOME).
+                    </li>
+                  )}
+                </ul>
+              </>
+            )}
           </InfoTip>
         </div>
         <div className="seg pk-scope-seg">
-          {dexScopeButtons(game).map(([id, label]) => (
+          {scopeOptions.map(([id, label]) => (
             <button
               key={id}
               type="button"
               className="seg-opt pk-toggle"
               style={pillStyle(activeScope === id, false, { padding: "8px 12px" })}
-              onClick={() => onScope(id)}
+              aria-pressed={activeScope === id}
+              onClick={() => {
+                if (!regionBrowse) {
+                  onScope(id);
+                }
+              }}
             >
               {label}
             </button>

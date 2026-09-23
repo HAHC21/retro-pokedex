@@ -16,6 +16,7 @@ type ChecklistViewProps = {
   indexLoading: boolean;
   prog: Progress;
   game: string;
+  gen: number;
   q: string;
   status: StatusFilter;
   scope: DexScope;
@@ -36,6 +37,7 @@ export function ChecklistView({
   indexLoading,
   prog,
   game,
+  gen,
   q,
   status,
   scope,
@@ -52,19 +54,19 @@ export function ChecklistView({
 }: ChecklistViewProps) {
   const [methods, setMethods] = useState<Record<number, string>>({});
   const [exclusives, setExclusives] = useState<Record<number, string | null>>({});
-  const candidateIds = dexCandidateIds(scope, game, regional);
+  const candidateIds = dexCandidateIds(scope, game, regional, gen);
   const listed = filterDexIds(candidateIds, index, prog, status, q);
   const rows = status === "exclusives" ? listed.filter((id) => exclusives[id]) : listed;
   const exclusivesPending = status === "exclusives" && listed.some((id) => exclusives[id] === undefined);
-  const head = dexHeadCopy(scope, game, rows.length, candidateIds.length, "checklist");
+  const head = dexHeadCopy(scope, game, rows.length, candidateIds.length, "checklist", gen);
 
   useEffect(() => {
     setMethods({});
     setExclusives({});
-  }, [game, q, scope, regional, index]);
+  }, [game, gen, q, scope, regional, index]);
 
   useEffect(() => {
-    const ids = filterDexIds(dexCandidateIds(scope, game, regional), index, prog, status, q);
+    const ids = filterDexIds(dexCandidateIds(scope, game, regional, gen), index, prog, status, q);
     if (!ids.length) {
       return;
     }
@@ -88,12 +90,13 @@ export function ChecklistView({
     return () => {
       cancelled = true;
     };
-  }, [game, q, status, scope, regional, index]);
+  }, [game, gen, q, status, scope, regional, index]);
 
   return (
     <div className="pk-page pk-dex pk-checklist">
       <DexToolbar
         game={game}
+        gen={gen}
         q={q}
         status={status}
         scope={scope}

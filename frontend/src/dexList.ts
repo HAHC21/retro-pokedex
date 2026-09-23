@@ -1,4 +1,4 @@
-import { gameByKey, genById, introducedIdsForGame, nationalIdsForGame } from "./catalog";
+import { gameByKey, genById, idsIntroducedInGen, introducedIdsForGame, nationalIdsForGame } from "./catalog";
 import { gameLabel, unionSets } from "./progress";
 import type { RegionalDex } from "./pokeapi";
 import type { DexIndex, DexScope, Progress, StatusFilter } from "./types";
@@ -18,20 +18,34 @@ export const CHECKLIST_STATUSES: Array<[StatusFilter, string]> = [
   ...DEX_STATUSES.slice(1),
 ];
 
-export function activeDexScope(scope: DexScope, game: string): DexScope {
-  const meta = gameByKey(game);
-  if (scope === "generation" && !(meta && meta.g > 0)) {
-    return "national";
-  }
+/** Homepage region browse: Global Collection + generation scope. */
+export function isRegionBrowseMode(game: string, scope: DexScope): boolean {
+  return game === "home" && scope === "generation";
+}
+
+export function regionBrowseLabel(genId: number): string {
+  const gen = genById(genId);
+  return `GEN ${gen.roman} · ${gen.region.toUpperCase()}`;
+}
+
+export function activeDexScope(scope: DexScope, _game: string): DexScope {
   return scope;
 }
 
-export function dexCandidateIds(scope: DexScope, game: string, regional: RegionalDex | null): number[] {
+export function dexCandidateIds(
+  scope: DexScope,
+  game: string,
+  regional: RegionalDex | null,
+  gen = 1,
+): number[] {
   const active = activeDexScope(scope, game);
   if (active === "regional") {
     return regional?.ids || [];
   }
   if (active === "generation") {
+    if (game === "home") {
+      return idsIntroducedInGen(gen);
+    }
     return introducedIdsForGame(game);
   }
   return nationalIdsForGame(game);
@@ -75,7 +89,10 @@ export function filterDexIds(
   return next;
 }
 
-export function dexScopeButtons(game: string): Array<[DexScope, string]> {
+export function dexScopeButtons(game: string, gen: number, scope: DexScope): Array<[DexScope, string]> {
+  if (isRegionBrowseMode(game, scope)) {
+    return [["generation", regionBrowseLabel(gen)]];
+  }
   const scopes: Array<[DexScope, string]> = [
     ["regional", "Regional"],
     ["national", "National"],
@@ -93,10 +110,19 @@ export function dexHeadCopy(
   shown: number,
   total: number,
   kind: "dex" | "checklist",
+  gen = 1,
 ): { title: string; meta: string } {
   const active = activeDexScope(scope, game);
   const meta = gameByKey(game);
   const nativeGen = meta && meta.g > 0 ? genById(meta.g) : null;
+  if (isRegionBrowseMode(game, active)) {
+    const label = regionBrowseLabel(gen);
+    const region = genById(gen);
+    return {
+      title: kind === "checklist" ? `${label} Checklist` : label,
+      meta: `New in ${region.region} · ${shown} of ${total} shown`,
+    };
+  }
   if (active === "regional") {
     return {
       title: kind === "checklist" ? `Regional Checklist · ${gameLabel(game)}` : `Regional Dex · ${gameLabel(game)}`,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { clampGen, gameByKey, introducedIdsForGame, nationalIdsForGame } from "./catalog";
+import { clampGen, gameByKey, idsIntroducedInGen, introducedIdsForGame, nationalIdsForGame } from "./catalog";
 import { fetchMe, isStaffRole, logout, type AuthUser } from "./auth";
 import { fetchCollectionProgress, syncCollectionProgress, upsertCollectionMark } from "./collectionApi";
 import { ensureObtainIndex, isObtainableInGame, rememberRegionalDex, resolveObtainabilityForIds } from "./obtainability";
@@ -222,7 +222,9 @@ export default function App() {
       scope === "regional"
         ? regional?.ids || []
         : scope === "generation"
-          ? introducedIdsForGame(game)
+          ? game === "home"
+            ? idsIntroducedInGen(gen)
+            : introducedIdsForGame(game)
           : nationalIdsForGame(game);
     if (!ids.length) {
       return;
@@ -456,7 +458,14 @@ export default function App() {
           onImported={refreshProgressFromServer}
           onOpen={open}
           onOpenGen={(genId) => {
-            go({ view: "dex", game, gen: clampGen(genId), q: "", status: "all", scope: "national" });
+            go({
+              view: "dex",
+              game: "home",
+              gen: clampGen(genId),
+              q: "",
+              status: "all",
+              scope: "generation",
+            });
           }}
           onOpenGame={(gameKey, genId) => {
             const next = dexContextForGame(gameKey, clampGen(genId));
@@ -490,6 +499,7 @@ export default function App() {
           indexLoading={indexLoading}
           prog={prog}
           game={game}
+          gen={gen}
           q={q}
           status={status}
           scope={scope}
@@ -517,6 +527,7 @@ export default function App() {
           indexLoading={indexLoading}
           prog={prog}
           game={game}
+          gen={gen}
           q={q}
           status={status}
           scope={scope}
