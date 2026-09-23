@@ -100,6 +100,14 @@ class PokeApiClient:
             return {}
         return await asyncio.to_thread(self._cache.get_many, paths)
 
+    async def scan_obtain_sources(self, limit: int) -> tuple[dict[int, Any], dict[int, Any]]:
+        """Encounter payloads + species parent refs for obtain-index rebuild (cache only)."""
+        return await asyncio.to_thread(self._cache.scan_obtain_sources, limit)
+
+    async def scan_species_evolution_refs(self, limit: int) -> dict[int, dict[str, Any]]:
+        """Species name / evolves_from / evolution_chain refs (cache only)."""
+        return await asyncio.to_thread(self._cache.scan_species_evolution_refs, limit)
+
     async def cache_if_absent(
         self,
         path: str,

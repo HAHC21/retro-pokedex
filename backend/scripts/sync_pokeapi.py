@@ -7,8 +7,10 @@ Skips paths that already have a row (TTL is ignored). Per species that is:
 - ``pokemon/{id}/encounters``
 - ``evolution-chain/{id}`` (deduped from species payloads)
 
-Also warms the name index, types, and regional Pokédex lists, then flattens
-pokedex rows when that collection is empty.
+Also warms the species list, types, and regional Pokédex list payloads.
+Does **not** compile API working-set tables — run ``compile_poke_tables`` after
+a full warm (or when derived schemas change). Re-sync PokéAPI only ~every
+6 months or when a new game releases.
 
 Usage (from backend/ with venv active and MONGODB_URI set):
 
@@ -16,6 +18,7 @@ Usage (from backend/ with venv active and MONGODB_URI set):
     python -m scripts.sync_pokeapi --start 1 --end 151
     python -m scripts.sync_pokeapi --id 25
     python -m scripts.sync_pokeapi --force
+    python -m scripts.compile_poke_tables
 """
 
 from __future__ import annotations
@@ -36,8 +39,7 @@ from app.dependencies import get_pokeapi_cache_repository, get_pokeapi_client, s
 from app.integrations.pokeapi.client import PokeApiClient
 from app.integrations.pokeapi.mapper import pokemon_id_from_url
 from app.repositories.pokeapi_cache_repository import PokeApiCacheRepository
-from app.repositories.pokedex_entry_repository import PokedexEntryRepository
-from app.services.poke_proxy_service import GAME_REGIONAL_POKEDEXES
+from app.services.poke_proxy_service import unique_regional_pokedex_names
 
 DEFAULT_END = 1025
 SPECIES_LIST_PARAMS = {"limit": DEFAULT_END, "offset": 0}
@@ -47,22 +49,10 @@ MAX_ATTEMPTS = 5
 Resource = tuple[str, dict[str, Any] | None]
 
 
-def _unique_pokedex_names() -> list[str]:
-    names: list[str] = []
-    seen: set[str] = set()
-    for group in GAME_REGIONAL_POKEDEXES.values():
-        for name in group:
-            if name in seen:
-                continue
-            seen.add(name)
-            names.append(name)
-    return names
-
-
 def _catalog_resources() -> list[Resource]:
     resources: list[Resource] = [("pokemon-species", SPECIES_LIST_PARAMS)]
     resources.extend((f"type/{type_name}", None) for type_name in ATTACKING_TYPES)
-    resources.extend((f"pokedex/{name}", None) for name in _unique_pokedex_names())
+    resources.extend((f"pokedex/{name}", None) for name in unique_regional_pokedex_names())
     return resources
 
 
@@ -129,25 +119,6 @@ async def _warm_all(
         counts[status] = counts.get(status, 0) + 1
 
 
-async def _flatten_pokedexes(*, force: bool) -> tuple[int, int]:
-    client = get_pokeapi_client()
-    repo = PokedexEntryRepository()
-    synced = 0
-    skipped = 0
-    for name in _unique_pokedex_names():
-        if not force and repo.has_entries(name):
-            skipped += 1
-            continue
-        payload = await client.get_cached(f"pokedex/{name}")
-        if not isinstance(payload, dict):
-            skipped += 1
-            continue
-        await asyncio.to_thread(repo.sync_from_payload, name, payload)
-        synced += 1
-        print(f"  flattened pokedex {name}")
-    return synced, skipped
-
-
 async def run(
     *,
     start: int,
@@ -211,9 +182,6 @@ async def run(
         )
     await _warm_all(client, chain_resources, force=force, delay_seconds=delay_seconds, counts=counts)
 
-    print("Flattening regional Pokédex rows…")
-    flattened, flatten_skipped = await _flatten_pokedexes(force=force)
-
     print(
         "Done.",
         f"fetched={counts['fetched']}",
@@ -221,8 +189,7 @@ async def run(
         f"missing={counts['missing']}",
         f"error={counts['error']}",
         f"chains={len(chain_resources)}",
-        f"pokedex_flattened={flattened}",
-        f"pokedex_flatten_skipped={flatten_skipped}",
+        "Next: python -m scripts.compile_poke_tables",
     )
 
 

@@ -8,14 +8,22 @@ from app.services.poke_proxy_service import PokeProxyService
 router = APIRouter(prefix="/poke", tags=["poke"])
 
 
+@router.get("/catalog")
+async def poke_catalog(service: PokeProxyService = Depends(get_poke_proxy_service)) -> dict:
+    """National Dex names + type membership in one compiled payload."""
+    return await service.catalog()
+
+
 @router.get("/index")
 async def poke_index(service: PokeProxyService = Depends(get_poke_proxy_service)) -> dict:
+    """Deprecated: prefer GET /catalog. Names only."""
     names = await service.name_index()
     return {"names": names}
 
 
 @router.get("/types/{type_name}")
 async def poke_type(type_name: str, service: PokeProxyService = Depends(get_poke_proxy_service)) -> dict:
+    """Deprecated: prefer GET /catalog. Single-type id list."""
     ids = await service.type_ids(type_name)
     return {"ids": ids}
 
@@ -107,7 +115,7 @@ async def poke_obtainability(
     limit: int = 1025,
     service: PokeProxyService = Depends(get_poke_proxy_service),
 ) -> dict:
-    """Bulk National Dex obtain versions + evolves_from from Mongo (no per-id PokéAPI calls)."""
+    """Bulk National Dex obtain versions + evolves_from from the slim Mongo index."""
     capped = max(1, min(limit, 1025))
     return await service.obtain_index(limit=capped)
 

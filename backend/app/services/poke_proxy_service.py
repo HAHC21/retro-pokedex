@@ -2,10 +2,20 @@ import asyncio
 import re
 from typing import Any
 
+from app.catalog.type_matchups import ATTACKING_TYPES
 from app.integrations.pokeapi.client import PokeApiClient
+from app.repositories.ability_effect_repository import AbilityEffectRepository
+from app.repositories.location_meta_repository import LocationMetaRepository
 from app.repositories.move_repository import MoveRepository
+from app.repositories.obtain_index_repository import ObtainIndexRepository
 from app.repositories.pokedex_entry_repository import PokedexEntryRepository
+from app.repositories.pokemon_acquisition_repository import PokemonAcquisitionRepository
+from app.repositories.pokemon_detail_view_repository import PokemonDetailViewRepository
+from app.repositories.pokemon_evolution_repository import PokemonEvolutionRepository
+from app.repositories.pokemon_names_repository import PokemonNamesRepository
 from app.repositories.pokemon_overview_repository import PokemonOverviewRepository
+from app.repositories.pokemon_spawns_repository import PokemonSpawnsRepository
+from app.repositories.type_membership_repository import TypeMembershipRepository
 from app.services.learnset_service import build_learnset
 
 NOT_WILD = re.compile(r"gift|only-one|trade|starter|squirt-bottle|wailmer-pail")
@@ -208,6 +218,19 @@ GAME_REGIONAL_POKEDEXES: dict[str, list[str]] = {
 }
 
 
+def unique_regional_pokedex_names() -> list[str]:
+    """Deduped PokéAPI pokedex slugs used by GAME_REGIONAL_POKEDEXES (stable order)."""
+    names: list[str] = []
+    seen: set[str] = set()
+    for group in GAME_REGIONAL_POKEDEXES.values():
+        for name in group:
+            if name in seen:
+                continue
+            seen.add(name)
+            names.append(name)
+    return names
+
+
 def _english_ability_effect(payload: dict[str, Any] | None) -> str | None:
     if not payload:
         return None
@@ -242,6 +265,88 @@ def _evolution_detail_for(chain: dict[str, Any], pokemon_id: int) -> dict[str, A
     return walk(chain.get("chain") or {})
 
 
+def _evolution_steps_from_chain(chain: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not chain:
+        return []
+    steps: list[dict[str, Any]] = []
+
+    def walk(node: dict[str, Any], cond: str) -> None:
+        species_node = node.get("species") or {}
+        steps.append(
+            {
+                "id": _id_from_url(species_node.get("url") or ""),
+                "name": _title(species_node.get("name") or ""),
+                "cond": cond,
+            }
+        )
+        for nxt in node.get("evolves_to") or []:
+            details = nxt.get("evolution_details") or []
+            walk(nxt, _cond_text(details[0] if details else None))
+
+    walk(chain.get("chain") or {}, "Base")
+    return steps
+
+
+def _annotate_encounters(
+    encounters: list[dict[str, Any]],
+    location_map: dict[str, dict[str, str | None]],
+) -> list[dict[str, Any]]:
+    annotated: list[dict[str, Any]] = []
+    for entry in encounters:
+        area_name = (entry.get("location_area") or {}).get("name") or ""
+        meta = location_map.get(area_name) or {}
+        annotated.append(
+            {
+                **entry,
+                "region": meta.get("region"),
+                "loc": meta.get("loc_name"),
+            }
+        )
+    return annotated
+
+
+def _project_pokemon_data(data: dict[str, Any], abilities: list[dict[str, Any]]) -> dict[str, Any]:
+    """SPA-facing pokemon slice — omit moves and other unused PokéAPI fields."""
+    return {
+        "id": data.get("id"),
+        "name": data.get("name"),
+        "height": data.get("height"),
+        "weight": data.get("weight"),
+        "types": data.get("types") or [],
+        "abilities": abilities,
+        "stats": data.get("stats") or [],
+        "game_indices": data.get("game_indices") or [],
+        "species": data.get("species") or {},
+    }
+
+
+def _project_species(species: dict[str, Any]) -> dict[str, Any]:
+    """Keep fields the detail UI reads; English flavor text only."""
+    flavors = [
+        entry
+        for entry in (species.get("flavor_text_entries") or [])
+        if isinstance(entry, dict) and (entry.get("language") or {}).get("name") == "en"
+    ]
+    return {
+        "name": species.get("name"),
+        "names": species.get("names") or [],
+        "varieties": species.get("varieties") or [],
+        "evolution_chain": species.get("evolution_chain"),
+        "flavor_text_entries": flavors,
+    }
+
+
+def _abilities_with_effect_map(
+    abilities: list[dict[str, Any]],
+    effects: dict[str, str | None],
+) -> list[dict[str, Any]]:
+    enriched: list[dict[str, Any]] = []
+    for entry in abilities:
+        name = ((entry.get("ability") or {}).get("name") or "") if isinstance(entry, dict) else ""
+        enriched.append({**entry, "description": effects.get(name) if name else None})
+    return enriched
+
+
 class PokeProxyService:
     """Compose SPA-facing PokéAPI payloads; all upstream reads go through the cached client."""
 
@@ -251,34 +356,83 @@ class PokeProxyService:
         pokedex_entries: PokedexEntryRepository | None = None,
         moves: MoveRepository | None = None,
         overviews: PokemonOverviewRepository | None = None,
+        obtain_index: ObtainIndexRepository | None = None,
+        names: PokemonNamesRepository | None = None,
+        type_membership: TypeMembershipRepository | None = None,
+        location_meta: LocationMetaRepository | None = None,
+        spawns: PokemonSpawnsRepository | None = None,
+        evolution: PokemonEvolutionRepository | None = None,
+        acquisition: PokemonAcquisitionRepository | None = None,
+        ability_effects: AbilityEffectRepository | None = None,
+        detail_views: PokemonDetailViewRepository | None = None,
     ) -> None:
         self._client = client
         self._pokedex_entries = pokedex_entries or PokedexEntryRepository()
         self._moves = moves or MoveRepository()
         self._overviews = overviews or PokemonOverviewRepository()
+        self._obtain_index_repo = obtain_index or ObtainIndexRepository()
+        self._names = names or PokemonNamesRepository()
+        self._type_membership = type_membership or TypeMembershipRepository()
+        self._location_meta = location_meta or LocationMetaRepository()
+        self._spawns = spawns or PokemonSpawnsRepository()
+        self._evolution = evolution or PokemonEvolutionRepository()
+        self._acquisition = acquisition or PokemonAcquisitionRepository()
+        self._ability_effects = ability_effects or AbilityEffectRepository()
+        self._detail_views = detail_views or PokemonDetailViewRepository()
         self._area_region: dict[str, str | None] = {}
         self._loc_region: dict[str, str | None] = {}
         self._area_loc: dict[str, str] = {}
         self._obtain_index: dict[str, Any] | None = None
+        self._location_map: dict[str, dict[str, str | None]] | None = None
+        self._ability_effect_map: dict[str, str | None] | None = None
+
+    async def catalog(self, *, limit: int = 1025) -> dict[str, Any]:
+        """Single payload: National Dex names + pokemon_id → type names."""
+        names = await self.name_index(limit=limit)
+        membership = await asyncio.to_thread(self._type_membership.get_all, ATTACKING_TYPES)
+        if membership is None:
+            membership = await self.rebuild_type_membership()
+        types_by_id: dict[str, list[str]] = {}
+        for type_name, pokemon_ids in membership.items():
+            for pokemon_id in pokemon_ids:
+                if 1 <= int(pokemon_id) <= limit:
+                    key = str(pokemon_id)
+                    types_by_id.setdefault(key, []).append(type_name)
+        return {"names": names, "types": types_by_id, "count": limit}
 
     async def name_index(self, limit: int = 1025) -> dict[str, str]:
-        # Species list keeps base names (Giratina, Pumpkaboo) without form suffixes.
-        payload = await self._client.list_species(limit=limit, offset=0)
-        names: dict[str, str] = {}
-        for index, entry in enumerate(payload.get("results") or []):
-            names[str(index + 1)] = _title(entry.get("name") or "")
-        return names
+        stored = await asyncio.to_thread(self._names.get, min_count=limit)
+        if stored is not None:
+            return stored
+        return await self.rebuild_name_index(limit=limit)
+
+    async def rebuild_name_index(self, *, limit: int = 1025) -> dict[str, str]:
+        payload = await self._client.get_cached("pokemon-species", {"limit": limit, "offset": 0})
+        if not isinstance(payload, dict):
+            payload = await self._client.list_species(limit=limit, offset=0)
+        return await asyncio.to_thread(self._names.upsert_from_species_list, payload, limit=limit)
 
     async def type_ids(self, type_name: str) -> list[int]:
-        payload = await self._client.get_type(type_name)
-        if not payload:
-            return []
-        ids: list[int] = []
-        for entry in payload.get("pokemon") or []:
-            pokemon_id = _id_from_url((entry.get("pokemon") or {}).get("url") or "")
-            if 1 <= pokemon_id <= 1025:
-                ids.append(pokemon_id)
-        return ids
+        stored = await asyncio.to_thread(self._type_membership.get_ids, type_name)
+        if stored is not None:
+            return stored
+        rebuilt = await self.rebuild_type_membership(type_names=(type_name,))
+        return rebuilt.get(type_name, [])
+
+    async def rebuild_type_membership(
+        self,
+        *,
+        type_names: tuple[str, ...] | None = None,
+    ) -> dict[str, list[int]]:
+        names = type_names or ATTACKING_TYPES
+        result: dict[str, list[int]] = {}
+        for name in names:
+            payload = await self._client.get_cached(f"type/{name}")
+            if not isinstance(payload, dict):
+                payload = await self._client.get_type(name)
+            ids = await asyncio.to_thread(self._type_membership.upsert_from_type_payload, name, payload)
+            result[name] = ids
+        return result
 
     async def regional_dex(self, game_key: str) -> dict[str, Any]:
         names = GAME_REGIONAL_POKEDEXES.get(game_key)
@@ -299,58 +453,290 @@ class PokeProxyService:
         }
 
     async def obtain_meta(self, pokemon_id: int) -> dict[str, Any]:
-        raw = await self._client.get_encounters(pokemon_id)
-        species = await self._client.get_species(pokemon_id)
-        parent = None
-        if species and species.get("evolves_from_species"):
-            parent = _id_from_url(species["evolves_from_species"].get("url") or "")
+        index = await self.obtain_index(limit=max(pokemon_id, 1025))
+        key = str(pokemon_id)
+        parent = index["evolves_from"].get(key)
         return {
-            "versions": obtain_versions_from_raw(raw),
-            "evolves_from": parent,
+            "versions": list(index["versions"].get(key) or []),
+            "evolves_from": int(parent) if parent is not None else None,
         }
 
     async def obtain_index(self, *, limit: int = 1025) -> dict[str, Any]:
-        """National Dex obtain versions + evolves_from from Mongo cache (one bulk read)."""
+        """Serve the slim National Dex obtain index (persisted singleton; rebuild on miss)."""
         if self._obtain_index is not None and int(self._obtain_index.get("count") or 0) >= limit:
             return self._obtain_index
 
-        encounter_paths = [f"pokemon/{pokemon_id}/encounters" for pokemon_id in range(1, limit + 1)]
-        species_paths = [f"pokemon-species/{pokemon_id}" for pokemon_id in range(1, limit + 1)]
-        cached = await self._client.get_cached_many(encounter_paths + species_paths)
+        stored = await asyncio.to_thread(self._obtain_index_repo.get, min_count=limit)
+        if stored is not None:
+            self._obtain_index = stored
+            return stored
+
+        payload = await self.rebuild_obtain_index(limit=limit)
+        return payload
+
+    async def rebuild_obtain_index(self, *, limit: int = 1025) -> dict[str, Any]:
+        """Scan pokeapi_cache once, persist a slim index, and keep it in process memory."""
+        encounters, parent_refs = await self._client.scan_obtain_sources(limit)
 
         versions: dict[str, list[str]] = {}
-        evolves_from: dict[str, int | None] = {}
+        evolves_from: dict[str, int] = {}
         for pokemon_id in range(1, limit + 1):
             key = str(pokemon_id)
-            raw = cached.get(f"pokemon/{pokemon_id}/encounters")
+            raw = encounters.get(pokemon_id)
             if not isinstance(raw, list):
                 raw = []
-            versions[key] = obtain_versions_from_raw(raw)
-            species = cached.get(f"pokemon-species/{pokemon_id}")
+            version_list = obtain_versions_from_raw(raw)
+            # Omit empty lists — clients fill defaults for 1..count.
+            if version_list:
+                versions[key] = version_list
+            parent_ref = parent_refs.get(pokemon_id)
             parent = None
-            if isinstance(species, dict) and species.get("evolves_from_species"):
-                parent = _id_from_url(species["evolves_from_species"].get("url") or "") or None
-            evolves_from[key] = parent
+            if isinstance(parent_ref, dict):
+                parent = _id_from_url(parent_ref.get("url") or "") or None
+            # Omit base forms (null) — clients fill defaults for 1..count.
+            if parent:
+                evolves_from[key] = parent
 
-        payload = {
-            "count": limit,
-            "versions": versions,
-            "evolves_from": evolves_from,
-        }
+        payload = await asyncio.to_thread(
+            self._obtain_index_repo.upsert,
+            count=limit,
+            versions=versions,
+            evolves_from=evolves_from,
+        )
         self._obtain_index = payload
         return payload
+
+    async def rebuild_location_meta(self, *, limit: int = 1025) -> int:
+        """Build area → loc/region from encounter refs + cached location-area/location rows."""
+        encounters, _ = await self._client.scan_obtain_sources(limit)
+        areas: dict[str, int] = {}
+        for raw in encounters.values():
+            if not isinstance(raw, list):
+                continue
+            for entry in raw:
+                area = entry.get("location_area") or {}
+                area_name = area.get("name") or ""
+                if not area_name:
+                    continue
+                area_id = _id_from_url(area.get("url") or "")
+                if area_id:
+                    areas[area_name] = area_id
+
+        area_payloads = await self._client.get_cached_many(
+            [f"location-area/{area_id}" for area_id in sorted(set(areas.values()))]
+        )
+        loc_ids: dict[str, int] = {}
+        area_to_loc: dict[str, str] = {}
+        for area_name, area_id in areas.items():
+            payload = area_payloads.get(f"location-area/{area_id}")
+            if not isinstance(payload, dict):
+                continue
+            loc = payload.get("location") or {}
+            loc_name = loc.get("name") or ""
+            if not loc_name:
+                continue
+            area_to_loc[area_name] = loc_name
+            loc_id = _id_from_url(loc.get("url") or "")
+            if loc_id:
+                loc_ids[loc_name] = loc_id
+
+        loc_payloads = await self._client.get_cached_many(
+            [f"location/{loc_id}" for loc_id in sorted(set(loc_ids.values()))]
+        )
+        loc_region: dict[str, str | None] = {}
+        for loc_name, loc_id in loc_ids.items():
+            payload = loc_payloads.get(f"location/{loc_id}")
+            region = None
+            if isinstance(payload, dict) and payload.get("region"):
+                region = _title((payload.get("region") or {}).get("name") or "") or None
+            loc_region[loc_name] = region
+
+        rows: list[dict[str, Any]] = []
+        for area_name, area_id in areas.items():
+            loc_name = area_to_loc.get(area_name)
+            rows.append(
+                {
+                    "area_name": area_name,
+                    "area_id": area_id,
+                    "loc_name": loc_name,
+                    "region": loc_region.get(loc_name) if loc_name else None,
+                }
+            )
+        count = await asyncio.to_thread(self._location_meta.replace_all, rows)
+        self._location_map = None
+        return count
+
+    async def rebuild_pokemon_evolution(self, *, limit: int = 1025) -> int:
+        refs = await self._client.scan_species_evolution_refs(limit)
+        chain_ids: set[int] = set()
+        for payload in refs.values():
+            chain_url = ((payload.get("evolution_chain") or {}).get("url") or "") if payload else ""
+            chain_id = _id_from_url(chain_url) if chain_url else 0
+            if chain_id:
+                chain_ids.add(chain_id)
+        chain_payloads = await self._client.get_cached_many(
+            [f"evolution-chain/{chain_id}" for chain_id in sorted(chain_ids)]
+        )
+        steps_by_chain = {
+            chain_id: _evolution_steps_from_chain(chain_payloads.get(f"evolution-chain/{chain_id}"))
+            for chain_id in chain_ids
+        }
+
+        rows: list[dict[str, Any]] = []
+        for pokemon_id in range(1, limit + 1):
+            payload = refs.get(pokemon_id) or {}
+            parent_ref = payload.get("evolves_from_species") if isinstance(payload.get("evolves_from_species"), dict) else {}
+            parent_name = _title((parent_ref or {}).get("name") or "") or None
+            parent_id = _id_from_url((parent_ref or {}).get("url") or "") or None
+            if not parent_name:
+                parent_id = None
+            chain_url = ((payload.get("evolution_chain") or {}).get("url") or "") if payload else ""
+            chain_id = _id_from_url(chain_url) if chain_url else 0
+            steps = steps_by_chain.get(chain_id, [])
+            evolve_label = None
+            if parent_name:
+                chain = chain_payloads.get(f"evolution-chain/{chain_id}") if chain_id else None
+                detail = _evolution_detail_for(chain or {}, pokemon_id) if isinstance(chain, dict) else None
+                evolve_label = _evolve_label(parent_name, detail)
+            rows.append(
+                {
+                    "pokemon_id": pokemon_id,
+                    "steps": steps,
+                    "parent_id": parent_id,
+                    "parent_name": parent_name,
+                    "evolve_label": evolve_label,
+                }
+            )
+        return await asyncio.to_thread(self._evolution.replace_all, rows)
+
+    async def rebuild_pokemon_spawns(self, *, limit: int = 1025) -> int:
+        location_map = await asyncio.to_thread(self._location_meta.get_map)
+        self._location_map = location_map
+        encounters, _ = await self._client.scan_obtain_sources(limit)
+        rows: list[tuple[int, list[dict[str, Any]]]] = []
+        for pokemon_id in range(1, limit + 1):
+            raw = encounters.get(pokemon_id)
+            if not isinstance(raw, list):
+                raw = []
+            wild = filter_wild_encounters(raw)
+            enc = _annotate_encounters(wild, location_map)
+            rows.append((pokemon_id, enc))
+        return await asyncio.to_thread(self._spawns.replace_all, rows)
+
+    async def rebuild_pokemon_acquisition(self, *, limit: int = 1025) -> int:
+        encounters, _ = await self._client.scan_obtain_sources(limit)
+        evolve_labels = await asyncio.to_thread(self._evolution.evolve_labels_map)
+        game_keys = [key for key in GAME_VERSIONS if key != "home"]
+        rows: list[tuple[int, dict[str, dict[str, Any]]]] = []
+        for pokemon_id in range(1, limit + 1):
+            raw = encounters.get(pokemon_id)
+            if not isinstance(raw, list):
+                raw = []
+            evolve_label = evolve_labels.get(pokemon_id)
+            by_game: dict[str, dict[str, Any]] = {
+                "home": {"text": "Pokémon HOME", "methods": ["home"]},
+            }
+            for game_key in game_keys:
+                labels = self._labels_from_encounters(raw, game_key)
+                if evolve_label:
+                    labels = [*labels, evolve_label]
+                by_game[game_key] = {"text": " / ".join(labels), "methods": labels}
+            rows.append((pokemon_id, by_game))
+        return await asyncio.to_thread(self._acquisition.replace_all, rows)
+
+    async def rebuild_ability_effects(self, *, limit: int = 1025) -> int:
+        """Collect ability names from pokemon payloads; store English effects from ability cache."""
+        ability_names: set[str] = set()
+        chunk = 200
+        for start in range(1, limit + 1, chunk):
+            end = min(limit, start + chunk - 1)
+            paths = [f"pokemon/{pokemon_id}" for pokemon_id in range(start, end + 1)]
+            payloads = await self._client.get_cached_many(paths)
+            for data in payloads.values():
+                if not isinstance(data, dict):
+                    continue
+                for entry in data.get("abilities") or []:
+                    if not isinstance(entry, dict):
+                        continue
+                    name = ((entry.get("ability") or {}).get("name") or "") if isinstance(entry.get("ability"), dict) else ""
+                    if name:
+                        ability_names.add(name)
+
+        ability_payloads = await self._client.get_cached_many(
+            [f"ability/{name}" for name in sorted(ability_names)]
+        )
+        rows: list[dict[str, Any]] = []
+        for name in sorted(ability_names):
+            payload = ability_payloads.get(f"ability/{name}")
+            rows.append(
+                {
+                    "ability_name": name,
+                    "description": _english_ability_effect(payload if isinstance(payload, dict) else None),
+                }
+            )
+        count = await asyncio.to_thread(self._ability_effects.replace_all, rows)
+        self._ability_effect_map = None
+        return count
+
+    async def rebuild_pokemon_detail_views(self, *, limit: int = 1025) -> int:
+        """Materialize SPA detail payloads from cache + compiled evolution/obtain/abilities/overviews."""
+        effects = await asyncio.to_thread(self._ability_effects.get_map)
+        self._ability_effect_map = effects
+        evo_steps = await asyncio.to_thread(self._evolution.steps_map)
+        overviews = await asyncio.to_thread(self._overviews.overview_map)
+        obtain = await self.obtain_index(limit=limit)
+        versions = obtain.get("versions") or {}
+        evolves_from = obtain.get("evolves_from") or {}
+
+        rows: list[tuple[int, dict[str, Any]]] = []
+        chunk = 100
+        for start in range(1, limit + 1, chunk):
+            end = min(limit, start + chunk - 1)
+            ids = list(range(start, end + 1))
+            pokemon_paths = [f"pokemon/{pokemon_id}" for pokemon_id in ids]
+            species_paths = [f"pokemon-species/{pokemon_id}" for pokemon_id in ids]
+            cached = await self._client.get_cached_many(pokemon_paths + species_paths)
+            for pokemon_id in ids:
+                data = cached.get(f"pokemon/{pokemon_id}")
+                if not isinstance(data, dict):
+                    continue
+                species_url = ((data.get("species") or {}).get("url") or "") if isinstance(data.get("species"), dict) else ""
+                species_id = _id_from_url(species_url) or pokemon_id
+                species_raw = cached.get(f"pokemon-species/{species_id}")
+                if not isinstance(species_raw, dict):
+                    species_raw = cached.get(f"pokemon-species/{pokemon_id}") or {}
+                if not isinstance(species_raw, dict):
+                    species_raw = {}
+                abilities = _abilities_with_effect_map(data.get("abilities") or [], effects)
+                key = str(species_id)
+                parent = evolves_from.get(key)
+                payload = {
+                    "data": _project_pokemon_data(data, abilities),
+                    "species": _project_species(species_raw),
+                    "evo": evo_steps.get(species_id, []),
+                    "obtain_versions": list(versions.get(key) or []),
+                    "evolves_from": int(parent) if parent is not None else None,
+                    "overview": overviews.get(species_id),
+                }
+                rows.append((pokemon_id, payload))
+        return await asyncio.to_thread(self._detail_views.replace_all, rows)
 
     async def acquisition(self, pokemon_id: int, game_key: str) -> dict[str, Any]:
         if game_key == "home":
             return {"text": "Pokémon HOME", "methods": ["home"]}
-        raw, species = await asyncio.gather(
-            self._client.get_encounters(pokemon_id),
-            self._client.get_species(pokemon_id),
-        )
+        stored = await asyncio.to_thread(self._acquisition.get, pokemon_id, game_key)
+        if stored is not None:
+            return stored
+        raw = await self._client.get_encounters(pokemon_id)
         labels = self._labels_from_encounters(raw or [], game_key)
-        evo_label = await self._evolution_label(species or {}, pokemon_id)
-        if evo_label:
-            labels.append(evo_label)
+        evo = await asyncio.to_thread(self._evolution.get, pokemon_id)
+        if evo and evo.get("evolve_label"):
+            labels.append(str(evo["evolve_label"]))
+        elif not evo:
+            species = await self._client.get_species(pokemon_id)
+            evo_label = await self._evolution_label(species or {}, pokemon_id)
+            if evo_label:
+                labels.append(evo_label)
         return {"text": " / ".join(labels), "methods": labels}
 
     def _labels_from_encounters(self, raw: list[dict[str, Any]], game_key: str) -> list[str]:
@@ -388,33 +774,47 @@ class PokeProxyService:
         return _evolve_label(parent_name, detail)
 
     async def pokemon_detail(self, pokemon_id: int) -> dict[str, Any] | None:
-        data, raw = await asyncio.gather(
-            self._client.get_pokemon(pokemon_id),
-            self._client.get_encounters(pokemon_id),
-        )
+        stored = await asyncio.to_thread(self._detail_views.get, pokemon_id)
+        if stored is not None:
+            return stored
+        return await self._pokemon_detail_live(pokemon_id)
+
+    async def _pokemon_detail_live(self, pokemon_id: int) -> dict[str, Any] | None:
+        data = await self._client.get_pokemon(pokemon_id)
         if data is None:
             return None
         species_url = (data.get("species") or {}).get("url") or ""
         species_id = _id_from_url(species_url) or pokemon_id
         species = await self._client.get_species(species_id) or {}
-        evo = await self._evolution_steps(species)
-        parent = None
-        if species.get("evolves_from_species"):
-            parent = _id_from_url(species["evolves_from_species"].get("url") or "")
+        evo_doc = await asyncio.to_thread(self._evolution.get, species_id)
+        if evo_doc is not None:
+            evo = evo_doc["steps"]
+        else:
+            evo = await self._evolution_steps(species)
+        obtain = await self.obtain_meta(species_id)
         overview_doc = await asyncio.to_thread(self._overviews.get, species_id)
         abilities = await self._abilities_with_descriptions(data.get("abilities") or [])
         return {
-            "data": {**data, "abilities": abilities},
-            "species": species,
+            "data": _project_pokemon_data(data, abilities),
+            "species": _project_species(species),
             "evo": evo,
-            "obtain_versions": obtain_versions_from_raw(raw),
-            "evolves_from": parent,
+            "obtain_versions": obtain["versions"],
+            "evolves_from": obtain["evolves_from"],
             "overview": overview_doc.overview if overview_doc else None,
         }
 
     async def pokemon_spawns(self, pokemon_id: int) -> dict[str, Any]:
+        stored = await asyncio.to_thread(self._spawns.get, pokemon_id)
+        if stored is not None:
+            return {"enc": stored}
         raw = await self._client.get_encounters(pokemon_id)
         wild = filter_wild_encounters(raw)
+        location_map = self._location_map
+        if location_map is None:
+            location_map = await asyncio.to_thread(self._location_meta.get_map)
+            self._location_map = location_map
+        if location_map:
+            return {"enc": _annotate_encounters(wild, location_map)}
         enc = await self._resolve_regions(wild)
         return {"enc": enc}
 
@@ -437,25 +837,7 @@ class PokeProxyService:
             return []
         chain_id = _id_from_url(chain_url)
         chain = await self._client.get_evolution_chain(chain_id)
-        if not chain:
-            return []
-        steps: list[dict[str, Any]] = []
-
-        def walk(node: dict[str, Any], cond: str) -> None:
-            species_node = node.get("species") or {}
-            steps.append(
-                {
-                    "id": _id_from_url(species_node.get("url") or ""),
-                    "name": _title(species_node.get("name") or ""),
-                    "cond": cond,
-                }
-            )
-            for nxt in node.get("evolves_to") or []:
-                details = nxt.get("evolution_details") or []
-                walk(nxt, _cond_text(details[0] if details else None))
-
-        walk(chain.get("chain") or {}, "Base")
-        return steps
+        return _evolution_steps_from_chain(chain)
 
     async def _abilities_with_descriptions(self, abilities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         names: list[str] = []
@@ -463,9 +845,15 @@ class PokeProxyService:
             name = (entry.get("ability") or {}).get("name") or ""
             if name and name not in names:
                 names.append(name)
-        payloads = await asyncio.gather(*(self._client.get_ability(name) for name in names))
-        effects = {name: _english_ability_effect(payload) for name, payload in zip(names, payloads)}
-        return [{**entry, "description": effects.get((entry.get("ability") or {}).get("name") or "")} for entry in abilities]
+        effects = dict(self._ability_effect_map or {})
+        if not effects:
+            effects = await asyncio.to_thread(self._ability_effects.get_map, names)
+        missing = [name for name in names if name not in effects]
+        if missing:
+            payloads = await asyncio.gather(*(self._client.get_ability(name) for name in missing))
+            for name, payload in zip(missing, payloads):
+                effects[name] = _english_ability_effect(payload)
+        return _abilities_with_effect_map(abilities, effects)
 
     async def _resolve_regions(self, encounters: list[dict[str, Any]]) -> list[dict[str, Any]]:
         pending_areas: dict[str, int] = {}

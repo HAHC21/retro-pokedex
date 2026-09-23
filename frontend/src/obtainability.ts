@@ -88,7 +88,7 @@ export function isObtainIndexReady() {
 
 /**
  * One bulk fetch of encounter versions + evolves_from for the whole National Dex
- * (served from Mongo). Replaces N× `/pokemon/{id}/obtain` calls.
+ * (served from the slim Mongo obtain_index). Replaces N× `/pokemon/{id}/obtain` calls.
  */
 export async function ensureObtainIndex(limit = 1025): Promise<void> {
   if (indexHydrated && obtainVersions.size >= Math.min(limit, 100)) {
@@ -109,17 +109,23 @@ export async function ensureObtainIndex(limit = 1025): Promise<void> {
         evolves_from?: Record<string, number | null>;
         count?: number;
       };
+      const count = Math.max(1, Number(payload.count) || limit);
+      // Slim payload omits empty version lists and null parents — fill defaults.
+      for (let id = 1; id <= count; id += 1) {
+        obtainVersions.set(id, []);
+        evolvesFrom.set(id, null);
+      }
       Object.entries(payload.versions || {}).forEach(([id, versions]) => {
         if (Array.isArray(versions)) {
           obtainVersions.set(Number(id), versions);
         }
       });
       Object.entries(payload.evolves_from || {}).forEach(([id, parent]) => {
-        if (parent === null || typeof parent === "number") {
+        if (typeof parent === "number") {
           evolvesFrom.set(Number(id), parent);
         }
       });
-      markIndexHydrated(Number(payload.count) || obtainVersions.size);
+      markIndexHydrated(count);
       schedulePersist();
     } finally {
       indexInflight = null;

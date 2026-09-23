@@ -1,4 +1,4 @@
-import { API, IDX_KEY, TYPES } from "./catalog";
+import { API, IDX_KEY } from "./catalog";
 import { rememberEvolvesFrom, rememberObtainVersions } from "./obtainability";
 import type { WildEncounter } from "./encounters";
 import type { DexIndex, EvolutionStep, MonPayload } from "./types";
@@ -20,21 +20,21 @@ export function saveIndex(index: DexIndex) {
   }
 }
 
-export async function fetchNameIndex(): Promise<Record<number, string>> {
-  const payload = await (await fetch(`${API}/index`)).json();
+/** One request: National Dex names + pokemon_id → type names (replaces /index + N× /types). */
+export async function fetchCatalog(): Promise<DexIndex> {
+  const payload = await (await fetch(`${API}/catalog`)).json();
   const names: Record<number, string> = {};
   Object.entries(payload.names || {}).forEach(([id, name]) => {
     names[Number(id)] = String(name);
   });
-  return names;
+  const types: Record<number, string[]> = {};
+  Object.entries(payload.types || {}).forEach(([id, typeNames]) => {
+    if (Array.isArray(typeNames)) {
+      types[Number(id)] = typeNames.map(String);
+    }
+  });
+  return { names, types };
 }
-
-export async function fetchTypeMembership(typeName: string) {
-  const payload = await (await fetch(`${API}/types/${typeName}`)).json();
-  return { typeName, ids: (payload.ids || []) as number[] };
-}
-
-export { TYPES };
 
 export async function fetchMon(id: number): Promise<MonPayload> {
   const payload = await (await fetch(`${API}/pokemon/${id}`)).json();

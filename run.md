@@ -26,18 +26,19 @@ On macOS/Linux, activate the venv with `source .venv/bin/activate` instead.
 API: [http://127.0.0.1:8000](http://127.0.0.1:8000)  
 Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-Pokémon data for the SPA is served under `/api/poke/*` and cached in Atlas for about **30 days** (cache-on-read from PokéAPI). Entry detail is `/api/poke/pokemon/{id}`; wild spawn maps load separately from `/api/poke/pokemon/{id}/spawns`; learnsets are `/api/poke/pokemon/{id}/moves?game=…` (methods from the Pokémon payload, type/power from the Mongo `moves` catalog). Regional dex lists are assembled with a Mongo aggregation over flattened pokedex rows.
+Pokémon data for the SPA is served under `/api/poke/*`. Raw PokéAPI JSON lives in Mongo `pokeapi_cache` (re-warm only about every **6 months** or when a new game releases). Working-set tables (`pokemon_names`, `type_membership`, `obtain_index`, `pokedex_entries`) are compiled from that cache. Entry detail is `/api/poke/pokemon/{id}`; wild spawn maps load separately from `/api/poke/pokemon/{id}/spawns`; learnsets are `/api/poke/pokemon/{id}/moves?game=…` (methods from the Pokémon payload, type/power from the Mongo `moves` catalog). Catalog boot uses `/api/poke/catalog`.
 
-Pre-fill the PokéAPI cache (species, Pokémon, encounters, evolution chains, types, regional dex lists) from `backend/`. Rows that already exist in Mongo are skipped:
+Pre-fill the PokéAPI warehouse (species, Pokémon, encounters, evolution chains, types, regional dex lists) from `backend/`. Rows that already exist in Mongo are skipped. Then compile working-set tables (no PokéAPI calls):
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python -m scripts.sync_pokeapi
+python -m scripts.compile_poke_tables
 python -m scripts.sync_pokeapi --start 1 --end 151
 python -m scripts.sync_pokeapi --id 25
 ```
 
-Use `--force` to refetch. Optional `--delay` (default `0.05`) pauses after each network call. Location-area payloads used by spawn maps are still filled on first visit.
+Use `--force` on `sync_pokeapi` to refetch from PokéAPI. Optional `--delay` (default `0.05`) pauses after each network call. Use `--force` on `compile_poke_tables` to rebuild regional dex rows even when present. Location-area payloads used by spawn maps are still filled on first visit.
 
 Populate the move catalog once (or after PokéAPI updates) from `backend/`:
 

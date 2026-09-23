@@ -34,6 +34,13 @@ class PokemonOverviewRepository:
     def get(self, pokemon_id: int) -> PokemonOverviewDocument | None:
         return PokemonOverviewDocument.objects(pokemon_id=pokemon_id).first()
 
+    def overview_map(self) -> dict[int, str]:
+        return {
+            int(doc.pokemon_id): str(doc.overview)
+            for doc in PokemonOverviewDocument.objects.only("pokemon_id", "overview")
+            if doc.overview
+        }
+
     def exists(self, pokemon_id: int) -> bool:
         return PokemonOverviewDocument.objects(pokemon_id=pokemon_id).count() > 0
 

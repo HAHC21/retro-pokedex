@@ -111,6 +111,154 @@ class PokemonOverviewDocument(Document):
     updated_at = DateTimeField(required=True)
 
 
+class ObtainIndexDocument(Document):
+    """Precomputed National Dex obtain versions + evolves_from (slim singleton).
+
+    ``versions`` maps species id → version name list (empty lists omitted).
+    ``evolves_from`` maps species id → parent id (null/base forms omitted).
+    """
+
+    meta = {
+        "collection": "obtain_index",
+        "indexes": [
+            {"fields": ["key"], "unique": True},
+        ],
+    }
+
+    key = StringField(required=True, default="national")
+    count = IntField(required=True)
+    versions = DictField(required=True, default=dict)
+    evolves_from = DictField(required=True, default=dict)
+    built_at = DateTimeField(required=True)
+
+
+class PokemonNamesDocument(Document):
+    """Compiled National Dex display names (slim singleton from species list)."""
+
+    meta = {
+        "collection": "pokemon_names",
+        "indexes": [
+            {"fields": ["key"], "unique": True},
+        ],
+    }
+
+    key = StringField(required=True, default="national")
+    count = IntField(required=True)
+    names = DictField(required=True, default=dict)  # id str → display name
+    built_at = DateTimeField(required=True)
+
+
+class TypeMembershipDocument(Document):
+    """Compiled National Dex pokemon ids for one attacking type."""
+
+    meta = {
+        "collection": "type_membership",
+        "indexes": [
+            {"fields": ["type_name"], "unique": True},
+        ],
+    }
+
+    type_name = StringField(required=True)
+    pokemon_ids = ListField(IntField(), default=list)
+    built_at = DateTimeField(required=True)
+
+
+class LocationMetaDocument(Document):
+    """Compiled location-area → location name + region title."""
+
+    meta = {
+        "collection": "location_meta",
+        "indexes": [
+            {"fields": ["area_name"], "unique": True},
+            {"fields": ["area_id"]},
+        ],
+    }
+
+    area_name = StringField(required=True)
+    area_id = IntField(null=True)
+    loc_name = StringField(null=True)
+    region = StringField(null=True)
+    built_at = DateTimeField(required=True)
+
+
+class PokemonSpawnsDocument(Document):
+    """Compiled wild spawn list for one National Dex species (SPA enc[] shape)."""
+
+    meta = {
+        "collection": "pokemon_spawns",
+        "indexes": [
+            {"fields": ["pokemon_id"], "unique": True},
+        ],
+    }
+
+    pokemon_id = IntField(required=True)
+    enc = ListField(DictField(), default=list)
+    built_at = DateTimeField(required=True)
+
+
+class PokemonEvolutionDocument(Document):
+    """Compiled evolution steps + acquisition evolve label for one species."""
+
+    meta = {
+        "collection": "pokemon_evolution",
+        "indexes": [
+            {"fields": ["pokemon_id"], "unique": True},
+        ],
+    }
+
+    pokemon_id = IntField(required=True)
+    steps = ListField(DictField(), default=list)
+    parent_id = IntField(null=True)
+    parent_name = StringField(null=True)
+    evolve_label = StringField(null=True)
+    built_at = DateTimeField(required=True)
+
+
+class PokemonAcquisitionDocument(Document):
+    """Compiled how-to-obtain lines per game for one species."""
+
+    meta = {
+        "collection": "pokemon_acquisition",
+        "indexes": [
+            {"fields": ["pokemon_id"], "unique": True},
+        ],
+    }
+
+    pokemon_id = IntField(required=True)
+    by_game = DictField(required=True, default=dict)  # game_key → {text, methods}
+    built_at = DateTimeField(required=True)
+
+
+class AbilityEffectDocument(Document):
+    """Compiled English ability short-effect text."""
+
+    meta = {
+        "collection": "ability_effects",
+        "indexes": [
+            {"fields": ["ability_name"], "unique": True},
+        ],
+    }
+
+    ability_name = StringField(required=True)
+    description = StringField(null=True)
+    built_at = DateTimeField(required=True)
+
+
+class PokemonDetailViewDocument(Document):
+    """SPA-shaped detail payload for GET /pokemon/{id} (no fat PokéAPI leftovers)."""
+
+    meta = {
+        "collection": "pokemon_detail_view",
+        "indexes": [
+            {"fields": ["pokemon_id"], "unique": True},
+        ],
+    }
+
+    pokemon_id = IntField(required=True)
+    payload = DictField(required=True)
+    built_at = DateTimeField(required=True)
+
+
 class PokemonAiMovesetDocument(Document):
     """Persisted Gemini moveset suggestions for a Pokémon + game."""
 

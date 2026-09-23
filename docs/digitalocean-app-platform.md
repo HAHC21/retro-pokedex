@@ -154,12 +154,13 @@ Local redirect URIs (`http://localhost:5173/...`) can stay on the same client or
 
 ## 7. Load catalog data
 
-The API proxies PokéAPI and caches responses in MongoDB. A fresh database works, and the first views will be slower until the cache fills. To warm it, run the sync scripts **once from your machine** against the production URI. Do not attach them as a deploy job; a full sync is long and would run on every push.
+The API proxies PokéAPI and caches responses in MongoDB. A fresh database works, and the first views will be slower until the cache fills. To warm it, run the sync scripts **once from your machine** against the production URI. Do not attach them as a deploy job; a full sync is long and would run on every push. Re-run `sync_pokeapi` only about every 6 months or when a new game releases. After a warm (or when derived schemas change), run `compile_poke_tables` to rebuild API working-set tables from cache — that step does not call PokéAPI.
 
 From `backend/`, with the production `MONGODB_URI` in the environment (and `GEMINI_API_KEY` only for the overview script):
 
 ```powershell
 python -m scripts.sync_pokeapi
+python -m scripts.compile_poke_tables
 python -m scripts.sync_moves
 python -m scripts.generate_overviews
 ```

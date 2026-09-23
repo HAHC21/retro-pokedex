@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { TYPES, clampGen, gameByKey, introducedIdsForGame, nationalIdsForGame } from "./catalog";
+import { clampGen, gameByKey, introducedIdsForGame, nationalIdsForGame } from "./catalog";
 import { fetchMe, isStaffRole, logout, type AuthUser } from "./auth";
 import { fetchCollectionProgress, syncCollectionProgress, upsertCollectionMark } from "./collectionApi";
 import { ensureObtainIndex, isObtainableInGame, rememberRegionalDex, resolveObtainabilityForIds } from "./obtainability";
 import {
+  fetchCatalog,
   fetchMon,
-  fetchNameIndex,
   fetchRegionalDex,
   fetchLearnset,
   fetchSpawns,
-  fetchTypeMembership,
   loadCachedIndex,
   saveIndex,
   type LearnsetGroup,
@@ -145,24 +144,13 @@ export default function App() {
     let cancelled = false;
     (async () => {
       try {
-        const names = await fetchNameIndex();
+        const next = await fetchCatalog();
         if (cancelled) {
           return;
         }
-        setIndex({ names, types: {} });
+        setIndex(next);
+        saveIndex(next);
         setIndexLoading(false);
-        const types: Record<number, string[]> = {};
-        for (const typeName of TYPES) {
-          const { ids } = await fetchTypeMembership(typeName);
-          if (cancelled) {
-            return;
-          }
-          ids.forEach((pokemonId) => {
-            (types[pokemonId] = types[pokemonId] || []).push(typeName);
-          });
-          setIndex({ names, types: { ...types } });
-        }
-        saveIndex({ names, types });
       } catch {
         if (!cancelled) {
           setIndexLoading(false);
