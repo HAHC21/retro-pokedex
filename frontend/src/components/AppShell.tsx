@@ -208,7 +208,7 @@ export function AppShell({
                   learnsets are scoped to this game.
                 </p>
                 <p>
-                  <strong>HOME</strong> is the global collection view across every game. Other options (e.g. HeartGold /
+                  <strong>Global Collection</strong> tracks catches across every game. Other options (e.g. HeartGold /
                   SoulSilver) represent that specific cartridge or title.
                 </p>
               </InfoTip>

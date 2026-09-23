@@ -129,6 +129,7 @@ export type Game = {
 };
 
 export const GAMES: Game[] = [
+  { k: "home", l: "Global Collection", g: 0 },
   { k: "rb", l: "Red / Blue", g: 1 },
   { k: "y", l: "Yellow", g: 1 },
   { k: "gs", l: "Gold / Silver", g: 2 },
@@ -149,7 +150,6 @@ export const GAMES: Game[] = [
   { k: "bdsp", l: "Brilliant Diamond / Shining Pearl", g: 8 },
   { k: "pla", l: "Legends: Arceus", g: 8 },
   { k: "sv", l: "Scarlet / Violet", g: 9 },
-  { k: "home", l: "HOME (global collection)", g: 0 },
 ];
 
 export const VERSIONS: Record<string, [number, string]> = {
