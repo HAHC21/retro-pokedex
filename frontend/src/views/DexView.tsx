@@ -16,6 +16,7 @@ type DexViewProps = {
   prog: Progress;
   game: string;
   gen: number;
+  region?: string | null;
   q: string;
   status: StatusFilter;
   scope: DexScope;
@@ -37,6 +38,7 @@ export function DexView({
   prog,
   game,
   gen,
+  region = null,
   q,
   status,
   scope,
@@ -51,15 +53,16 @@ export function DexView({
   onToggleCaught,
   onToggleShiny,
 }: DexViewProps) {
-  const candidateIds = dexCandidateIds(scope, game, regional, gen);
+  const candidateIds = dexCandidateIds(scope, game, regional, gen, region);
   const grid = filterDexIds(candidateIds, index, prog, status, q);
-  const head = dexHeadCopy(scope, game, grid.length, candidateIds.length, "dex", gen);
+  const head = dexHeadCopy(scope, game, grid.length, candidateIds.length, "dex", gen, region);
 
   return (
     <div className="pk-page pk-dex">
       <DexToolbar
         game={game}
         gen={gen}
+        region={region}
         q={q}
         status={status}
         scope={scope}

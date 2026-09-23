@@ -104,23 +104,68 @@ export const STAT_LABELS: Record<string, string> = {
 export type Generation = {
   id: number;
   roman: string;
-  region: string;
   from: number;
   to: number;
   games: string;
 };
 
+/** Species introduced in a National Dex generation. Gen VIII includes Hisui's new species. */
 export const GENS: Generation[] = [
-  { id: 1, roman: "I", region: "Kanto", from: 1, to: 151, games: "Red · Blue · Yellow" },
-  { id: 2, roman: "II", region: "Johto", from: 152, to: 251, games: "Gold · Silver · Crystal" },
-  { id: 3, roman: "III", region: "Hoenn", from: 252, to: 386, games: "Ruby · Sapphire · Emerald · FR/LG" },
-  { id: 4, roman: "IV", region: "Sinnoh", from: 387, to: 493, games: "Diamond · Pearl · Platinum · HG/SS" },
-  { id: 5, roman: "V", region: "Unova", from: 494, to: 649, games: "Black · White · B2/W2" },
-  { id: 6, roman: "VI", region: "Kalos", from: 650, to: 721, games: "X · Y · OR/AS" },
-  { id: 7, roman: "VII", region: "Alola", from: 722, to: 809, games: "Sun · Moon · US/UM" },
-  { id: 8, roman: "VIII", region: "Galar", from: 810, to: 905, games: "Sword · Shield · BD/SP · Legends Arceus" },
-  { id: 9, roman: "IX", region: "Paldea", from: 906, to: 1025, games: "Scarlet · Violet" },
+  { id: 1, roman: "I", from: 1, to: 151, games: "Red · Blue · Yellow" },
+  { id: 2, roman: "II", from: 152, to: 251, games: "Gold · Silver · Crystal" },
+  { id: 3, roman: "III", from: 252, to: 386, games: "Ruby · Sapphire · Emerald · FR/LG" },
+  { id: 4, roman: "IV", from: 387, to: 493, games: "Diamond · Pearl · Platinum · HG/SS" },
+  { id: 5, roman: "V", from: 494, to: 649, games: "Black · White · B2/W2" },
+  { id: 6, roman: "VI", from: 650, to: 721, games: "X · Y · OR/AS" },
+  { id: 7, roman: "VII", from: 722, to: 809, games: "Sun · Moon · US/UM" },
+  { id: 8, roman: "VIII", from: 810, to: 905, games: "Sword · Shield · BD/SP · Legends Arceus" },
+  { id: 9, roman: "IX", from: 906, to: 1025, games: "Scarlet · Violet" },
 ];
+
+export type DexRegion = {
+  slug: string;
+  name: string;
+  from: number;
+  to: number;
+  games: string;
+};
+
+/** Species introduced in a geographic region. Independent of generation. */
+export const REGIONS: DexRegion[] = [
+  { slug: "kanto", name: "Kanto", from: 1, to: 151, games: "Red · Blue · Yellow" },
+  { slug: "johto", name: "Johto", from: 152, to: 251, games: "Gold · Silver · Crystal" },
+  { slug: "hoenn", name: "Hoenn", from: 252, to: 386, games: "Ruby · Sapphire · Emerald · FR/LG" },
+  { slug: "sinnoh", name: "Sinnoh", from: 387, to: 493, games: "Diamond · Pearl · Platinum · HG/SS" },
+  { slug: "unova", name: "Unova", from: 494, to: 649, games: "Black · White · B2/W2" },
+  { slug: "kalos", name: "Kalos", from: 650, to: 721, games: "X · Y · OR/AS" },
+  { slug: "alola", name: "Alola", from: 722, to: 809, games: "Sun · Moon · US/UM" },
+  { slug: "galar", name: "Galar", from: 810, to: 898, games: "Sword · Shield · BD/SP" },
+  { slug: "hisui", name: "Hisui", from: 899, to: 905, games: "Legends: Arceus" },
+  { slug: "paldea", name: "Paldea", from: 906, to: 1025, games: "Scarlet · Violet" },
+];
+
+export function regionBySlug(slug: string | null | undefined): DexRegion | null {
+  if (!slug) {
+    return null;
+  }
+  return REGIONS.find((region) => region.slug === slug) ?? null;
+}
+
+function idsFromRange(from: number, to: number): number[] {
+  const ids: number[] = [];
+  for (let id = from; id <= to; id += 1) {
+    ids.push(id);
+  }
+  return ids;
+}
+
+export function idsInRegion(slug: string): number[] {
+  const region = regionBySlug(slug);
+  if (!region) {
+    return [];
+  }
+  return idsFromRange(region.from, region.to);
+}
 
 export type Game = {
   k: string;
@@ -371,22 +416,14 @@ export function introGenForId(pokemonId: number) {
 /** National Dex numbers introduced in this generation. */
 export function idsIntroducedInGen(genId: number): number[] {
   const gen = genById(genId);
-  const ids: number[] = [];
-  for (let id = gen.from; id <= gen.to; id += 1) {
-    ids.push(id);
-  }
-  return ids;
+  return idsFromRange(gen.from, gen.to);
 }
 
 /** National Dex numbers through this save's generation (HOME → full National Dex). */
 export function nationalIdsForGame(gameKey: string): number[] {
   const game = gameByKey(gameKey);
   const last = !game || game.g === 0 ? NATIONAL_TOTAL : genById(game.g).to;
-  const ids: number[] = [];
-  for (let id = 1; id <= last; id += 1) {
-    ids.push(id);
-  }
-  return ids;
+  return idsFromRange(1, last);
 }
 
 /** New species introduced in this save's generation. */

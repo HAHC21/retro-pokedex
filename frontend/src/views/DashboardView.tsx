@@ -1,10 +1,30 @@
 import { Blueprint } from "../components/Blueprint";
 import { PkBulkImport } from "../components/PkBulkImport";
 import { ProgressBar } from "../components/ProgressBar";
-import { GENS, genById } from "../catalog";
+import { REGIONS, genById } from "../catalog";
 import { dexNum, kindStyle, spriteUrl, whenText } from "../format";
 import { gameLabel, unionSets } from "../progress";
 import type { DexIndex, Progress } from "../types";
+
+type OriginBox = {
+  key: string;
+  title: string;
+  subtitle: string;
+  from: number;
+  to: number;
+  open: () => void;
+};
+
+function originProgressBoxes(onOpenRegion: (slug: string) => void): OriginBox[] {
+  return REGIONS.map((entry) => ({
+    key: entry.slug,
+    title: entry.name,
+    subtitle: entry.games,
+    from: entry.from,
+    to: entry.to,
+    open: () => onOpenRegion(entry.slug),
+  }));
+}
 
 const WELCOME_FEATURES = [
   {
@@ -33,7 +53,7 @@ type DashboardViewProps = {
   isStaff: boolean;
   onImported: () => void;
   onOpen: (id: number) => void;
-  onOpenGen: (genId: number) => void;
+  onOpenRegion: (slug: string) => void;
   onOpenDex: () => void;
   onOpenMissing: () => void;
   onOpenShinies: () => void;
@@ -47,7 +67,7 @@ export function DashboardView({
   isStaff,
   onImported,
   onOpen,
-  onOpenGen,
+  onOpenRegion,
   onOpenDex,
   onOpenMissing,
   onOpenShinies,
@@ -156,11 +176,11 @@ export function DashboardView({
 
       <section className="pk-section">
         <div className="pk-section-head">
-          <h2>Progress by generation</h2>
-          <span>Registered across every game · National Dex</span>
+          <h2>Progress by region</h2>
+          <span>Species introduced in each region</span>
         </div>
         <div className="pk-gen-grid">
-          {GENS.map((entry) => {
+          {originProgressBoxes(onOpenRegion).map((entry) => {
             let c = 0;
             let s = 0;
             for (let i = entry.from; i <= entry.to; i++) {
@@ -174,14 +194,14 @@ export function DashboardView({
             const n = entry.to - entry.from + 1;
             const pct = Math.round((c / n) * 100);
             return (
-              <button key={entry.id} type="button" className="blueprint pk-cell pk-nav pk-gen-box" onClick={() => onOpenGen(entry.id)}>
+              <button key={entry.key} type="button" className="blueprint pk-cell pk-nav pk-gen-box" onClick={entry.open}>
                 <i className="corner tl" aria-hidden="true" />
                 <i className="corner tr" aria-hidden="true" />
                 <i className="corner bl" aria-hidden="true" />
                 <i className="corner br" aria-hidden="true" />
                 <span className="pk-gen-box-head">
-                  <span className="pk-gen-region">{entry.region}</span>
-                  <span className="pk-gen-roman">Gen {entry.roman}</span>
+                  <span className="pk-gen-region">{entry.title}</span>
+                  <span className="pk-gen-roman">{entry.subtitle}</span>
                 </span>
                 <span className="pk-gen-pct">{pct}%</span>
                 <ProgressBar pct={pct} tall />
@@ -199,9 +219,9 @@ export function DashboardView({
 
       <div className="pk-shortcut-grid">
         {[
-          { title: "Pick up where I left off", body: `Open the current region: ${currentGen.region}.`, go: onOpenDex },
-          { title: "See what is missing", body: "Filter the region to Pokemon with no mark yet.", go: onOpenMissing },
-          { title: "My shinies", body: "Only the shinies recorded in this region.", go: onOpenShinies },
+          { title: "Pick up where I left off", body: `Open generation ${currentGen.roman}.`, go: onOpenDex },
+          { title: "See what is missing", body: "Open the National Dex filtered to species with no mark yet.", go: onOpenMissing },
+          { title: "My shinies", body: "Open the National Dex filtered to recorded shinies.", go: onOpenShinies },
         ].map((item) => (
           <button key={item.title} type="button" className="blueprint pk-cell pk-nav pk-shortcut" onClick={item.go}>
             <i className="corner tl" aria-hidden="true" />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { clampGen, gameByKey, idsIntroducedInGen, introducedIdsForGame, nationalIdsForGame } from "./catalog";
+import { gameByKey, idsInRegion, idsIntroducedInGen, introducedIdsForGame, nationalIdsForGame, regionBySlug } from "./catalog";
 import { fetchMe, isStaffRole, logout, type AuthUser } from "./auth";
 import { fetchCollectionProgress, syncCollectionProgress, upsertCollectionMark } from "./collectionApi";
 import { ensureObtainIndex, isObtainableInGame, rememberRegionalDex, resolveObtainabilityForIds } from "./obtainability";
@@ -51,7 +51,7 @@ export default function App() {
   const openIdRef = useRef<number | null>(null);
   const obtainGameRef = useRef(route.game);
 
-  const { view, game, gen, id, section, q, status, scope } = route;
+  const { view, game, gen, region, id, section, q, status, scope } = route;
 
   useEffect(() => {
     if (view === "dex" || view === "checklist" || view === "mon") {
@@ -218,8 +218,10 @@ export default function App() {
 
   useEffect(() => {
     setObtainable({});
-    const ids =
-      scope === "regional"
+    const origin = regionBySlug(region);
+    const ids = origin
+      ? idsInRegion(origin.slug)
+      : scope === "regional"
         ? regional?.ids || []
         : scope === "generation"
           ? game === "home"
@@ -241,7 +243,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [game, gen, scope, regional]);
+  }, [game, gen, region, scope, regional]);
 
   useEffect(() => {
     if (!id) {
@@ -350,9 +352,9 @@ export default function App() {
 
   const open = useCallback(
     (pokemonId: number, nextSection: DetailSection = "home") => {
-      go({ view: "mon", game, id: pokemonId, section: nextSection, gen, q, status, scope });
+      go({ view: "mon", game, id: pokemonId, section: nextSection, gen, region, q, status, scope });
     },
-    [game, gen, go, q, scope, status],
+    [game, gen, go, q, region, scope, status],
   );
 
   async function toggle(pokemonId: number, key: MarkKey) {
@@ -425,7 +427,7 @@ export default function App() {
       onDash={goDash}
       onDex={() => {
         if (view === "checklist" || view === "mon") {
-          go({ view: "dex", game, gen, q, status: status === "exclusives" ? "all" : status, scope });
+          go({ view: "dex", game, gen, region, q, status: status === "exclusives" ? "all" : status, scope });
           return;
         }
         const next = dexContextForGame(game, gen);
@@ -433,7 +435,7 @@ export default function App() {
       }}
       onChecklist={() => {
         if (view === "dex" || view === "mon") {
-          go({ view: "checklist", game, gen, q, status, scope });
+          go({ view: "checklist", game, gen, region, q, status, scope });
           return;
         }
         const next = dexContextForGame(game, gen);
@@ -457,11 +459,11 @@ export default function App() {
           isStaff={isStaffRole(authUser?.role)}
           onImported={refreshProgressFromServer}
           onOpen={open}
-          onOpenGen={(genId) => {
+          onOpenRegion={(slug) => {
             go({
               view: "dex",
               game: "home",
-              gen: clampGen(genId),
+              region: slug,
               q: "",
               status: "all",
               scope: "generation",
@@ -489,14 +491,15 @@ export default function App() {
           prog={prog}
           game={game}
           gen={gen}
+          region={region}
           q={q}
           status={status}
           scope={scope}
           regional={regional}
           regionalLoading={regionalLoading}
           obtainable={obtainable}
-          onQuery={(nextQ) => go({ view: "dex", game, gen, q: nextQ, status, scope }, true)}
-          onStatus={(nextStatus) => go({ view: "dex", game, gen, q, status: nextStatus, scope })}
+          onQuery={(nextQ) => go({ view: "dex", game, gen, region, q: nextQ, status, scope }, true)}
+          onStatus={(nextStatus) => go({ view: "dex", game, gen, region, q, status: nextStatus, scope })}
           onScope={(nextScope) => {
             const next = nextScope === "generation" ? dexContextForGame(game, gen) : { gen, scope: nextScope };
             go({ view: "dex", game, gen: next.gen, q, status, scope: next.scope });
@@ -517,14 +520,15 @@ export default function App() {
           prog={prog}
           game={game}
           gen={gen}
+          region={region}
           q={q}
           status={status}
           scope={scope}
           regional={regional}
           regionalLoading={regionalLoading}
           obtainable={obtainable}
-          onQuery={(nextQ) => go({ view: "checklist", game, gen, q: nextQ, status, scope }, true)}
-          onStatus={(nextStatus) => go({ view: "checklist", game, gen, q, status: nextStatus, scope })}
+          onQuery={(nextQ) => go({ view: "checklist", game, gen, region, q: nextQ, status, scope }, true)}
+          onStatus={(nextStatus) => go({ view: "checklist", game, gen, region, q, status: nextStatus, scope })}
           onScope={(nextScope) => {
             const next = nextScope === "generation" ? dexContextForGame(game, gen) : { gen, scope: nextScope };
             go({ view: "checklist", game, gen: next.gen, q, status, scope: next.scope });
@@ -555,8 +559,8 @@ export default function App() {
           authUser={authUser}
           section={section}
           listView={listView}
-          onSection={(nextSection) => go({ view: "mon", game, id, section: nextSection, gen, q, status, scope })}
-          onBack={() => go({ view: listView, game, gen, q, status, scope })}
+          onSection={(nextSection) => go({ view: "mon", game, id, section: nextSection, gen, region, q, status, scope })}
+          onBack={() => go({ view: listView, game, gen, region, q, status, scope })}
           onPrev={() => open(Math.max(1, id - 1), section)}
           onNext={() => open(Math.min(1025, id + 1), section)}
           onOpen={open}

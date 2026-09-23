@@ -1,4 +1,4 @@
-import { GENS, versionGen, versionLabel, versionsForGame } from "./catalog";
+import { GENS, REGIONS, versionGen, versionLabel, versionsForGame } from "./catalog";
 import { placeLabel, title } from "./format";
 import { graphsFromEncounters } from "./maps";
 import type { RegionGraph } from "./routeGraph";
@@ -142,7 +142,7 @@ export function groupEncounters(encounters: WildEncounter[]): EncounterRegion[] 
       });
     });
   });
-  const order = GENS.map((gen) => gen.region).concat(["Other"]);
+  const order = REGIONS.map((region) => region.name).concat(["Other"]);
   return Object.keys(byRegion)
     .sort((a, b) => {
       const ia = order.indexOf(a);

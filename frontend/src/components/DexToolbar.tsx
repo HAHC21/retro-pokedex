@@ -1,5 +1,5 @@
 import { DEX_STATUSES, activeDexScope, dexScopeButtons, isRegionBrowseMode, regionBrowseLabel } from "../dexList";
-import { gameByKey, genById } from "../catalog";
+import { gameByKey, genById, regionBySlug } from "../catalog";
 import { pillStyle } from "../format";
 import type { DexScope, StatusFilter } from "../types";
 import { InfoTip } from "./InfoTip";
@@ -7,6 +7,7 @@ import { InfoTip } from "./InfoTip";
 type DexToolbarProps = {
   game: string;
   gen: number;
+  region?: string | null;
   q: string;
   status: StatusFilter;
   scope: DexScope;
@@ -19,6 +20,7 @@ type DexToolbarProps = {
 export function DexToolbar({
   game,
   gen,
+  region = null,
   q,
   status,
   scope,
@@ -32,8 +34,10 @@ export function DexToolbar({
   const activeStatus = known.has(status) ? status : "all";
   const meta = gameByKey(game);
   const nativeGen = meta && meta.g > 0 ? genById(meta.g) : null;
-  const regionBrowse = isRegionBrowseMode(game, activeScope);
-  const scopeOptions = dexScopeButtons(game, gen, activeScope);
+  const origin = regionBySlug(region);
+  const regionBrowse = isRegionBrowseMode(region);
+  const scopeOptions = dexScopeButtons(game, gen, activeScope, region);
+  const browseLabel = regionBrowseLabel(region);
 
   return (
     <div className="pk-toolbar">
@@ -43,9 +47,9 @@ export function DexToolbar({
           <InfoTip label="About Regional, National, and generation filters" wide>
             {regionBrowse ? (
               <p>
-                You opened a generation from the homepage. This list shows only species{" "}
-                <strong>newly introduced</strong> in {genById(gen).region} ({regionBrowseLabel(gen)}), using Global
-                Collection marks. Switch games in the header to return to Regional / National scopes.
+                You opened a region from the homepage. This list shows only species{" "}
+                <strong>introduced</strong> in {origin?.name} ({browseLabel}), using Global Collection marks. Switch
+                games in the header to return to Regional / National scopes.
               </p>
             ) : (
               <>
@@ -64,8 +68,8 @@ export function DexToolbar({
                   </li>
                   {nativeGen ? (
                     <li>
-                      <strong>GEN {nativeGen.roman}</strong> — only species <em>introduced</em> in {nativeGen.region}{" "}
-                      (new in Gen {nativeGen.roman}), not earlier-generation Pokémon that also appear in this game.
+                      <strong>GEN {nativeGen.roman}</strong> — only species <em>introduced</em> in generation{" "}
+                      {nativeGen.roman}, not earlier-generation Pokémon that also appear in this game.
                     </li>
                   ) : (
                     <li>

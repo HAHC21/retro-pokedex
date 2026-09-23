@@ -1,4 +1,4 @@
-import { GAMES, clampGen, gameByKey } from "./catalog";
+import { GAMES, clampGen, gameByKey, regionBySlug } from "./catalog";
 import type { DexScope, StatusFilter, View } from "./types";
 
 export type DetailSection = "home" | "spawns" | "specimens" | "moves";
@@ -26,6 +26,7 @@ export type AppPath = {
   view: View;
   game: string;
   gen: number;
+  region: string | null;
   id: number | null;
   section: DetailSection;
   q: string;
@@ -37,6 +38,7 @@ const DEFAULT_PATH: AppPath = {
   view: "dash",
   game: "home",
   gen: 1,
+  region: null,
   id: null,
   section: "home",
   q: "",
@@ -135,6 +137,10 @@ function parseScope(raw: string | null): DexScope {
   return "national";
 }
 
+function parseRegionSlug(raw: string | null | undefined): string | null {
+  return regionBySlug(raw)?.slug ?? null;
+}
+
 /** Parse the browser location into app navigation state. */
 export function parseAppPath(pathname: string, search = ""): AppPath {
   const path = pathname.replace(/\/+$/, "") || "/";
@@ -175,11 +181,24 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
   }
 
   if (parts[1] === "dex" || parts[1] === "checklist") {
+    const listView = parts[1] === "checklist" ? "checklist" : "dex";
+    const regionSlug = parts[2] === "region" ? parseRegionSlug(parts[3]) : null;
+    if (regionSlug) {
+      return {
+        ...DEFAULT_PATH,
+        view: listView,
+        game,
+        region: regionSlug,
+        scope: "generation",
+        q,
+        status,
+      };
+    }
     const gen =
       parts[2] === "gen" ? parseGen(parts[3]) : clampGen(Number(params.get("gen")) || 1);
     return {
       ...DEFAULT_PATH,
-      view: parts[1] === "checklist" ? "checklist" : "dex",
+      view: listView,
       game,
       gen,
       q,
@@ -191,18 +210,22 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
   if (parts[1] === "pokemon") {
     const id = parsePokemonId(parts[2]);
     const stored = loadDexPrefs(game);
+    const region = parseRegionSlug(params.get("region"));
     const gen = clampGen(Number(params.get("gen")) || stored?.gen || 1);
     const scope = params.has("scope")
       ? parseScope(params.get("scope"))
-      : params.has("gen")
-        ? "national"
-        : (stored?.scope ?? "national");
+      : region
+        ? "generation"
+        : params.has("gen")
+          ? "national"
+          : (stored?.scope ?? "national");
     if (id == null) {
       return {
         ...DEFAULT_PATH,
         view: "dex",
         game,
         gen,
+        region,
         q,
         status,
         scope,
@@ -213,6 +236,7 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
       view: "mon",
       game,
       gen,
+      region,
       id,
       section: parseSection(parts[3]),
       q,
@@ -237,7 +261,7 @@ function dexSearch(path: AppPath): string {
   if (path.status !== "all") {
     params.set("status", path.status);
   }
-  if (path.scope === "regional" || path.scope === "generation") {
+  if (!regionBySlug(path.region) && (path.scope === "regional" || path.scope === "generation")) {
     params.set("scope", path.scope);
   }
   const query = params.toString();
@@ -253,6 +277,10 @@ function detailSearch(path: AppPath): string {
   }
   if (path.status !== "all") {
     params.set("status", path.status);
+  }
+  const regionSlug = regionBySlug(path.region)?.slug;
+  if (regionSlug) {
+    params.set("region", regionSlug);
   }
   if (path.scope === "regional" || path.scope === "generation") {
     params.set("scope", path.scope);
@@ -274,17 +302,24 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
   if (path.view === "dash") {
     return `/${game}`;
   }
+  const region = regionBySlug(path.region)?.slug ?? null;
+  const listState: AppPath = {
+    view: path.view === "checklist" ? "checklist" : "dex",
+    game,
+    gen,
+    region,
+    id: null,
+    section: "home",
+    q: path.q ?? "",
+    status: path.status ?? "all",
+    scope: path.scope ?? "national",
+  };
+
   if (path.view === "dex" || path.view === "checklist") {
-    return `/${game}/${path.view}/gen/${gen}${dexSearch({
-      view: path.view,
-      game,
-      gen,
-      id: null,
-      section: "home",
-      q: path.q ?? "",
-      status: path.status ?? "all",
-      scope: path.scope ?? "national",
-    })}`;
+    if (region) {
+      return `/${game}/${path.view}/region/${region}${dexSearch(listState)}`;
+    }
+    return `/${game}/${path.view}/gen/${gen}${dexSearch(listState)}`;
   }
 
   const id = Math.min(1025, Math.max(1, path.id ?? 1));
@@ -293,6 +328,7 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
     view: "mon",
     game,
     gen,
+    region,
     id,
     section: path.section ?? "home",
     q: path.q ?? "",

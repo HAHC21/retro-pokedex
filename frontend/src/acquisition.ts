@@ -1,4 +1,4 @@
-import { API, gameByKey, introGenForId, isEventObtainableInGame } from "./catalog";
+import { API, gameByKey, isAvailableInGame, isEventObtainableInGame } from "./catalog";
 import { gameLabel } from "./progress";
 
 const cache = new Map<string, string>();
@@ -49,8 +49,7 @@ export function acquisitionFallback(
     return apiText || "Event distribution";
   }
   if (obtainable === false) {
-    const game = gameByKey(gameKey);
-    if (game && introGenForId(pokemonId) <= game.g) {
+    if (isAvailableInGame(pokemonId, gameKey) && gameByKey(gameKey)) {
       return "Trade from another game";
     }
     return `Not available in ${gameLabel(gameKey)}`;
