@@ -1,18 +1,13 @@
-const MEASUREMENT_ID = "G-H9DLB7GLB9";
-
-function isLocalHost(hostname: string): boolean {
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-}
-
-/** Load GA only on the deployed site — never on Vite dev / local preview. */
+/** Load Google Analytics only when VITE_GA_MEASUREMENT_ID is set (production build). */
 export function initAnalytics(): void {
-  if (!import.meta.env.PROD || isLocalHost(window.location.hostname)) {
+  const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim();
+  if (!measurementId) {
     return;
   }
 
   const script = document.createElement("script");
   script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${MEASUREMENT_ID}`;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
   document.head.appendChild(script);
 
   const w = window as Window & {
@@ -24,5 +19,5 @@ export function initAnalytics(): void {
     w.dataLayer!.push(arguments);
   };
   w.gtag("js", new Date());
-  w.gtag("config", MEASUREMENT_ID);
+  w.gtag("config", measurementId);
 }

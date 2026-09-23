@@ -119,6 +119,12 @@ Set `FRONTEND_ORIGIN` and `AUTH_REDIRECT_BASE_URL` with **no trailing slash**. T
 | `ADMIN_EMAILS` | No | Optional comma-separated emails promoted to admin on login. |
 | `DEVELOPER_EMAILS` | No | Optional comma-separated emails promoted to developer on login. |
 
+On the **web** (static site) component, set build-time variables only. Vite inlines `VITE_*` at build time; leave them unset locally so analytics never loads in dev.
+
+| Variable | Secret | Value |
+| --- | --- | --- |
+| `VITE_GA_MEASUREMENT_ID` | No | `G-H9DLB7GLB9` (or your GA4 measurement id). Scope **BUILD_TIME**. |
+
 Leave `CORS_ORIGINS` unset. The API allows `https://www.retropokedex.com`, `https://retropokedex.com`, and `FRONTEND_ORIGIN` on its own. Set `CORS_ORIGINS` only to add another browser origin, as a JSON array:
 
 ```text
@@ -243,6 +249,11 @@ static_sites:
     output_dir: dist
     index_document: index.html
     catchall_document: index.html
+    envs:
+      - key: VITE_GA_MEASUREMENT_ID
+        value: G-H9DLB7GLB9
+        scope: BUILD_TIME
+        type: GENERAL
 
 ingress:
   rules:
