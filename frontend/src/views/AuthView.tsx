@@ -18,6 +18,9 @@ type AuthViewProps = {
   onContinue: () => void;
 };
 
+/** Flip to show Google and Microsoft on sign-in and log-in. */
+const SHOW_OAUTH_PROVIDERS = false;
+
 const COPY: Record<
   "signin" | "login",
   { kicker: string; title: string; body: string; google: string; microsoft: string; submit: string; altText: string; altLabel: string }
@@ -61,6 +64,9 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
   }, [error, mode]);
 
   useEffect(() => {
+    if (!SHOW_OAUTH_PROVIDERS) {
+      return;
+    }
     let cancelled = false;
     fetchProviders().then((next) => {
       if (!cancelled) {
@@ -148,25 +154,24 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
           <p>{resetting ? "Enter a new password for your account." : copy.body}</p>
         </div>
 
-        {!resetting ? (
-          <div className="pk-auth-providers">
-            <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("google")}>
-              <GoogleMark />
-              {copy.google}
-            </button>
-            <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("microsoft")}>
-              <MicrosoftMark />
-              {copy.microsoft}
-            </button>
-          </div>
-        ) : null}
-
-        {!resetting ? (
-          <div className="pk-auth-rule">
-            <span />
-            <span>or with email</span>
-            <span />
-          </div>
+        {SHOW_OAUTH_PROVIDERS && !resetting ? (
+          <>
+            <div className="pk-auth-providers">
+              <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("google")}>
+                <GoogleMark />
+                {copy.google}
+              </button>
+              <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("microsoft")}>
+                <MicrosoftMark />
+                {copy.microsoft}
+              </button>
+            </div>
+            <div className="pk-auth-rule">
+              <span />
+              <span>or with email</span>
+              <span />
+            </div>
+          </>
         ) : null}
 
         <form className="pk-auth-form" onSubmit={onEmail}>
