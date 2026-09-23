@@ -410,14 +410,6 @@ export function isAvailableInGame(pokemonId: number, gameKey: string) {
   return introGenForId(pokemonId) <= game.g;
 }
 
-export function gameTotal(game: Game) {
-  if (game.g === 0) {
-    return NATIONAL_TOTAL;
-  }
-  const gen = genById(game.g);
-  return gen.to - gen.from + 1;
-}
-
 export function gamesByGeneration(indices: Array<{ version: { name: string } }>) {
   return groupVersionNames(indices.map((item) => item.version.name));
 }

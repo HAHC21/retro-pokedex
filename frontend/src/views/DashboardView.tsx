@@ -1,7 +1,7 @@
 import { Blueprint } from "../components/Blueprint";
 import { PkBulkImport } from "../components/PkBulkImport";
 import { ProgressBar } from "../components/ProgressBar";
-import { GAMES, GENS, gameTotal, genById } from "../catalog";
+import { GENS, genById } from "../catalog";
 import { dexNum, kindStyle, spriteUrl, whenText } from "../format";
 import { gameLabel, unionSets } from "../progress";
 import type { DexIndex, Progress } from "../types";
@@ -34,7 +34,6 @@ type DashboardViewProps = {
   onImported: () => void;
   onOpen: (id: number) => void;
   onOpenGen: (genId: number) => void;
-  onOpenGame: (gameKey: string, genId: number) => void;
   onOpenDex: () => void;
   onOpenMissing: () => void;
   onOpenShinies: () => void;
@@ -49,7 +48,6 @@ export function DashboardView({
   onImported,
   onOpen,
   onOpenGen,
-  onOpenGame,
   onOpenDex,
   onOpenMissing,
   onOpenShinies,
@@ -84,14 +82,6 @@ export function DashboardView({
   });
   events.sort((a, b) => b.at - a.at);
   const recent = events.slice(0, 6);
-
-  const gameRows = GAMES.map((entry) => {
-    const p = prog[entry.k] || {};
-    const c = Object.keys(p).filter((id) => p[id].caught || p[id].shiny).length;
-    const s = Object.keys(p).filter((id) => p[id].shiny).length;
-    const n = gameTotal(entry);
-    return { ...entry, caught: c, shiny: s, total: n, pct: Math.round((c / n) * 100), active: entry.k === game };
-  }).filter((row) => row.active || row.caught > 0);
 
   return (
     <div className="pk-page pk-dash">
@@ -205,33 +195,6 @@ export function DashboardView({
             );
           })}
         </div>
-      </section>
-
-      <section className="pk-section">
-        <div className="pk-section-head">
-          <h2>Progress by game</h2>
-          <span>Active game: {gameLabel(game)}</span>
-        </div>
-        <Blueprint className="pk-game-list">
-          {gameRows.map((row) => (
-            <button
-              key={row.k}
-              type="button"
-              className={row.active ? "pk-nav pk-game-row is-active" : "pk-nav pk-game-row"}
-              onClick={() => onOpenGame(row.k, row.g === 0 ? gen : row.g)}
-            >
-              <span className="pk-row-copy">
-                <span className="pk-row-title">{row.l}</span>
-                <span className="pk-row-sub">{row.g === 0 ? "National" : `${genById(row.g).region} · Gen ${genById(row.g).roman}`}</span>
-              </span>
-              <ProgressBar pct={row.pct} />
-              <span className="pk-row-count">
-                {row.caught} / {row.total}
-              </span>
-              <span className="pk-row-shiny">{row.shiny} shiny</span>
-            </button>
-          ))}
-        </Blueprint>
       </section>
 
       <div className="pk-shortcut-grid">

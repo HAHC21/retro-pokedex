@@ -467,17 +467,6 @@ export default function App() {
               scope: "generation",
             });
           }}
-          onOpenGame={(gameKey, genId) => {
-            const next = dexContextForGame(gameKey, clampGen(genId));
-            go({
-              view: "dex",
-              game: gameKey,
-              gen: next.gen,
-              q: "",
-              status: "all",
-              scope: next.scope,
-            });
-          }}
           onOpenDex={() => {
             const next = dexContextForGame(game, gen);
             go({

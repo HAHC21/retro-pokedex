@@ -534,7 +534,6 @@
 }
 
 .pk-name,
-.pk-row-title,
 .pk-shortcut-title,
 .pk-evo-cell span:nth-child(2) {
   font-family: var(--font-heading);
@@ -553,84 +552,6 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-accent-700);
-}
-
-.pk-stack {
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.pk-game-list {
-  padding: var(--space-4) var(--space-6);
-}
-
-.pk-gen-row,
-.pk-game-row {
-  display: grid;
-  gap: var(--space-4);
-  align-items: center;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.pk-gen-row {
-  grid-template-columns: minmax(120px, 190px) 1fr auto;
-  border: 0;
-  border-bottom: 1px solid var(--color-divider);
-  padding: var(--space-3) 0;
-}
-
-.pk-game-row {
-  grid-template-columns: minmax(140px, 1.4fr) minmax(110px, 1fr) 1fr auto;
-  border: 0;
-  border-left: 3px solid transparent;
-  border-bottom: 1px solid var(--color-divider);
-  padding: var(--space-3);
-}
-
-.pk-game-row.is-active {
-  border-left-color: var(--color-accent);
-}
-
-.pk-row-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.pk-row-title {
-  font-size: 17px;
-  letter-spacing: 0.04em;
-}
-
-.pk-row-sub {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-neutral-600);
-}
-
-.pk-row-count {
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-  color: var(--color-neutral-700);
-  min-width: 92px;
-  text-align: right;
-}
-
-.pk-row-shiny {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-accent-800);
-  min-width: 68px;
-  text-align: right;
 }
 
 .pk-bar {
