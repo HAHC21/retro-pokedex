@@ -160,6 +160,7 @@ From `backend/`, with the production `MONGODB_URI` in the environment (and `GEMI
 
 ```powershell
 python -m scripts.sync_pokeapi
+python -m scripts.sync_pokeapi_refs
 python -m scripts.compile_poke_tables
 python -m scripts.sync_moves
 python -m scripts.generate_overviews

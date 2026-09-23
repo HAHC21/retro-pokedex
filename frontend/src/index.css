@@ -305,6 +305,13 @@
   text-transform: uppercase;
 }
 
+.pk-current-entry,
+.pk-current-entry:hover {
+  cursor: default;
+  background: var(--color-accent);
+  color: #fff;
+}
+
 .pk-toggle:focus-visible,
 .pk-nav:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -719,7 +726,6 @@
 }
 
 .pk-welcome-lead,
-.pk-welcome-list,
 .pk-welcome-note {
   margin: 0;
   font-size: 14px;
@@ -727,17 +733,34 @@
   color: var(--color-neutral-800);
 }
 
-.pk-welcome-list {
-  padding-left: 1.15rem;
+.pk-welcome-grid {
   display: grid;
-  gap: var(--space-2);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-6);
 }
 
-.pk-welcome-list strong {
+.pk-welcome-box {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pk-welcome-box h3 {
+  margin: 0;
   font-family: var(--font-heading);
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: 16px;
+}
+
+.pk-welcome-box p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-neutral-800);
 }
 
 .pk-welcome-note {
@@ -2771,6 +2794,10 @@
 }
 
 @media (max-width: 900px) {
+  .pk-welcome-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .pk-gen-grid {
     grid-template-columns: 1fr;
   }
@@ -2803,6 +2830,10 @@
 }
 
 @media (max-width: 560px) {
+  .pk-welcome-grid {
+    grid-template-columns: 1fr;
+  }
+
   .pk-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

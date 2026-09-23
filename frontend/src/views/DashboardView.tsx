@@ -6,6 +6,25 @@ import { dexNum, kindStyle, spriteUrl, whenText } from "../format";
 import { gameLabel, unionSets } from "../progress";
 import type { DexIndex, Progress } from "../types";
 
+const WELCOME_FEATURES = [
+  {
+    title: "Game selector",
+    body: "Pick the save you are playing; marks, specimens, spawns, and learnsets follow that game.",
+  },
+  {
+    title: "Pokédex & Checklist",
+    body: "Browse or tick off the list with Regional, National, or generation scopes, plus missing and owned filters.",
+  },
+  {
+    title: "Species pages",
+    body: "Overviews, Pokédex entries, base stats, abilities and natures, defensive matchups, wild spawns, and recommended movesets.",
+  },
+  {
+    title: "My Specimens",
+    body: "When signed in, log multiple catches of the same species (manual or PK file upload) with ability, nature, IVs, and EVs.",
+  },
+];
+
 type DashboardViewProps = {
   index: DexIndex;
   prog: Progress;
@@ -83,26 +102,16 @@ export function DashboardView({
         </div>
         <p className="pk-welcome-lead">
           Retro Pokédex helps you track every Pokémon you catch across games — normals and shinies separately — then dig
-          into stats, abilities, natures, spawn maps, learnsets, and competitive movesets.
+          into stats, abilities, natures, spawn maps, learnsets, and recommended movesets.
         </p>
-        <ul className="pk-welcome-list">
-          <li>
-            <strong>Game selector</strong> — pick the save you are playing; marks, specimens, spawns, and learnsets
-            follow that game.
-          </li>
-          <li>
-            <strong>Pokédex &amp; Checklist</strong> — browse or tick off the list with Regional, National, or generation
-            scopes, plus missing/owned filters.
-          </li>
-          <li>
-            <strong>Species pages</strong> — overviews, Pokédex entries, base stats, abilities &amp; natures, defensive
-            matchups, wild spawns, and Smogon / Gemini movesets.
-          </li>
-          <li>
-            <strong>My Specimens</strong> — when signed in, log multiple catches of the same species (manual or PK file
-            upload) with ability, nature, IVs, and EVs.
-          </li>
-        </ul>
+        <div className="pk-welcome-grid">
+          {WELCOME_FEATURES.map((feature) => (
+            <Blueprint key={feature.title} className="pk-welcome-box">
+              <h3>{feature.title}</h3>
+              <p>{feature.body}</p>
+            </Blueprint>
+          ))}
+        </div>
         <p className="pk-welcome-note">
           Look for the{" "}
           <span className="pk-info-tip-btn is-static" aria-hidden="true">

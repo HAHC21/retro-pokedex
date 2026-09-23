@@ -96,6 +96,9 @@ export function DetailView({
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onPrev}>
           ← {dexNum(prevId)} {names[prevId] || ""}
         </button>
+        <span className="btn pk-nav pk-current-entry" style={{ ...navBtnStyle(true), padding: "8px 14px", fontSize: 13 }}>
+          {dexNum(id)} {names[id] || ""}
+        </span>
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onNext}>
           {dexNum(nextId)} {names[nextId] || ""} →
         </button>
@@ -627,13 +630,12 @@ function MonBody({
 
           <div className="pk-moveset-block">
             <div className="pk-moveset-block-head">
-              <h4>Competitive movesets</h4>
+              <h4>Recommended movesets</h4>
               <span>
                 Data from{" "}
                 <a href={smogon?.attribution_url || "https://www.smogon.com/"} target="_blank" rel="noreferrer">
                   Smogon
                 </a>
-                {smogon?.format ? ` · ${smogon.format}` : ""}
               </span>
             </div>
             {smogonLoading ? (

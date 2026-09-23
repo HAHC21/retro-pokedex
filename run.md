@@ -38,7 +38,16 @@ python -m scripts.sync_pokeapi --start 1 --end 151
 python -m scripts.sync_pokeapi --id 25
 ```
 
-Use `--force` on `sync_pokeapi` to refetch from PokéAPI. Optional `--delay` (default `0.05`) pauses after each network call. Use `--force` on `compile_poke_tables` to rebuild regional dex rows even when present. Location-area payloads used by spawn maps are still filled on first visit.
+Use `--force` on `sync_pokeapi` to refetch from PokéAPI. Optional `--delay` (default `0.05`) pauses after each network call. Use `--force` on `compile_poke_tables` to rebuild regional dex rows even when present.
+
+Ability blurbs and spawn region/loc labels need extra warehouse rows (`ability/*`, `location-area/*`, `location/*`). Warm those once, then recompile:
+
+```powershell
+python -m scripts.sync_pokeapi_refs
+python -m scripts.compile_poke_tables
+```
+
+`--abilities-only` / `--locations-only` limit the warm. Existing cache rows are skipped unless `--force`.
 
 Populate the move catalog once (or after PokéAPI updates) from `backend/`:
 
