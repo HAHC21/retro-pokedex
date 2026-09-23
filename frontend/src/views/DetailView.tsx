@@ -5,6 +5,7 @@ import { MatchupPanel } from "../components/MatchupPanel";
 import { MoveNameTag } from "../components/MoveNameTag";
 import { OwnedCollectionPanel } from "../components/OwnedCollectionPanel";
 import { PokeBallIcon } from "../components/PokeBallIcon";
+import { PokemonSprite } from "../components/PokemonSprite";
 import { RegionMap } from "../components/RegionMap";
 import { TypeTag } from "../components/TypeTag";
 import { GameTag } from "../components/GameTag";
@@ -347,16 +348,17 @@ function MonBody({
                 </div>
                 <div className="pk-sprite-pair">
                   <figure>
-                    <img
-                      src={spriteUrl(data.id)}
+                    <PokemonSprite
+                      pokemonId={data.id}
                       alt={displayName}
                       className={marks.caught ? undefined : "is-dim"}
                     />
                     <figcaption>Normal</figcaption>
                   </figure>
                   <figure>
-                    <img
-                      src={spriteUrl(data.id, true)}
+                    <PokemonSprite
+                      pokemonId={data.id}
+                      shiny
                       alt={`${displayName} shiny`}
                       className={marks.shiny ? undefined : "is-dim"}
                     />

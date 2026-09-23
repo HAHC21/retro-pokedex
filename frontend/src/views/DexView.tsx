@@ -2,9 +2,10 @@ import { Blueprint } from "../components/Blueprint";
 import { DexToolbar } from "../components/DexToolbar";
 import { GameKeyTag } from "../components/GameTag";
 import { MarkToggles } from "../components/MarkToggles";
+import { PokemonSprite } from "../components/PokemonSprite";
 import { TypeTag } from "../components/TypeTag";
 import { dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
-import { dexNum, spriteUrl } from "../format";
+import { dexNum } from "../format";
 import type { RegionalDex } from "../pokeapi";
 import { gameLabel, unionFor } from "../progress";
 import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
@@ -92,8 +93,9 @@ export function DexView({
                     {marks.caught && marks.shiny ? "NORMAL + SHINY" : marks.shiny ? "SHINY" : marks.caught ? "NORMAL" : ""}
                   </span>
                 </span>
-                <img
-                  src={spriteUrl(id, !!marks.shiny)}
+                <PokemonSprite
+                  pokemonId={id}
+                  shiny={!!marks.shiny}
                   alt={index.names[id]}
                   loading="lazy"
                   className={marked || !dimUncaught ? "pk-mon-sprite" : "pk-mon-sprite is-dim"}

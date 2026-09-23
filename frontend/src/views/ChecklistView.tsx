@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Blueprint } from "../components/Blueprint";
 import { DexToolbar } from "../components/DexToolbar";
 import { MarkToggles } from "../components/MarkToggles";
+import { PokemonSprite } from "../components/PokemonSprite";
 import { acquisitionFallback, resolveAcquisitionForIds } from "../acquisition";
 import { versionLabel } from "../catalog";
 import { CHECKLIST_STATUSES, dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
-import { dexNum, navBtnStyle, spriteUrl } from "../format";
+import { dexNum, navBtnStyle } from "../format";
 import { resolveExclusiveVersionsForIds } from "../obtainability";
 import type { RegionalDex } from "../pokeapi";
 import { gameLabel, unionFor } from "../progress";
@@ -132,8 +133,9 @@ export function ChecklistView({
                 {numberLabel}
               </button>
               <button type="button" className="pk-nav pk-check-sprite-btn" onClick={() => onOpen(id)}>
-                <img
-                  src={spriteUrl(id, !!marks.shiny)}
+                <PokemonSprite
+                  pokemonId={id}
+                  shiny={!!marks.shiny}
                   alt=""
                   loading="lazy"
                   className={marked ? "pk-check-sprite" : "pk-check-sprite is-dim"}
