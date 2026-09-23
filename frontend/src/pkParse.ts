@@ -128,8 +128,7 @@ function loadMon(buffer: ArrayBuffer, format: string): PKM {
 }
 
 function genderOf(mon: PKM): string | null {
-  const value = typeof mon.gender === "number" ? mon.gender : Number(mon.gender);
-  return GENDER[value] || null;
+  return GENDER[mon.gender] ?? null;
 }
 
 function numberField(mon: PKM, key: string): number | null {
