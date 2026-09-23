@@ -1,3 +1,5 @@
+import { apiUrl } from "./apiBase";
+
 export type UserRole = "user" | "developer" | "admin";
 
 export type AuthUser = {
@@ -39,7 +41,7 @@ const DISABLED: AuthProviders = {
 
 export async function fetchMe(): Promise<AuthUser | null> {
   try {
-    const response = await fetch("/api/auth/me", { credentials: "include" });
+    const response = await fetch(apiUrl("/api/auth/me"), { credentials: "include" });
     if (!response.ok) {
       return null;
     }
@@ -51,18 +53,24 @@ export async function fetchMe(): Promise<AuthUser | null> {
 
 export async function fetchProviders(): Promise<AuthProviders> {
   try {
-    const response = await fetch("/api/auth/providers", { credentials: "include" });
+    const response = await fetch(apiUrl("/api/auth/providers"), { credentials: "include" });
     if (!response.ok) {
       return DISABLED;
     }
-    return (await response.json()) as AuthProviders;
+    const providers = (await response.json()) as AuthProviders;
+    for (const provider of [providers.google, providers.microsoft]) {
+      if (provider?.login_url && !provider.login_url.startsWith("http")) {
+        provider.login_url = apiUrl(provider.login_url);
+      }
+    }
+    return providers;
   } catch {
     return DISABLED;
   }
 }
 
 export async function registerWithEmail(email: string, password: string, name?: string): Promise<RegisterResult> {
-  const response = await fetch("/api/auth/register", {
+  const response = await fetch(apiUrl("/api/auth/register"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -76,7 +84,7 @@ export async function registerWithEmail(email: string, password: string, name?: 
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<AuthUser> {
-  const response = await fetch("/api/auth/login", {
+  const response = await fetch(apiUrl("/api/auth/login"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -90,7 +98,7 @@ export async function loginWithEmail(email: string, password: string): Promise<A
 }
 
 export async function resendConfirmation(email: string): Promise<RegisterResult> {
-  const response = await fetch("/api/auth/resend-confirmation", {
+  const response = await fetch(apiUrl("/api/auth/resend-confirmation"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -104,7 +112,7 @@ export async function resendConfirmation(email: string): Promise<RegisterResult>
 }
 
 export async function requestPasswordReset(email: string): Promise<RegisterResult> {
-  const response = await fetch("/api/auth/forgot-password", {
+  const response = await fetch(apiUrl("/api/auth/forgot-password"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -118,7 +126,7 @@ export async function requestPasswordReset(email: string): Promise<RegisterResul
 }
 
 export async function resetPassword(token: string, password: string): Promise<AuthUser> {
-  const response = await fetch("/api/auth/reset-password", {
+  const response = await fetch(apiUrl("/api/auth/reset-password"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -132,5 +140,5 @@ export async function resetPassword(token: string, password: string): Promise<Au
 }
 
 export async function logout(): Promise<void> {
-  await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+  await fetch(apiUrl("/api/auth/logout"), { method: "POST", credentials: "include" });
 }

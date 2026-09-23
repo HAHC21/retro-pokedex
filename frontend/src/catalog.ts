@@ -1,4 +1,6 @@
-export const API = "/api/poke";
+import { API_ORIGIN } from "./apiBase";
+
+export const API = `${API_ORIGIN}/api/poke`;
 export const SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 export const PROG_KEY = "pokedex-progress-v2";
 export const IDX_KEY = "pokedex-index-v4";

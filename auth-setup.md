@@ -120,9 +120,9 @@ The session cookie is `pokedex_session` (HTTP-only, SameSite=Lax, 14 days). Coll
 
 ## 6. Production later
 
-- New OAuth clients (or extra redirect URIs) for the real HTTPS origin.
-- `AUTH_REDIRECT_BASE_URL` and `FRONTEND_ORIGIN` set to that origin.
-- `CORS_ORIGINS` includes the UI origin.
+- OAuth redirect URIs on `https://api.retropokedex.com/api/auth/{google|microsoft}/callback`, and JavaScript origins for `https://www.retropokedex.com` and `https://retropokedex.com`.
+- `AUTH_REDIRECT_BASE_URL=https://api.retropokedex.com` and `FRONTEND_ORIGIN=https://www.retropokedex.com`.
+- The API allows those site origins for CORS. Set `CORS_ORIGINS` only to add another browser origin.
 - A new `SECRET_KEY`.
 - SessionMiddleware `https_only=True` once you are on HTTPS.
 

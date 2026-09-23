@@ -1,6 +1,7 @@
+import { API_ORIGIN } from "./apiBase";
 import type { MarkEntry, Progress } from "./types";
 
-const API = "/api/collection";
+const API = `${API_ORIGIN}/api/collection`;
 
 export async function fetchCollectionProgress(): Promise<Progress | null> {
   try {

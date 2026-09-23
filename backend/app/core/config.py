@@ -1,4 +1,11 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Browser origins that call the production API at https://api.retropokedex.com.
+PRODUCTION_SITE_ORIGINS = (
+    "https://www.retropokedex.com",
+    "https://retropokedex.com",
+)
 
 
 class Settings(BaseSettings):
@@ -38,6 +45,21 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.5-flash-lite"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @model_validator(mode="after")
+    def allow_browser_origins(self) -> "Settings":
+        frontend = self.frontend_origin.rstrip("/")
+        self.cors_origins = list(
+            dict.fromkeys(
+                [
+                    *self.cors_origins,
+                    frontend,
+                    "http://localhost:5173",
+                    *PRODUCTION_SITE_ORIGINS,
+                ]
+            )
+        )
+        return self
 
 
 settings = Settings()
