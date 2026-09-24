@@ -17,36 +17,41 @@ class EmailSendError(RuntimeError):
 
 
 class EmailSender(Protocol):
-    async def send(self, *, to: str, subject: str, text: str) -> None: ...
+    async def send(self, *, to: str, subject: str, text: str, html: str | None = None) -> None: ...
 
 
 class ConsoleEmailSender:
     """Zero-cost delivery: write the message to the server log."""
 
-    async def send(self, *, to: str, subject: str, text: str) -> None:
+    async def send(self, *, to: str, subject: str, text: str, html: str | None = None) -> None:
         logger.info("EMAIL to=%s subject=%s\n%s", to, subject, text)
 
 
 class ResendEmailSender:
-    """Optional free-tier delivery via Resend (https://resend.com)."""
+    """Transactional mail via the Resend HTTP API (https://resend.com)."""
 
     def __init__(self, api_key: str, from_address: str) -> None:
         self._api_key = api_key
         self._from = from_address
 
-    async def send(self, *, to: str, subject: str, text: str) -> None:
+    async def send(self, *, to: str, subject: str, text: str, html: str | None = None) -> None:
+        payload: dict[str, object] = {
+            "from": self._from,
+            "to": [to],
+            "subject": subject,
+            "text": text,
+        }
+        if html:
+            payload["html"] = html
         async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post(
                 "https://api.resend.com/emails",
                 headers={"Authorization": f"Bearer {self._api_key}"},
-                json={
-                    "from": self._from,
-                    "to": [to],
-                    "subject": subject,
-                    "text": text,
-                },
+                json=payload,
             )
-            response.raise_for_status()
+        if response.status_code >= 400:
+            logger.error("Resend rejected a message to %s: %s", to, response.text)
+            raise EmailSendError("Could not send email. Try again shortly.")
 
 
 class SmtpEmailSender:
@@ -69,12 +74,14 @@ class SmtpEmailSender:
         self._from = from_address
         self._use_tls = use_tls
 
-    async def send(self, *, to: str, subject: str, text: str) -> None:
+    async def send(self, *, to: str, subject: str, text: str, html: str | None = None) -> None:
         message = EmailMessage()
         message["From"] = self._from
         message["To"] = to
         message["Subject"] = subject
         message.set_content(text)
+        if html:
+            message.add_alternative(html, subtype="html")
         try:
             await asyncio.to_thread(self._send_sync, message)
         except smtplib.SMTPAuthenticationError as exc:

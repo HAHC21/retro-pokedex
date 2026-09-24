@@ -1,6 +1,13 @@
+import { useLayoutEffect } from "react";
 import { CHANGELOG } from "../changelog";
 
 export function ChangelogView() {
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+    const frame = requestAnimationFrame(() => window.scrollTo(0, 0));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   return (
     <article className="pk-page pk-changelog">
       <header className="pk-changelog-head">

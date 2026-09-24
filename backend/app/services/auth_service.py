@@ -7,6 +7,7 @@ from app.core.security import hash_password, hash_token, new_confirmation_token,
 from app.domain.roles import ROLE_ADMIN, ROLE_DEVELOPER, ROLE_USER, is_staff, normalize_role, role_for_email
 from app.domain.user import Identity, User
 from app.integrations.email.sender import EmailSendError, EmailSender, uses_outbound_email
+from app.integrations.email.templates import render_email
 from app.integrations.oidc.claims import OidcClaims
 from app.repositories.login_event_repository import LoginEventRepository
 from app.repositories.user_repository import UserRepository
@@ -314,14 +315,12 @@ class AuthService:
         expires = datetime.now(timezone.utc) + CONFIRMATION_TTL
         self._users.save_password_reset(hash_token(token), user.id, expires)
         reset_url = f"{public_frontend_origin.rstrip('/')}/login?reset_token={token}"
+        html, text = render_email("reset-password", action_url=reset_url)
         await self._mailer.send(
             to=normalized,
-            subject="Reset your Pokédex password",
-            text=(
-                "Reset your Pokédex password by opening this link:\n"
-                f"{reset_url}\n\n"
-                "This link expires in 48 hours. If you did not request a reset, ignore this message.\n"
-            ),
+            subject="Reset your Retro Pokédex password",
+            text=text,
+            html=html,
         )
         expose_link = not uses_outbound_email()
         return RegisterResult(
@@ -357,13 +356,11 @@ class AuthService:
             f"{public_api_base.rstrip('/')}{settings.api_prefix}/auth/confirm"
             f"?token={token}"
         )
+        html, text = render_email("confirm-account", action_url=confirm_url)
         await self._mailer.send(
             to=email,
-            subject="Confirm your Pokédex account",
-            text=(
-                "Welcome to Pokédex Collection.\n\n"
-                f"Confirm your email by opening this link:\n{confirm_url}\n\n"
-                "This link expires in 48 hours. If you did not create an account, ignore this message.\n"
-            ),
+            subject="Confirm your Retro Pokédex account",
+            text=text,
+            html=html,
         )
         return confirm_url

@@ -2,6 +2,17 @@
 
 All notable changes to Retro Pokédex, taken from the versioned commits on `main`. v0.5 is the first release. Dates are the commit dates.
 
+## [0.7.5] - 2026-09-24
+
+### Changed
+
+- Account confirmation and password reset mail go through Resend instead of MailerSend SMTP. Messages use the HTML templates, with a plain-text fallback.
+- `EMAIL_FROM` is `Pokédex <noreply@retropokedex.com>`.
+
+### Added
+
+- `scripts.test_resend` sends one test message with the Resend API key from `backend/.env`.
+
 ## [0.7.4] - 2026-09-24
 
 ### Added

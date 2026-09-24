@@ -26,10 +26,10 @@ class Settings(BaseSettings):
     microsoft_client_id: str = ""
     microsoft_client_secret: str = ""
     microsoft_tenant: str = "common"
-    # console = log + confirm_url in API. smtp/mailersend = SMTP. resend = Resend HTTP API.
+    # console = log + confirm_url in API. resend = Resend HTTP API. smtp = STARTTLS relay.
     email_delivery: str = "console"
     resend_api_key: str = ""
-    email_from: str = "Pokédex <onboarding@resend.dev>"
+    email_from: str = "Pokédex <noreply@retropokedex.com>"
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""
