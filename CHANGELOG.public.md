@@ -2,6 +2,12 @@
 
 Updates you can see in Retro Pokédex. Releases that only changed hosting, search listings, or internal data are left out.
 
+## 0.7.4 — September 24, 2026
+
+- Fossil Pokémon have a bronze border, and starters have a gray one. The name and Pokédex number use that same color.
+- Pseudo-legendary violet covers the whole evolutionary line.
+- A species page shows a rarity label between the Pokédex number and the types. An info button explains that rarity.
+
 ## 0.7.3 — September 24, 2026
 
 - Legendary Pokémon have a gold border on Pokédex cards, checklist rows, and the species page.

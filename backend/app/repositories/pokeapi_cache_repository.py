@@ -80,6 +80,26 @@ def _chain_species(node: dict[str, Any], found: set[int]) -> None:
             _chain_species(child, found)
 
 
+def _lines_containing(coll: Any, chain_ids: set[int], seeds: set[int]) -> set[int]:
+    """Every species in an evolution chain that includes one of ``seeds``."""
+    found: set[int] = set()
+    paths = [f"evolution-chain/{chain_id}" for chain_id in sorted(chain_ids)]
+    for index in range(0, len(paths), _IN_CHUNK):
+        chunk = paths[index : index + _IN_CHUNK]
+        cursor = coll.find({"path": {"$in": chunk}}, {"body.data.chain": 1, "_id": 0})
+        for doc in cursor:
+            body = doc.get("body") or {}
+            data = body.get("data") if isinstance(body, dict) else None
+            chain = data.get("chain") if isinstance(data, dict) else None
+            if not isinstance(chain, dict):
+                continue
+            members: set[int] = set()
+            _chain_species(chain, members)
+            if members & seeds:
+                found.update(members)
+    return found
+
+
 def _fossil_ids(coll: Any, chain_ids: set[int], mentioned: set[int]) -> set[int]:
     """A fossil line is every species in a chain where one member is revived from a fossil."""
     fossils: set[int] = set()
@@ -262,8 +282,8 @@ class PokeApiCacheRepository:
         """Legendary, mythical, pseudo-legendary, and fossil National Dex ids.
 
         Legendary and mythical come from the species flags. A species flagged both
-        ways is mythical. A pseudo-legendary is the final stage of a three-stage
-        line whose default form totals 600 base stats. A fossil species shares an
+        ways is mythical.         A pseudo-legendary line is a three-stage family whose final form totals
+        600 base stats. Every stage in that line is included. A fossil species shares an
         evolution chain with a Pokémon revived from a fossil. The first match wins:
         mythical, legendary, pseudo, fossil.
         """
@@ -310,7 +330,12 @@ class PokeApiCacheRepository:
                     chain_ids.add(chain_id)
         finals = _three_stage_finals(coll, chain_ids)
         totals = _base_stat_totals(coll, [pokemon_id for pokemon_id in finals if pokemon_id not in flagged and pokemon_id <= limit])
-        pseudos = sorted(pokemon_id for pokemon_id, total in totals.items() if total == 600)
+        pseudo_finals = {pokemon_id for pokemon_id, total in totals.items() if total == 600}
+        pseudos = sorted(
+            pokemon_id
+            for pokemon_id in _lines_containing(coll, chain_ids, pseudo_finals)
+            if pokemon_id not in flagged and pokemon_id <= limit
+        )
         taken = flagged | set(pseudos)
         fossils = sorted(pokemon_id for pokemon_id in _fossil_ids(coll, chain_ids, mentioned) if pokemon_id not in taken and pokemon_id <= limit)
         legendaries.sort()

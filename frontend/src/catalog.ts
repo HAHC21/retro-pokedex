@@ -3,7 +3,7 @@ import { API_ORIGIN } from "./apiBase";
 export const API = `${API_ORIGIN}/api/poke`;
 export const SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
 export const PROG_KEY = "pokedex-progress-v2";
-export const IDX_KEY = "pokedex-index-v9";
+export const IDX_KEY = "pokedex-index-v13";
 export const NATIONAL_TOTAL = 1025;
 
 export const TYPES = [
@@ -135,11 +135,11 @@ export const REGIONS: DexRegion[] = [
   { slug: "kanto", name: "Kanto", from: 1, to: 151, games: "Red · Blue · Yellow" },
   { slug: "johto", name: "Johto", from: 152, to: 251, games: "Gold · Silver · Crystal" },
   { slug: "hoenn", name: "Hoenn", from: 252, to: 386, games: "Ruby · Sapphire · Emerald · FR/LG" },
-  { slug: "sinnoh", name: "Sinnoh", from: 387, to: 493, games: "Diamond · Pearl · Platinum · HG/SS" },
+  { slug: "sinnoh", name: "Sinnoh", from: 387, to: 493, games: "Diamond · Pearl · Platinum" },
   { slug: "unova", name: "Unova", from: 494, to: 649, games: "Black · White · B2/W2" },
-  { slug: "kalos", name: "Kalos", from: 650, to: 721, games: "X · Y · OR/AS" },
+  { slug: "kalos", name: "Kalos", from: 650, to: 721, games: "X · Y" },
   { slug: "alola", name: "Alola", from: 722, to: 809, games: "Sun · Moon · US/UM" },
-  { slug: "galar", name: "Galar", from: 810, to: 898, games: "Sword · Shield · BD/SP" },
+  { slug: "galar", name: "Galar", from: 810, to: 898, games: "Sword · Shield" },
   { slug: "hisui", name: "Hisui", from: 899, to: 905, games: "Legends: Arceus" },
   { slug: "paldea", name: "Paldea", from: 906, to: 1025, games: "Scarlet · Violet" },
 ];

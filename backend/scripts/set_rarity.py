@@ -1,7 +1,7 @@
 """Store rarity on every Pokémon row.
 
-Values are mythical, legendary, pseudo, and fossil. Every form of a species
-gets the same value. Other species keep the field empty.
+Values are mythical, legendary, pseudo, fossil, and starter. Every form of a
+species gets the same value. Other species keep the field empty.
 
 Usage (from backend/):
 
@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.catalog.starters import STARTER_IDS
 from app.db.documents import PokemonDocument
 from app.db.mongo import connect_mongo, disconnect_mongo
 from app.repositories.pokeapi_cache_repository import PokeApiCacheRepository
@@ -33,6 +34,8 @@ def _assignments() -> dict[int, str]:
         assigned[pokedex_id] = "legendary"
     for pokedex_id in mythicals:
         assigned[pokedex_id] = "mythical"
+    for pokedex_id in STARTER_IDS:
+        assigned.setdefault(pokedex_id, "starter")
     return assigned
 
 
@@ -41,7 +44,7 @@ def main() -> None:
     try:
         assigned = _assignments()
         saved = 0
-        counts = {"mythical": 0, "legendary": 0, "pseudo": 0, "fossil": 0, "": 0}
+        counts = {"mythical": 0, "legendary": 0, "pseudo": 0, "fossil": 0, "starter": 0, "": 0}
         seen: set[tuple[int, str]] = set()
         for doc in PokemonDocument.objects():
             value = assigned.get(int(doc.pokedex_id))
@@ -56,7 +59,7 @@ def main() -> None:
         print(
             f"Saved rarity on {saved} rows "
             f"({counts['mythical']} mythical, {counts['legendary']} legendary, "
-            f"{counts['pseudo']} pseudo, {counts['fossil']} fossil)"
+            f"{counts['pseudo']} pseudo, {counts['fossil']} fossil, {counts['starter']} starter)"
         )
     finally:
         disconnect_mongo()

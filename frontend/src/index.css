@@ -841,6 +841,16 @@
   border-color: #5c4d8a;
 }
 
+.pk-check-row.is-fossil,
+.pk-check-row.is-fossil.is-marked {
+  border-color: #8a6a3b;
+}
+
+.pk-check-row.is-starter,
+.pk-check-row.is-starter.is-marked {
+  border-color: #5d5d60;
+}
+
 .pk-check-id,
 .pk-check-name,
 .pk-check-sprite-btn {
@@ -1001,6 +1011,75 @@
 .pk-check-row.is-pseudo > .corner,
 .pk-identity.is-pseudo > .corner {
   color: #5c4d8a;
+}
+
+.pk-mon.is-fossil,
+.pk-check-row.is-fossil,
+.pk-identity.is-fossil {
+  border-color: #8a6a3b;
+}
+
+.pk-mon.is-fossil > .corner,
+.pk-check-row.is-fossil > .corner,
+.pk-identity.is-fossil > .corner {
+  color: #8a6a3b;
+}
+
+.pk-mon.is-starter,
+.pk-check-row.is-starter,
+.pk-identity.is-starter {
+  border-color: #5d5d60;
+}
+
+.pk-mon.is-starter > .corner,
+.pk-check-row.is-starter > .corner,
+.pk-identity.is-starter > .corner {
+  color: #5d5d60;
+}
+
+.pk-mon.is-legendary .pk-name,
+.pk-mon.is-legendary .pk-mon-top > span:first-child,
+.pk-check-row.is-legendary .pk-check-name,
+.pk-check-row.is-legendary .pk-check-id,
+.pk-identity.is-legendary h1,
+.pk-identity.is-legendary .pk-dex-box {
+  color: #c6a15b;
+}
+
+.pk-mon.is-mythical .pk-name,
+.pk-mon.is-mythical .pk-mon-top > span:first-child,
+.pk-check-row.is-mythical .pk-check-name,
+.pk-check-row.is-mythical .pk-check-id,
+.pk-identity.is-mythical h1,
+.pk-identity.is-mythical .pk-dex-box {
+  color: #7a1f2b;
+}
+
+.pk-mon.is-pseudo .pk-name,
+.pk-mon.is-pseudo .pk-mon-top > span:first-child,
+.pk-check-row.is-pseudo .pk-check-name,
+.pk-check-row.is-pseudo .pk-check-id,
+.pk-identity.is-pseudo h1,
+.pk-identity.is-pseudo .pk-dex-box {
+  color: #5c4d8a;
+}
+
+.pk-mon.is-fossil .pk-name,
+.pk-mon.is-fossil .pk-mon-top > span:first-child,
+.pk-check-row.is-fossil .pk-check-name,
+.pk-check-row.is-fossil .pk-check-id,
+.pk-identity.is-fossil h1,
+.pk-identity.is-fossil .pk-dex-box {
+  color: #8a6a3b;
+}
+
+.pk-mon.is-starter .pk-name,
+.pk-mon.is-starter .pk-mon-top > span:first-child,
+.pk-check-row.is-starter .pk-check-name,
+.pk-check-row.is-starter .pk-check-id,
+.pk-identity.is-starter h1,
+.pk-identity.is-starter .pk-dex-box {
+  color: #5d5d60;
 }
 
 .pk-mon-open {
@@ -1278,19 +1357,81 @@
   min-height: 28px;
 }
 
-.pk-dex-box {
+.pk-dex-box,
+.pk-rarity-box {
   box-sizing: border-box;
   min-width: 3.6rem;
   justify-content: center;
   font-family: var(--font-heading);
   font-size: 10px;
   letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.pk-dex-box {
   color: var(--color-neutral-700);
   background: var(--color-neutral-100);
   border: 1px solid var(--color-neutral-500);
-  border-radius: 0;
   font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+}
+
+.pk-rarity-box {
+  justify-content: flex-start;
+  gap: 6px;
+  padding-right: 3px;
+  border: 1px solid transparent;
+}
+
+.pk-rarity-box .pk-info-tip {
+  margin-left: auto;
+}
+
+.pk-rarity-box .pk-info-tip-btn {
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+  border-color: currentColor;
+  color: inherit;
+  background: transparent;
+}
+
+.pk-rarity-box .pk-info-tip-btn.is-open,
+.pk-rarity-box .pk-info-tip-btn:hover {
+  border-color: currentColor;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 12%, white);
+}
+
+.pk-identity.is-legendary .pk-rarity-box {
+  color: #c6a15b;
+  border-color: #c6a15b;
+  background: color-mix(in srgb, #c6a15b 16%, white);
+}
+
+.pk-identity.is-mythical .pk-rarity-box {
+  color: #7a1f2b;
+  border-color: #7a1f2b;
+  background: color-mix(in srgb, #7a1f2b 12%, white);
+}
+
+.pk-identity.is-pseudo .pk-rarity-box {
+  color: #5c4d8a;
+  border-color: #5c4d8a;
+  background: color-mix(in srgb, #5c4d8a 14%, white);
+}
+
+.pk-identity.is-fossil .pk-rarity-box {
+  color: #8a6a3b;
+  border-color: #8a6a3b;
+  background: color-mix(in srgb, #8a6a3b 16%, white);
+}
+
+.pk-identity.is-starter .pk-rarity-box {
+  color: #5d5d60;
+  border-color: #5d5d60;
+  background: color-mix(in srgb, #5d5d60 14%, white);
 }
 
 .pk-identity-head h1 {

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { isStaffRole, type AuthUser } from "../auth";
 import { Blueprint } from "../components/Blueprint";
-import { boxClass } from "../rarity";
+import { InfoTip } from "../components/InfoTip";
+import { boxClass, rarityLabel, rarityNote } from "../rarity";
 import { MatchupPanel } from "../components/MatchupPanel";
 import { MoveNameTag } from "../components/MoveNameTag";
 import { OwnedCollectionPanel } from "../components/OwnedCollectionPanel";
@@ -375,6 +376,14 @@ function MonBody({
                 <div className="pk-identity-head">
                   <div className="pk-identity-meta">
                     <span className="tag pk-dex-box">{dexNum(speciesId)}</span>
+                    {rarity ? (
+                      <span className="tag pk-rarity-box">
+                        {rarityLabel(rarity)}
+                        <InfoTip label={`About ${rarityLabel(rarity)} Pokémon`}>
+                          <p>{rarityNote(rarity)}</p>
+                        </InfoTip>
+                      </span>
+                    ) : null}
                     <div className="pk-types pk-identity-types">
                       {myTypes.map((type) => (
                         <TypeTag key={type} type={type} />

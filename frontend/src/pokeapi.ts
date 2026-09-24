@@ -67,6 +67,13 @@ export async function fetchCatalog(): Promise<DexIndex> {
       rarity[pokedexId] = "fossil";
     }
   });
+  const starterIds = Array.isArray(payload.starters) ? payload.starters : [];
+  starterIds.forEach((id: unknown) => {
+    const pokedexId = Number(id);
+    if (Number.isFinite(pokedexId) && !rarity[pokedexId]) {
+      rarity[pokedexId] = "starter";
+    }
+  });
   return { names, types, rarity };
 }
 

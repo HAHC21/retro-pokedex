@@ -80,7 +80,13 @@ class PokemonRepository:
 
     def rarity_groups(self) -> dict[str, list[int]]:
         """National Dex ids by stored rarity. One id per species, from the base row."""
-        groups: dict[str, list[int]] = {"mythical": [], "legendary": [], "pseudo": [], "fossil": []}
+        groups: dict[str, list[int]] = {
+            "mythical": [],
+            "legendary": [],
+            "pseudo": [],
+            "fossil": [],
+            "starter": [],
+        }
         query = PokemonDocument.objects(form="base", rarity__ne=None).only("pokedex_id", "rarity")
         for doc in query:
             bucket = groups.get(str(doc.rarity or ""))

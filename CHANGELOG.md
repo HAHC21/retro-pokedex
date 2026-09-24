@@ -2,6 +2,18 @@
 
 All notable changes to Retro Pokédex, taken from the versioned commits on `main`. v0.5 is the first release. Dates are the commit dates.
 
+## [0.7.4] - 2026-09-24
+
+### Added
+
+- `starter` on the `rarity` field, for each main-series first partner and the rest of its line. `scripts.set_rarity` writes it alongside mythical, legendary, pseudo, and fossil.
+- A rarity label on the species identity card, between the Pokédex number and the types, with a short explanation.
+
+### Changed
+
+- Fossil Pokémon use a bronze border, and starters use gray. The name and Pokédex number use the same color as the border.
+- Pseudo-legendary violet covers the whole evolutionary line, not only the final stage.
+
 ## [0.7.3] - 2026-09-24
 
 ### Added

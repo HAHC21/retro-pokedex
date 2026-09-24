@@ -436,6 +436,7 @@ class PokeProxyService:
             "mythicals": groups["mythical"],
             "pseudos": groups["pseudo"],
             "fossils": groups["fossil"],
+            "starters": groups["starter"],
             "count": limit,
         }
 

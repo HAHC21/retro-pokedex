@@ -13,6 +13,25 @@ export type ChangelogRelease = {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: "0.7.4",
+    date: "Sep 24, 2026",
+    title: "Rarity labels",
+    features: [
+      {
+        title: "Bronze fossils and gray starters",
+        body: "Fossil Pokémon have a bronze border, and starters have a gray one. The name and Pokédex number use that same color.",
+      },
+      {
+        title: "A whole pseudo-legendary line",
+        body: "Violet covers every stage of a pseudo-legendary line, from the first Pokémon through the final one.",
+      },
+      {
+        title: "A label on the species page",
+        body: "The identity card shows the rarity between the Pokédex number and the types. An info button explains what that rarity means.",
+      },
+    ],
+  },
+  {
     version: "0.7.3",
     date: "Sep 24, 2026",
     title: "Rarity borders",

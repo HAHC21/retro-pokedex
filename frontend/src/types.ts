@@ -15,7 +15,7 @@ export type MarkEntry = {
 
 export type Progress = Record<string, Record<string, MarkEntry>>;
 
-export type SpeciesRarity = "legendary" | "mythical" | "pseudo" | "fossil";
+export type SpeciesRarity = "legendary" | "mythical" | "pseudo" | "fossil" | "starter";
 
 export type DexIndex = {
   names: Record<number, string>;
