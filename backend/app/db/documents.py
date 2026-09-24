@@ -122,6 +122,8 @@ class PokemonDocument(Document):
 
     pokedex_id = IntField(required=True)
     form = StringField(required=True)
+    capture = BooleanField(required=True, default=True)
+    rarity = StringField(null=True)
     name = StringField(required=True)
     resource_id = IntField(required=True)
     types = ListField(StringField(), default=list)

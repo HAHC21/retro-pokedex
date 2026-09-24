@@ -1,5 +1,13 @@
 export type FormKind = "mega" | "regional" | "gmax";
 
+export type FormList = "mega" | "gmax" | "regional";
+
+export const FORM_LISTS: Array<{ id: FormList; title: string; subtitle: string }> = [
+  { id: "mega", title: "Mega Evolutions", subtitle: "Temporary battle forms" },
+  { id: "gmax", title: "Gigantamax", subtitle: "Max Raid forms" },
+  { id: "regional", title: "Regional Forms", subtitle: "Alola, Galar, Hisui, and Paldea" },
+];
+
 export type SpeciesForm = {
   kind: FormKind;
   name: string | null;
@@ -43,6 +51,32 @@ export function formFromVarietySlug(pokemonSlug: string, speciesSlug: string): S
     return { kind: "regional", name: suffix };
   }
   return null;
+}
+
+export function isFormList(value: string | undefined): value is FormList {
+  return value === "mega" || value === "gmax" || value === "regional";
+}
+
+export function formFromStorageKey(key: string): SpeciesForm | null {
+  if (key === "gigantamax") {
+    return { kind: "gmax", name: null };
+  }
+  if (key === "mega") {
+    return { kind: "mega", name: null };
+  }
+  if (key.startsWith("mega-")) {
+    const name = key.slice("mega-".length);
+    return name ? { kind: "mega", name } : null;
+  }
+  if (key.startsWith("regional-")) {
+    const name = key.slice("regional-".length);
+    return REGIONAL_NAMES.has(name) ? { kind: "regional", name } : null;
+  }
+  return null;
+}
+
+export function formListOf(form: SpeciesForm): FormList {
+  return form.kind;
 }
 
 export function formPath(form: SpeciesForm | null | undefined): string {

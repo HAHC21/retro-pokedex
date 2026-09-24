@@ -1,5 +1,5 @@
 import { GAMES, clampGen, gameByKey, regionBySlug } from "./catalog";
-import { formPath, isFormKind, type SpeciesForm } from "./forms";
+import { formPath, isFormKind, isFormList, type FormList, type SpeciesForm } from "./forms";
 import type { DexScope, StatusFilter, View } from "./types";
 
 export type DetailSection = "home" | "spawns" | "specimens" | "moves";
@@ -21,6 +21,7 @@ export type AppPath = {
   region: string | null;
   id: number | null;
   form: SpeciesForm | null;
+  formList: FormList | null;
   section: DetailSection;
   q: string;
   status: StatusFilter;
@@ -34,6 +35,7 @@ const DEFAULT_PATH: AppPath = {
   region: null,
   id: null,
   form: null,
+  formList: null,
   section: "home",
   q: "",
   status: "all",
@@ -176,6 +178,14 @@ export function parseAppPath(pathname: string, _search = ""): AppPath {
 
   if (parts[1] === "dex" || parts[1] === "checklist") {
     const listView = parts[1] === "checklist" ? "checklist" : "dex";
+    if (listView === "dex" && parts[2] === "forms" && isFormList(parts[3])) {
+      return {
+        ...DEFAULT_PATH,
+        view: listView,
+        game,
+        formList: parts[3],
+      };
+    }
     const regionSlug = parts[2] === "region" ? parseRegionSlug(parts[3]) : null;
     if (regionSlug) {
       return {
@@ -243,6 +253,9 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
   const region = regionBySlug(path.region)?.slug ?? null;
 
   if (path.view === "dex" || path.view === "checklist") {
+    if (path.view === "dex" && path.formList && isFormList(path.formList)) {
+      return `/${game}/dex/forms/${path.formList}`;
+    }
     if (region) {
       return `/${game}/${path.view}/region/${region}`;
     }

@@ -13,6 +13,44 @@ export type ChangelogRelease = {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: "0.7.3",
+    date: "Sep 24, 2026",
+    title: "Rarity borders",
+    features: [
+      {
+        title: "Gold for legendaries",
+        body: "Legendary Pokémon have a gold border on Pokédex cards, checklist rows, and the species page.",
+      },
+      {
+        title: "Dark red for mythicals",
+        body: "Mythical Pokémon have a dark red border in those same places.",
+      },
+      {
+        title: "Violet for pseudo-legendaries",
+        body: "Pseudo-legendaries, such as Dragonite and Tyranitar, have a violet border.",
+      },
+    ],
+  },
+  {
+    version: "0.7.2",
+    date: "Sep 24, 2026",
+    title: "Mega and Gigantamax lists",
+    features: [
+      {
+        title: "Form lists on the dashboard",
+        body: "Mega Evolutions, Gigantamax, and Regional Forms each have a box on the dashboard. Open one to browse that list in the Pokédex.",
+      },
+      {
+        title: "No catch marks on temporary forms",
+        body: "Mega Evolutions and Gigantamax show their colored sprite and no catch marks, since they cannot be caught on their own.",
+      },
+      {
+        title: "A shorter page for Mega and Gigantamax",
+        body: "Those pages leave out the Pokédex entry, abilities and natures, wild locations, moves, and your specimens.",
+      },
+    ],
+  },
+  {
     version: "0.7.1",
     date: "Sep 24, 2026",
     title: "Changelog and gender marks",

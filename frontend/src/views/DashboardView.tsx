@@ -3,7 +3,9 @@ import { PkBulkImport } from "../components/PkBulkImport";
 import { ProgressBar } from "../components/ProgressBar";
 import { REGIONS, genById } from "../catalog";
 import { dexNum, kindStyle, spriteUrl, whenText } from "../format";
-import { gameLabel, unionSets } from "../progress";
+import { FORM_LISTS, formListOf, type FormList } from "../forms";
+import type { CatalogForm } from "../pokeapi";
+import { gameLabel, unionFor, unionSets } from "../progress";
 import type { DexIndex, Progress } from "../types";
 
 type OriginBox = {
@@ -54,6 +56,8 @@ type DashboardViewProps = {
   onImported: () => void;
   onOpen: (id: number) => void;
   onOpenRegion: (slug: string) => void;
+  onOpenFormList: (list: FormList) => void;
+  forms: CatalogForm[];
   onOpenDex: () => void;
   onOpenMissing: () => void;
   onOpenShinies: () => void;
@@ -68,6 +72,8 @@ export function DashboardView({
   onImported,
   onOpen,
   onOpenRegion,
+  onOpenFormList,
+  forms,
   onOpenDex,
   onOpenMissing,
   onOpenShinies,
@@ -210,6 +216,47 @@ export function DashboardView({
                     {c} / {n}
                   </span>
                   <span className="pk-gen-shiny">Shinies: {s}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="pk-section">
+        <div className="pk-section-head">
+          <h2>Forms</h2>
+          <span>Mega Evolutions, Gigantamax, and regional forms</span>
+        </div>
+        <div className="pk-gen-grid">
+          {FORM_LISTS.map((entry) => {
+            const rows = forms.filter((form) => formListOf(form.form) === entry.id);
+            const temporary = rows.length > 0 && rows.every((form) => !form.capture);
+            let caught = 0;
+            if (!temporary) {
+              rows.forEach((form) => {
+                const marks = unionFor(prog, form.pokedexId, form.form);
+                if (marks.caught || marks.shiny) {
+                  caught += 1;
+                }
+              });
+            }
+            const total = rows.length;
+            const pct = total ? Math.round((caught / total) * 100) : 0;
+            return (
+              <button key={entry.id} type="button" className="blueprint pk-cell pk-nav pk-gen-box" onClick={() => onOpenFormList(entry.id)}>
+                <i className="corner tl" aria-hidden="true" />
+                <i className="corner tr" aria-hidden="true" />
+                <i className="corner bl" aria-hidden="true" />
+                <i className="corner br" aria-hidden="true" />
+                <span className="pk-gen-box-head">
+                  <span className="pk-gen-region">{entry.title}</span>
+                  <span className="pk-gen-roman">{entry.subtitle}</span>
+                </span>
+                <span className="pk-gen-pct">{temporary ? total || "—" : total ? `${pct}%` : "—"}</span>
+                {temporary ? null : <ProgressBar pct={pct} tall />}
+                <span className="pk-gen-box-foot">
+                  <span className="pk-gen-frac">{temporary ? (total ? `${total} forms` : "None stored") : `${caught} / ${total || "—"}`}</span>
                 </span>
               </button>
             );

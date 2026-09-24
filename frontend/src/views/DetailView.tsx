@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { isStaffRole, type AuthUser } from "../auth";
 import { Blueprint } from "../components/Blueprint";
+import { boxClass } from "../rarity";
 import { MatchupPanel } from "../components/MatchupPanel";
 import { MoveNameTag } from "../components/MoveNameTag";
 import { OwnedCollectionPanel } from "../components/OwnedCollectionPanel";
@@ -47,6 +48,7 @@ type DetailViewProps = {
   prog: Progress;
   game: string;
   names: DexIndex["names"];
+  rarity: DexIndex["rarity"];
   obtainable?: boolean;
   authUser?: AuthUser | null;
   section: DetailSection;
@@ -75,6 +77,7 @@ export function DetailView({
   prog,
   game,
   names,
+  rarity,
   obtainable,
   authUser = null,
   section,
@@ -113,6 +116,7 @@ export function DetailView({
         </button>
       </div>
 
+      {mon?.capture === false ? null : (
       <div className="pk-detail-sections" role="tablist" aria-label="Pokémon detail sections">
         {DETAIL_SECTIONS.map((item) => (
           <button
@@ -128,6 +132,7 @@ export function DetailView({
           </button>
         ))}
       </div>
+      )}
 
       {loading ? <div className="pk-status">Loading entry…</div> : null}
 
@@ -137,7 +142,7 @@ export function DetailView({
           marks={marks}
           game={game}
           obtainable={obtainable}
-          section={section}
+          section={mon.capture === false ? "home" : section}
           spawns={spawns}
           spawnsLoading={spawnsLoading}
           learnset={learnset}
@@ -147,6 +152,7 @@ export function DetailView({
           displayName={form ? formDisplayName(speciesDisplayName(names, id, mon), form) : speciesDisplayName(names, id, mon)}
           speciesName={speciesDisplayName(names, id, mon)}
           speciesId={id}
+          rarity={rarity[id]}
           form={form}
           canRefreshAi={isStaffRole(authUser?.role)}
           signedIn={!!authUser}
@@ -177,6 +183,7 @@ type MonBodyProps = {
   displayName: string;
   speciesName: string;
   speciesId: number;
+  rarity: DexIndex["rarity"][number];
   form: SpeciesForm | null;
   canRefreshAi: boolean;
   signedIn: boolean;
@@ -203,6 +210,7 @@ function MonBody({
   displayName,
   speciesName,
   speciesId,
+  rarity,
   form,
   canRefreshAi,
   signedIn,
@@ -213,6 +221,7 @@ function MonBody({
   onToggleShiny,
   onToggleGender,
 }: MonBodyProps) {
+  const capturable = mon.capture !== false;
   const data = mon.data;
   const species = mon.species;
   const myTypes = data.types.map((slot) => slot.type.name);
@@ -361,7 +370,7 @@ function MonBody({
         <>
           <div className="pk-detail-row pk-detail-split pk-detail-overview">
             <div className="pk-side-stack">
-              <Blueprint className="pk-identity">
+              <Blueprint className={boxClass("pk-identity", false, rarity)}>
                 <PokeBallIcon caught={!!(marks.caught || marks.shiny)} />
                 <div className="pk-identity-head">
                   <div className="pk-identity-meta">
@@ -381,7 +390,7 @@ function MonBody({
                       male={!!marks.caughtMale}
                       female={!!marks.caughtFemale}
                       alt={displayName}
-                      className={marks.caught ? undefined : "is-dim"}
+                      className={capturable && !marks.caught ? "is-dim" : undefined}
                     />
                     <figcaption>Normal</figcaption>
                   </figure>
@@ -392,24 +401,27 @@ function MonBody({
                       male={!!marks.shinyMale}
                       female={!!marks.shinyFemale}
                       alt={`${displayName} shiny`}
-                      className={marks.shiny ? undefined : "is-dim"}
+                      className={capturable && !marks.shiny ? "is-dim" : undefined}
                     />
                     <figcaption>Shiny</figcaption>
                   </figure>
                 </div>
-                <MarkToggles
-                  caught={!!marks.caught}
-                  shiny={!!marks.shiny}
-                  caughtMale={!!marks.caughtMale}
-                  caughtFemale={!!marks.caughtFemale}
-                  shinyMale={!!marks.shinyMale}
-                  shinyFemale={!!marks.shinyFemale}
-                  available={obtainable}
-                  unavailableLabel={`Not available in ${gameName}`}
-                  onCaught={onToggleCaught}
-                  onShiny={onToggleShiny}
-                  onGender={onToggleGender}
-                />
+                {capturable ? (
+                  <MarkToggles
+                    caught={!!marks.caught}
+                    shiny={!!marks.shiny}
+                    caughtMale={!!marks.caughtMale}
+                    caughtFemale={!!marks.caughtFemale}
+                    shinyMale={!!marks.shinyMale}
+                    shinyFemale={!!marks.shinyFemale}
+                    available={obtainable}
+                    unavailableLabel={`Not available in ${gameName}`}
+                    onCaught={onToggleCaught}
+                    onShiny={onToggleShiny}
+                    onGender={onToggleGender}
+                  />
+                ) : null}
+                {capturable ? (
                 <div className="pk-recorded">
                   <span>
                     {obtainable === true
@@ -431,6 +443,7 @@ function MonBody({
                     <span className="pk-recorded-empty">Not recorded in any game</span>
                   )}
                 </div>
+                ) : null}
               </Blueprint>
 
               {overview ? (
@@ -440,6 +453,7 @@ function MonBody({
                 </Blueprint>
               ) : null}
 
+              {capturable ? (
               <Blueprint className="pk-dex-entry">
                 <h3>Pokédex entry</h3>
                 {dexEntries.length ? (
@@ -453,6 +467,7 @@ function MonBody({
                   <p className="pk-none">No Pokédex entry for {gameName}.</p>
                 )}
               </Blueprint>
+              ) : null}
 
               {mon.evo.length > 1 ? (
                 <Blueprint className="pk-evo">
@@ -509,6 +524,7 @@ function MonBody({
                 </div>
               </Blueprint>
 
+              {capturable ? (
               <Blueprint className="pk-traits">
                 <h3>Abilities &amp; natures</h3>
                 <div className="pk-traits-block">
@@ -550,6 +566,7 @@ function MonBody({
                   </div>
                 </div>
               </Blueprint>
+              ) : null}
 
               <MatchupPanel title="Defensive matchups" groups={defense} />
               <MatchupPanel title="Offensive matchups" groups={offense} />

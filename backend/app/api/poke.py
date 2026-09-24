@@ -14,6 +14,12 @@ async def poke_catalog(service: PokeProxyService = Depends(get_poke_proxy_servic
     return await service.catalog()
 
 
+@router.get("/forms")
+async def poke_forms(service: PokeProxyService = Depends(get_poke_proxy_service)) -> dict:
+    """Mega, Gigantamax, and regional form rows."""
+    return await service.alternate_forms()
+
+
 @router.get("/index")
 async def poke_index(service: PokeProxyService = Depends(get_poke_proxy_service)) -> dict:
     """Deprecated: prefer GET /catalog. Names only."""

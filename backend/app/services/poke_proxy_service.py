@@ -428,7 +428,20 @@ class PokeProxyService:
                 if 1 <= int(pokemon_id) <= limit:
                     key = str(pokemon_id)
                     types_by_id.setdefault(key, []).append(type_name)
-        return {"names": names, "types": types_by_id, "count": limit}
+        groups = await asyncio.to_thread(self._pokemon.rarity_groups)
+        return {
+            "names": names,
+            "types": types_by_id,
+            "legendaries": groups["legendary"],
+            "mythicals": groups["mythical"],
+            "pseudos": groups["pseudo"],
+            "fossils": groups["fossil"],
+            "count": limit,
+        }
+
+    async def alternate_forms(self) -> dict[str, Any]:
+        forms = await asyncio.to_thread(self._pokemon.list_alternate_forms)
+        return {"forms": forms}
 
     async def name_index(self, limit: int = 1025) -> dict[str, str]:
         stored = await asyncio.to_thread(self._names.get, min_count=limit)
@@ -818,9 +831,9 @@ class PokeProxyService:
     async def _with_form_record(self, resource_id: int, payload: dict[str, Any]) -> dict[str, Any]:
         record = await asyncio.to_thread(self._pokemon.get_by_resource_id, resource_id)
         if record is None:
-            return payload
+            return {**payload, "capture": True}
         overview_doc = await asyncio.to_thread(self._overviews.get, record.id)
-        payload = {**payload, "overview": overview_doc.overview if overview_doc else None}
+        payload = {**payload, "overview": overview_doc.overview if overview_doc else None, "capture": bool(record.capture)}
         if record.types:
             data = dict(payload.get("data") or {})
             data["types"] = [{"type": {"name": name}} for name in record.types]

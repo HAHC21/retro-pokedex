@@ -8,6 +8,14 @@ REGIONAL_NAMES = frozenset({"alola", "galar", "hisui", "paldea"})
 # regional-* distinguishes Alolan Meowth from Galarian Meowth, which share a Pokédex number.
 
 
+def can_capture(form: str) -> bool:
+    """Base species and regional forms can be caught. Mega and Gigantamax cannot."""
+    key = form.strip().lower()
+    if key == "gigantamax" or key == "mega" or key.startswith("mega-"):
+        return False
+    return True
+
+
 def form_key(pokemon_slug: str, species_slug: str) -> str | None:
     """Return base, mega, mega-x, regional-alola, gigantamax, or None when this variety is not tracked."""
     slug = pokemon_slug.lower()

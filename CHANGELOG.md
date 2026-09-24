@@ -2,6 +2,29 @@
 
 All notable changes to Retro Pokédex, taken from the versioned commits on `main`. v0.5 is the first release. Dates are the commit dates.
 
+## [0.7.3] - 2026-09-24
+
+### Added
+
+- A `rarity` field on each Pokémon row: `mythical`, `legendary`, `pseudo`, or `fossil`. Other species leave it empty. `scripts.set_rarity` writes the value, and every form of a species shares it.
+
+### Changed
+
+- Pokédex cards, checklist rows, and the species identity card use that field for a gold border on legendaries, a dark red border on mythicals, and a violet border on pseudo-legendaries.
+
+## [0.7.2] - 2026-09-24
+
+### Added
+
+- Dashboard boxes for Mega Evolutions, Gigantamax, and Regional Forms. Each opens a Pokédex list of that form.
+- A `capture` flag on each Pokémon row. Base species and regional forms can be caught; Mega and Gigantamax cannot. `scripts.set_capture` writes the flag and inserts missing Gigantamax rows.
+- `GET /api/poke/forms` lists alternate forms and whether each one can be caught.
+
+### Changed
+
+- Mega and Gigantamax lists and species pages hide catch marks and show the colored sprite.
+- Mega and Gigantamax species pages hide the Pokédex entry, abilities and natures, and the Spawns, Moves, and My Specimens sections.
+
 ## [0.7.1] - 2026-09-24
 
 ### Added

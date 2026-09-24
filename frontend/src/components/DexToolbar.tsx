@@ -11,6 +11,7 @@ type DexToolbarProps = {
   q: string;
   status: StatusFilter;
   scope: DexScope;
+  formListTitle?: string | null;
   statuses?: Array<[StatusFilter, string]>;
   onQuery: (q: string) => void;
   onStatus: (status: StatusFilter) => void;
@@ -24,6 +25,7 @@ export function DexToolbar({
   q,
   status,
   scope,
+  formListTitle = null,
   statuses = DEX_STATUSES,
   onQuery,
   onStatus,
@@ -45,7 +47,12 @@ export function DexToolbar({
         <div className="pk-scope-label-row">
           <span className="pk-kicker">Dex scope</span>
           <InfoTip label="About Regional, National, and generation filters" wide>
-            {regionBrowse ? (
+            {formListTitle ? (
+              <p>
+                This list shows <strong>{formListTitle}</strong>. Each card opens that form. Marks here are stored on the
+                form, separate from the base species.
+              </p>
+            ) : regionBrowse ? (
               <p>
                 You opened a region from the homepage. This list shows only species{" "}
                 <strong>introduced</strong> in {origin?.name} ({browseLabel}), using Global Collection marks. Switch
@@ -83,22 +90,28 @@ export function DexToolbar({
           </InfoTip>
         </div>
         <div className="seg pk-scope-seg">
-          {scopeOptions.map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className="seg-opt pk-toggle"
-              style={pillStyle(activeScope === id, false, { padding: "8px 12px" })}
-              aria-pressed={activeScope === id}
-              onClick={() => {
-                if (!regionBrowse) {
-                  onScope(id);
-                }
-              }}
-            >
-              {label}
+          {formListTitle ? (
+            <button type="button" className="seg-opt pk-toggle" style={pillStyle(true, false, { padding: "8px 12px" })} aria-pressed>
+              {formListTitle}
             </button>
-          ))}
+          ) : (
+            scopeOptions.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className="seg-opt pk-toggle"
+                style={pillStyle(activeScope === id, false, { padding: "8px 12px" })}
+                aria-pressed={activeScope === id}
+                onClick={() => {
+                  if (!regionBrowse) {
+                    onScope(id);
+                  }
+                }}
+              >
+                {label}
+              </button>
+            ))
+          )}
         </div>
       </div>
       <label className="field pk-field pk-search">

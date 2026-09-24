@@ -2,6 +2,18 @@
 
 Updates you can see in Retro Pokédex. Releases that only changed hosting, search listings, or internal data are left out.
 
+## 0.7.3 — September 24, 2026
+
+- Legendary Pokémon have a gold border on Pokédex cards, checklist rows, and the species page.
+- Mythical Pokémon have a dark red border in those same places.
+- Pseudo-legendaries have a violet border.
+
+## 0.7.2 — September 24, 2026
+
+- The dashboard lists Mega Evolutions, Gigantamax, and Regional Forms. Each box opens that list in the Pokédex.
+- Mega Evolutions and Gigantamax show their colored sprite and no catch marks, since they cannot be caught on their own.
+- A Mega or Gigantamax page leaves out the Pokédex entry, abilities and natures, wild locations, moves, and your specimens.
+
 ## 0.7.1 — September 24, 2026
 
 - A changelog page lists what changed in each release. Open it from the footer.

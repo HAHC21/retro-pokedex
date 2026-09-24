@@ -1,4 +1,5 @@
 import { API, IDX_KEY } from "./catalog";
+import { formFromStorageKey, type SpeciesForm } from "./forms";
 import { rememberEvolvesFrom, rememberObtainVersions } from "./obtainability";
 import type { WildEncounter } from "./encounters";
 import type { DexIndex, EvolutionStep, MonPayload } from "./types";
@@ -6,7 +7,11 @@ import type { DexIndex, EvolutionStep, MonPayload } from "./types";
 export function loadCachedIndex(): DexIndex | null {
   try {
     const cached = localStorage.getItem(IDX_KEY);
-    return cached ? (JSON.parse(cached) as DexIndex) : null;
+    if (!cached) {
+      return null;
+    }
+    const index = JSON.parse(cached) as DexIndex;
+    return { names: index.names || {}, types: index.types || {}, rarity: index.rarity || {} };
   } catch {
     return null;
   }
@@ -33,7 +38,66 @@ export async function fetchCatalog(): Promise<DexIndex> {
       types[Number(id)] = typeNames.map(String);
     }
   });
-  return { names, types };
+  const rarity: DexIndex["rarity"] = {};
+  const mythicalIds = Array.isArray(payload.mythicals) ? payload.mythicals : [];
+  const legendaryIds = Array.isArray(payload.legendaries) ? payload.legendaries : [];
+  mythicalIds.forEach((id: unknown) => {
+    const pokedexId = Number(id);
+    if (Number.isFinite(pokedexId)) {
+      rarity[pokedexId] = "mythical";
+    }
+  });
+  legendaryIds.forEach((id: unknown) => {
+    const pokedexId = Number(id);
+    if (Number.isFinite(pokedexId) && !rarity[pokedexId]) {
+      rarity[pokedexId] = "legendary";
+    }
+  });
+  const pseudoIds = Array.isArray(payload.pseudos) ? payload.pseudos : [];
+  pseudoIds.forEach((id: unknown) => {
+    const pokedexId = Number(id);
+    if (Number.isFinite(pokedexId) && !rarity[pokedexId]) {
+      rarity[pokedexId] = "pseudo";
+    }
+  });
+  const fossilIds = Array.isArray(payload.fossils) ? payload.fossils : [];
+  fossilIds.forEach((id: unknown) => {
+    const pokedexId = Number(id);
+    if (Number.isFinite(pokedexId) && !rarity[pokedexId]) {
+      rarity[pokedexId] = "fossil";
+    }
+  });
+  return { names, types, rarity };
+}
+
+export type CatalogForm = {
+  pokedexId: number;
+  form: SpeciesForm;
+  resourceId: number;
+  types: string[];
+  capture: boolean;
+};
+
+export async function fetchForms(): Promise<CatalogForm[]> {
+  const payload = await (await fetch(`${API}/forms`)).json();
+  const rows = Array.isArray(payload.forms) ? payload.forms : [];
+  const forms: CatalogForm[] = [];
+  rows.forEach((row: { pokedex_id?: number; form?: string; resource_id?: number; types?: string[]; capture?: boolean }) => {
+    const form = formFromStorageKey(String(row.form || ""));
+    const pokedexId = Number(row.pokedex_id);
+    const resourceId = Number(row.resource_id);
+    if (!form || !Number.isFinite(pokedexId) || !Number.isFinite(resourceId)) {
+      return;
+    }
+    forms.push({
+      pokedexId,
+      form,
+      resourceId,
+      types: Array.isArray(row.types) ? row.types.map(String) : [],
+      capture: row.capture === true,
+    });
+  });
+  return forms;
 }
 
 export async function fetchMon(id: number): Promise<MonPayload> {
@@ -46,6 +110,7 @@ export async function fetchMon(id: number): Promise<MonPayload> {
     evo: (payload.evo || []) as EvolutionStep[],
     enc: [],
     overview: typeof payload.overview === "string" ? payload.overview : null,
+    capture: payload.capture !== false,
   };
 }
 

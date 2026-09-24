@@ -826,6 +826,21 @@
   background: var(--color-accent-100);
 }
 
+.pk-check-row.is-legendary,
+.pk-check-row.is-legendary.is-marked {
+  border-color: #c6a15b;
+}
+
+.pk-check-row.is-mythical,
+.pk-check-row.is-mythical.is-marked {
+  border-color: #7a1f2b;
+}
+
+.pk-check-row.is-pseudo,
+.pk-check-row.is-pseudo.is-marked {
+  border-color: #5c4d8a;
+}
+
 .pk-check-id,
 .pk-check-name,
 .pk-check-sprite-btn {
@@ -950,6 +965,42 @@
 
 .pk-mon.is-marked:hover {
   background: color-mix(in srgb, var(--color-accent) 18%, var(--color-accent-100));
+}
+
+.pk-mon.is-legendary,
+.pk-check-row.is-legendary,
+.pk-identity.is-legendary {
+  border-color: #c6a15b;
+}
+
+.pk-mon.is-legendary > .corner,
+.pk-check-row.is-legendary > .corner,
+.pk-identity.is-legendary > .corner {
+  color: #c6a15b;
+}
+
+.pk-mon.is-mythical,
+.pk-check-row.is-mythical,
+.pk-identity.is-mythical {
+  border-color: #7a1f2b;
+}
+
+.pk-mon.is-mythical > .corner,
+.pk-check-row.is-mythical > .corner,
+.pk-identity.is-mythical > .corner {
+  color: #7a1f2b;
+}
+
+.pk-mon.is-pseudo,
+.pk-check-row.is-pseudo,
+.pk-identity.is-pseudo {
+  border-color: #5c4d8a;
+}
+
+.pk-mon.is-pseudo > .corner,
+.pk-check-row.is-pseudo > .corner,
+.pk-identity.is-pseudo > .corner {
+  color: #5c4d8a;
 }
 
 .pk-mon-open {

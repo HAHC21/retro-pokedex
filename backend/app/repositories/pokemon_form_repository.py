@@ -7,6 +7,7 @@ from typing import Any
 
 from bson import ObjectId
 
+from app.catalog.pokemon_form import can_capture
 from app.db.documents import PokemonDocument, PokemonStats
 
 
@@ -68,6 +69,7 @@ class PokemonRepository:
             doc = PokemonDocument(pokedex_id=pokedex_id, form=form, updated_at=now)
         doc.name = name.strip()
         doc.resource_id = resource_id
+        doc.capture = can_capture(form)
         if stats is not None:
             doc.stats = stats
         if types:
@@ -76,8 +78,40 @@ class PokemonRepository:
         doc.save()
         return doc
 
+    def rarity_groups(self) -> dict[str, list[int]]:
+        """National Dex ids by stored rarity. One id per species, from the base row."""
+        groups: dict[str, list[int]] = {"mythical": [], "legendary": [], "pseudo": [], "fossil": []}
+        query = PokemonDocument.objects(form="base", rarity__ne=None).only("pokedex_id", "rarity")
+        for doc in query:
+            bucket = groups.get(str(doc.rarity or ""))
+            if bucket is not None:
+                bucket.append(int(doc.pokedex_id))
+        for bucket in groups.values():
+            bucket.sort()
+        return groups
+
     def base_pokedex_ids(self) -> dict[ObjectId, int]:
         return {
             doc.id: int(doc.pokedex_id)
             for doc in PokemonDocument.objects(form="base").only("id", "pokedex_id")
         }
+
+    def list_alternate_forms(self) -> list[dict[str, Any]]:
+        """Mega, Gigantamax, and regional rows. Base species are omitted."""
+        rows: list[dict[str, Any]] = []
+        query = PokemonDocument.objects(form__ne="base").only(
+            "pokedex_id", "form", "name", "resource_id", "types", "capture"
+        )
+        for doc in query:
+            rows.append(
+                {
+                    "pokedex_id": int(doc.pokedex_id),
+                    "form": doc.form,
+                    "name": doc.name,
+                    "resource_id": int(doc.resource_id),
+                    "types": list(doc.types or []),
+                    "capture": bool(doc.capture),
+                }
+            )
+        rows.sort(key=lambda row: (row["pokedex_id"], row["form"]))
+        return rows

@@ -108,6 +108,10 @@ class PokeApiClient:
         """Species name / evolves_from / evolution_chain refs (cache only)."""
         return await asyncio.to_thread(self._cache.scan_species_evolution_refs, limit)
 
+    async def scan_species_rarity(self, limit: int) -> tuple[list[int], list[int], list[int], list[int]]:
+        """Legendary, mythical, pseudo-legendary, and fossil National Dex ids from the cache."""
+        return await asyncio.to_thread(self._cache.scan_species_rarity, limit)
+
     async def cache_if_absent(
         self,
         path: str,

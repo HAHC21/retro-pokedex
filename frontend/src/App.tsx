@@ -7,17 +7,19 @@ import { fetchCollectionProgress, syncCollectionProgress, upsertCollectionMark }
 import { ensureObtainIndex, isObtainableInGame, rememberRegionalDex, resolveObtainabilityForIds } from "./obtainability";
 import {
   fetchCatalog,
+  fetchForms,
   fetchMon,
   fetchRegionalDex,
   fetchLearnset,
   fetchSpawns,
   loadCachedIndex,
   saveIndex,
+  type CatalogForm,
   type LearnsetGroup,
   type RegionalDex,
 } from "./pokeapi";
 import { idFromUrl } from "./format";
-import { formFromVarietySlug, formStorageKey, formsEqual, type SpeciesForm } from "./forms";
+import { formFromVarietySlug, formStorageKey, formsEqual, type FormList, type SpeciesForm } from "./forms";
 import { buildAppPath, parseAppPath, saveDexPrefs, loadDexPrefs, loadListView, saveListView, type DetailSection, type ListView } from "./paths";
 import { entryFor, loadProgress, mergeProgress, saveProgress, clearProgress, isProgressEmpty, toggleGenderMark, toggleMark, type GenderChoice } from "./progress";
 import type { DexIndex, DexScope, MarkKey, MonPayload, Progress, StatusFilter } from "./types";
@@ -41,13 +43,14 @@ async function monForForm(payload: MonPayload, form: SpeciesForm | null): Promis
     return null;
   }
   const formMon = await fetchMon(formId);
-  return { ...payload, data: formMon.data, overview: formMon.overview };
+  return { ...payload, data: formMon.data, overview: formMon.overview, capture: formMon.capture };
 }
 
 type ListContext = {
   gen: number;
   region: string | null;
   scope: DexScope;
+  formList: FormList | null;
   q: string;
   status: StatusFilter;
 };
@@ -60,6 +63,7 @@ function initialList(pathname: string): ListContext {
     gen: onList ? parsed.gen : (prefs?.gen ?? 1),
     region: onList ? parsed.region : null,
     scope: parsed.region ? "generation" : (prefs?.scope ?? "national"),
+    formList: onList ? parsed.formList : null,
     q: "",
     status: "all",
   };
@@ -77,8 +81,10 @@ export default function App() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [regional, setRegional] = useState<RegionalDex | null>(null);
   const [regionalLoading, setRegionalLoading] = useState(false);
-  const [index, setIndex] = useState<DexIndex>({ names: {}, types: {} });
+  const [index, setIndex] = useState<DexIndex>({ names: {}, types: {}, rarity: {} });
   const [indexLoading, setIndexLoading] = useState(true);
+  const [forms, setForms] = useState<CatalogForm[]>([]);
+  const [formsLoading, setFormsLoading] = useState(true);
   const [prog, setProg] = useState<Progress>({});
   const [mon, setMon] = useState<MonPayload | null>(null);
   const [monLoading, setMonLoading] = useState(false);
@@ -94,7 +100,7 @@ export default function App() {
 
   const { view, game, id, form, section } = route;
   const [list, setList] = useState<ListContext>(() => initialList(location.pathname));
-  const { gen, region, q, status, scope } = list;
+  const { gen, region, q, status, scope, formList } = list;
 
   useEffect(() => {
     if (view !== "dex" && view !== "checklist") {
@@ -104,12 +110,13 @@ export default function App() {
       const nextRegion = route.region;
       const nextGen = route.gen;
       const nextScope = nextRegion ? "generation" : prev.scope;
-      if (prev.gen === nextGen && prev.region === nextRegion && prev.scope === nextScope) {
+      const nextFormList = route.formList;
+      if (prev.gen === nextGen && prev.region === nextRegion && prev.scope === nextScope && prev.formList === nextFormList) {
         return prev;
       }
-      return { ...prev, gen: nextGen, region: nextRegion, scope: nextScope };
+      return { ...prev, gen: nextGen, region: nextRegion, scope: nextScope, formList: nextFormList };
     });
-  }, [route.gen, route.region, view]);
+  }, [route.gen, route.region, route.formList, view]);
 
   useEffect(() => {
     if (view === "dex" || view === "checklist" || view === "mon") {
@@ -215,6 +222,25 @@ export default function App() {
         }
       }
     })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchForms()
+      .then((next) => {
+        if (!cancelled) {
+          setForms(next);
+          setFormsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFormsLoading(false);
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -519,9 +545,14 @@ export default function App() {
           onImported={refreshProgressFromServer}
           onOpen={open}
           onOpenRegion={(slug) => {
-            setList((prev) => ({ ...prev, region: slug, q: "", status: "all", scope: "generation" }));
+            setList((prev) => ({ ...prev, region: slug, formList: null, q: "", status: "all", scope: "generation" }));
             go({ view: "dex", game: "home", region: slug });
           }}
+          onOpenFormList={(kind) => {
+            setList((prev) => ({ ...prev, formList: kind, region: null, q: "", status: "all" }));
+            go({ view: "dex", game, formList: kind });
+          }}
+          forms={forms}
           onOpenDex={() => {
             const next = dexContextForGame(game, gen);
             setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope, q: "", status: "all" }));
@@ -551,19 +582,26 @@ export default function App() {
           regional={regional}
           regionalLoading={regionalLoading}
           obtainable={obtainable}
+          formList={formList}
+          forms={forms}
+          formsLoading={formsLoading}
           onQuery={(nextQ) => setList((prev) => ({ ...prev, q: nextQ }))}
           onStatus={(nextStatus) => setList((prev) => ({ ...prev, status: nextStatus }))}
           onScope={(nextScope) => {
             const next = nextScope === "generation" ? dexContextForGame(game, gen) : { gen, scope: nextScope };
-            setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope }));
+            setList((prev) => ({ ...prev, gen: next.gen, region: null, formList: null, scope: next.scope }));
             go({ view: "dex", game, gen: next.gen });
           }}
           onOpen={open}
+          onOpenForm={openForm}
           onToggleCaught={(pokemonId) => {
             void toggle(pokemonId, "caught");
           }}
           onToggleShiny={(pokemonId) => {
             void toggle(pokemonId, "shiny");
+          }}
+          onToggleForm={(pokemonId, nextForm, key) => {
+            void toggle(pokemonId, key, nextForm);
           }}
         />
       ) : null}
@@ -610,12 +648,13 @@ export default function App() {
           prog={prog}
           game={game}
           names={index.names}
+          rarity={index.rarity}
           obtainable={obtainable[id]}
           authUser={authUser}
           section={section}
           listView={listView}
           onSection={(nextSection) => go({ view: "mon", game, id, form, section: nextSection })}
-          onBack={() => go({ view: listView, game, gen, region })}
+          onBack={() => go({ view: listView, game, gen, region, formList })}
           onPrev={() => open(Math.max(1, id - 1), section)}
           onNext={() => open(Math.min(1025, id + 1), section)}
           form={form}

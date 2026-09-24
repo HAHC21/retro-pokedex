@@ -15,9 +15,12 @@ export type MarkEntry = {
 
 export type Progress = Record<string, Record<string, MarkEntry>>;
 
+export type SpeciesRarity = "legendary" | "mythical" | "pseudo" | "fossil";
+
 export type DexIndex = {
   names: Record<number, string>;
   types: Record<number, string[]>;
+  rarity: Record<number, SpeciesRarity>;
 };
 
 export type View = "dash" | "dex" | "checklist" | "mon" | "signin" | "login" | "changelog";
@@ -79,4 +82,5 @@ export type MonPayload = {
   evo: EvolutionStep[];
   enc: WildEncounter[];
   overview?: string | null;
+  capture?: boolean;
 };

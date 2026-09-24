@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Blueprint } from "../components/Blueprint";
+import { boxClass } from "../rarity";
 import { DexToolbar } from "../components/DexToolbar";
 import { MarkToggles } from "../components/MarkToggles";
 import { GenderSprites } from "../components/GenderSprites";
@@ -131,7 +132,7 @@ export function ChecklistView({
           const exclusiveKey = exclusives[id];
           const exclusiveName = exclusiveKey ? versionLabel(exclusiveKey) : null;
           return (
-            <Blueprint key={id} className={marked ? "pk-check-row is-marked" : "pk-check-row"}>
+            <Blueprint key={id} className={boxClass("pk-check-row", marked, index.rarity[id])}>
               <button type="button" className="pk-nav pk-check-id" onClick={() => onOpen(id)}>
                 {numberLabel}
               </button>
