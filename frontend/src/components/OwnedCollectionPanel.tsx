@@ -56,6 +56,7 @@ export function OwnedCollectionPanel({
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<"add" | "upload" | null>(null);
   const [shiny, setShiny] = useState(false);
+  const [gender, setGender] = useState("");
   const [nickname, setNickname] = useState("");
   const [level, setLevel] = useState("50");
   const [abilityName, setAbilityName] = useState(abilities[0]?.name || "");
@@ -116,6 +117,7 @@ export function OwnedCollectionPanel({
   function resetAddForm() {
     setNickname("");
     setShiny(false);
+    setGender("");
     setLevel("50");
     setAbilityName(abilities[0]?.name || "");
     setNature(NATURES[0]?.name || "Hardy");
@@ -149,6 +151,7 @@ export function OwnedCollectionPanel({
         nickname: nickname.trim() || null,
         level: level ? Number(level) : null,
         shiny,
+        gender: gender || null,
         ability_name: abilityName || null,
         ability_slot: ability?.slot ?? null,
         nature: nature || null,
@@ -306,6 +309,15 @@ export function OwnedCollectionPanel({
             <select className="input" value={shiny ? "shiny" : "normal"} onChange={(event) => setShiny(event.target.value === "shiny")}>
               <option value="normal">Normal</option>
               <option value="shiny">Shiny</option>
+            </select>
+          </label>
+          <label className="field pk-field">
+            <span>Gender</span>
+            <select className="input" value={gender} onChange={(event) => setGender(event.target.value)}>
+              <option value="">Unknown</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="genderless">Genderless</option>
             </select>
           </label>
           <label className="field pk-field">

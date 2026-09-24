@@ -13,6 +13,8 @@ from app.repositories.pokemon_acquisition_repository import PokemonAcquisitionRe
 from app.repositories.pokemon_detail_view_repository import PokemonDetailViewRepository
 from app.repositories.pokemon_evolution_repository import PokemonEvolutionRepository
 from app.repositories.pokemon_names_repository import PokemonNamesRepository
+from app.db.documents import PokemonDocument
+from app.repositories.pokemon_form_repository import PokemonRepository
 from app.repositories.pokemon_overview_repository import PokemonOverviewRepository
 from app.repositories.pokemon_spawns_repository import PokemonSpawnsRepository
 from app.repositories.type_membership_repository import TypeMembershipRepository
@@ -26,6 +28,32 @@ def _title(value: str) -> str:
     if not value:
         return ""
     return "-".join(part[:1].upper() + part[1:] for part in value.split("-") if part)
+
+
+def _apply_stored_stats(payload: dict[str, Any], record: PokemonDocument) -> dict[str, Any]:
+    stats = record.stats
+    if stats is None:
+        return payload
+    stored = {
+        "hp": stats.hp,
+        "attack": stats.attack,
+        "defense": stats.defense,
+        "special-attack": stats.special_attack,
+        "special-defense": stats.special_defense,
+        "speed": stats.speed,
+    }
+    data = dict(payload.get("data") or {})
+    updated = []
+    for entry in data.get("stats") or []:
+        name = ((entry.get("stat") or {}).get("name") or "") if isinstance(entry, dict) else ""
+        if name in stored:
+            updated.append({**entry, "base_stat": stored[name]})
+        else:
+            updated.append(entry)
+    if not updated:
+        return payload
+    data["stats"] = updated
+    return {**payload, "data": data}
 
 
 def _pretty(value: str) -> str:
@@ -356,6 +384,7 @@ class PokeProxyService:
         pokedex_entries: PokedexEntryRepository | None = None,
         moves: MoveRepository | None = None,
         overviews: PokemonOverviewRepository | None = None,
+        pokemon: PokemonRepository | None = None,
         obtain_index: ObtainIndexRepository | None = None,
         names: PokemonNamesRepository | None = None,
         type_membership: TypeMembershipRepository | None = None,
@@ -370,6 +399,7 @@ class PokeProxyService:
         self._pokedex_entries = pokedex_entries or PokedexEntryRepository()
         self._moves = moves or MoveRepository()
         self._overviews = overviews or PokemonOverviewRepository()
+        self._pokemon = pokemon or PokemonRepository()
         self._obtain_index_repo = obtain_index or ObtainIndexRepository()
         self._names = names or PokemonNamesRepository()
         self._type_membership = type_membership or TypeMembershipRepository()
@@ -773,26 +803,61 @@ class PokeProxyService:
         detail = _evolution_detail_for(chain or {}, pokemon_id)
         return _evolve_label(parent_name, detail)
 
-    async def pokemon_detail(self, pokemon_id: int) -> dict[str, Any] | None:
-        stored = await asyncio.to_thread(self._detail_views.get, pokemon_id)
+    async def pokemon_detail(self, resource_id: int) -> dict[str, Any] | None:
+        record = await asyncio.to_thread(self._pokemon.get_by_resource_id, resource_id)
+        pokedex_id = int(record.pokedex_id) if record is not None else resource_id
+        form = record.form if record is not None else "base"
+        stored = await asyncio.to_thread(self._detail_views.get, pokedex_id, form)
         if stored is not None:
-            return stored
-        return await self._pokemon_detail_live(pokemon_id)
+            return await self._with_form_record(resource_id, stored)
+        live = await self._pokemon_detail_live(resource_id, pokedex_id=pokedex_id, form=form)
+        if live is None:
+            return None
+        return await self._with_form_record(resource_id, live)
 
-    async def _pokemon_detail_live(self, pokemon_id: int) -> dict[str, Any] | None:
+    async def _with_form_record(self, resource_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+        record = await asyncio.to_thread(self._pokemon.get_by_resource_id, resource_id)
+        if record is None:
+            return payload
+        overview_doc = await asyncio.to_thread(self._overviews.get, record.id)
+        payload = {**payload, "overview": overview_doc.overview if overview_doc else None}
+        if record.types:
+            data = dict(payload.get("data") or {})
+            data["types"] = [{"type": {"name": name}} for name in record.types]
+            payload = {**payload, "data": data}
+        elif record is not None:
+            names = [
+                ((slot.get("type") or {}).get("name") or "")
+                for slot in (payload.get("data") or {}).get("types") or []
+                if isinstance(slot, dict)
+            ]
+            names = [name for name in names if name]
+            if names:
+                record.types = names
+                await asyncio.to_thread(record.save)
+        return _apply_stored_stats(payload, record)
+
+    async def _pokemon_detail_live(
+        self,
+        pokemon_id: int,
+        *,
+        pokedex_id: int | None = None,
+        form: str = "base",
+    ) -> dict[str, Any] | None:
         data = await self._client.get_pokemon(pokemon_id)
         if data is None:
             return None
         species_url = (data.get("species") or {}).get("url") or ""
         species_id = _id_from_url(species_url) or pokemon_id
         species = await self._client.get_species(species_id) or {}
-        evo_doc = await asyncio.to_thread(self._evolution.get, species_id)
+        evo_doc = await asyncio.to_thread(self._evolution.get, pokedex_id or species_id, form)
+        if evo_doc is None and (form.startswith("mega") or form == "gigantamax"):
+            evo_doc = await asyncio.to_thread(self._evolution.get, pokedex_id or species_id, "base")
         if evo_doc is not None:
             evo = evo_doc["steps"]
         else:
             evo = await self._evolution_steps(species)
         obtain = await self.obtain_meta(species_id)
-        overview_doc = await asyncio.to_thread(self._overviews.get, species_id)
         abilities = await self._abilities_with_descriptions(data.get("abilities") or [])
         return {
             "data": _project_pokemon_data(data, abilities),
@@ -800,14 +865,22 @@ class PokeProxyService:
             "evo": evo,
             "obtain_versions": obtain["versions"],
             "evolves_from": obtain["evolves_from"],
-            "overview": overview_doc.overview if overview_doc else None,
+            "overview": None,
         }
 
-    async def pokemon_spawns(self, pokemon_id: int) -> dict[str, Any]:
-        stored = await asyncio.to_thread(self._spawns.get, pokemon_id)
+    async def pokemon_spawns(self, resource_id: int) -> dict[str, Any]:
+        record = await asyncio.to_thread(self._pokemon.get_by_resource_id, resource_id)
+        pokedex_id = int(record.pokedex_id) if record is not None else resource_id
+        form = record.form if record is not None else "base"
+        stored = await asyncio.to_thread(self._spawns.get, pokedex_id, form)
+        if stored is None and (form.startswith("mega") or form == "gigantamax"):
+            stored = await asyncio.to_thread(self._spawns.get, pokedex_id, "base")
         if stored is not None:
             return {"enc": stored}
-        raw = await self._client.get_encounters(pokemon_id)
+        if form.startswith("regional"):
+            raw = await self._client.get_encounters(resource_id)
+        else:
+            raw = await self._client.get_encounters(pokedex_id)
         wild = filter_wild_encounters(raw)
         location_map = self._location_map
         if location_map is None:

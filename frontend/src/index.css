@@ -1026,6 +1026,83 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
+  align-items: start;
+}
+
+.pk-mark-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pk-gender-slot {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 180ms ease;
+}
+
+.pk-gender-slot.is-open {
+  grid-template-rows: 1fr;
+}
+
+.pk-gender-slot-inner {
+  overflow: hidden;
+}
+
+.pk-gender-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.pk-gender-sprites {
+  position: relative;
+  overflow: visible;
+}
+
+.pk-sprite-pair .pk-gender-sprites {
+  width: 220px;
+  height: 176px;
+}
+
+.pk-gender-sprites .pk-gender-male,
+.pk-gender-sprites .pk-gender-female {
+  position: absolute;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  max-width: none;
+}
+
+.pk-sprite-pair .pk-gender-sprites .pk-gender-male {
+  left: 0;
+  top: 0;
+  width: 168px;
+  height: 168px;
+}
+
+.pk-sprite-pair .pk-gender-sprites .pk-gender-female {
+  left: 68px;
+  top: 20px;
+  width: 148px;
+  height: 148px;
+  z-index: 1;
+}
+
+.pk-mon-sprite.pk-gender-sprites .pk-gender-male {
+  left: 0;
+  top: 4px;
+  width: 72px;
+  height: 88px;
+}
+
+.pk-mon-sprite.pk-gender-sprites .pk-gender-female {
+  left: 36px;
+  top: 18px;
+  width: 64px;
+  height: 80px;
+  z-index: 1;
 }
 
 .pk-mon .pk-toggles {

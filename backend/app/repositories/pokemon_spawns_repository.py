@@ -13,8 +13,10 @@ _CHUNK = 200
 
 
 class PokemonSpawnsRepository:
-    def get(self, pokemon_id: int) -> list[dict[str, Any]] | None:
-        doc = PokemonSpawnsDocument.objects(pokemon_id=pokemon_id).first()
+    def get(self, pokemon_id: int, form: str = "base") -> list[dict[str, Any]] | None:
+        doc = PokemonSpawnsDocument.objects(pokemon_id=pokemon_id, form=form).first()
+        if doc is None and form == "base":
+            doc = PokemonSpawnsDocument.objects(pokemon_id=pokemon_id, form__exists=False).first()
         if doc is None:
             return None
         return list(doc.enc or [])

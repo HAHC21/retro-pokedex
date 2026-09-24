@@ -5,7 +5,8 @@ import { MatchupPanel } from "../components/MatchupPanel";
 import { MoveNameTag } from "../components/MoveNameTag";
 import { OwnedCollectionPanel } from "../components/OwnedCollectionPanel";
 import { PokeBallIcon } from "../components/PokeBallIcon";
-import { PokemonSprite } from "../components/PokemonSprite";
+import { GenderSprites } from "../components/GenderSprites";
+import { MarkToggles } from "../components/MarkToggles";
 import { RegionMap } from "../components/RegionMap";
 import { TypeTag } from "../components/TypeTag";
 import { GameTag } from "../components/GameTag";
@@ -16,7 +17,8 @@ import {
   regionGraphsFromEncounters,
   type WildEncounter,
 } from "../encounters";
-import { dexNum, idFromUrl, navBtnStyle, pillStyle, spriteUrl, title } from "../format";
+import { dexNum, idFromUrl, navBtnStyle, spriteUrl, title } from "../format";
+import { formDisplayName, formFromVarietySlug, formsEqual, type SpeciesForm } from "../forms";
 import { defensiveGroups, offensiveGroups } from "../matchups";
 import { NATURES, natureModifierLabel } from "../natures";
 import { baseStatsFromPokeApi } from "../ownedStats";
@@ -31,8 +33,8 @@ import {
   type SmogonMovesetsPayload,
 } from "../pokeapi";
 import { fetchOwnedPokemon } from "../collectionApi";
-import { gameLabel, unionFor } from "../progress";
-import type { DexIndex, MonPayload, Progress } from "../types";
+import { gameLabel, unionFor, type GenderChoice } from "../progress";
+import type { DexIndex, MarkKey, MonPayload, Progress } from "../types";
 
 type DetailViewProps = {
   id: number;
@@ -53,9 +55,12 @@ type DetailViewProps = {
   onBack: () => void;
   onPrev: () => void;
   onNext: () => void;
+  form: SpeciesForm | null;
   onOpen: (id: number) => void;
+  onOpenForm: (id: number, form: SpeciesForm | null) => void;
   onToggleCaught: (id: number) => void;
   onToggleShiny: (id: number) => void;
+  onToggleGender: (id: number, key: MarkKey, gender: GenderChoice) => void;
   onProgressRefresh?: () => void;
 };
 
@@ -78,12 +83,15 @@ export function DetailView({
   onBack,
   onPrev,
   onNext,
+  form,
   onOpen,
+  onOpenForm,
   onToggleCaught,
   onToggleShiny,
+  onToggleGender,
   onProgressRefresh,
 }: DetailViewProps) {
-  const marks = unionFor(prog, id);
+  const marks = unionFor(prog, id, form);
   const prevId = Math.max(1, id - 1);
   const nextId = Math.min(1025, id + 1);
   const navStyle = { ...navBtnStyle(false), padding: "8px 14px", fontSize: 13 };
@@ -98,7 +106,7 @@ export function DetailView({
           ← {dexNum(prevId)} {names[prevId] || ""}
         </button>
         <span className="btn pk-nav pk-current-entry" style={{ ...navBtnStyle(true), padding: "8px 14px", fontSize: 13 }}>
-          {dexNum(id)} {names[id] || ""}
+          {dexNum(id)} {form ? formDisplayName(names[id] || "", form) : names[id] || ""}
         </span>
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onNext}>
           {dexNum(nextId)} {names[nextId] || ""} →
@@ -136,13 +144,18 @@ export function DetailView({
           learnsetLoading={learnsetLoading}
           recordedGames={marks.where.map(gameLabel)}
           gameName={gameLabel(game)}
-          displayName={speciesDisplayName(names, id, mon)}
+          displayName={form ? formDisplayName(speciesDisplayName(names, id, mon), form) : speciesDisplayName(names, id, mon)}
+          speciesName={speciesDisplayName(names, id, mon)}
+          speciesId={id}
+          form={form}
           canRefreshAi={isStaffRole(authUser?.role)}
           signedIn={!!authUser}
           onProgressRefresh={onProgressRefresh}
           onOpen={onOpen}
-          onToggleCaught={() => onToggleCaught(mon.data.id)}
-          onToggleShiny={() => onToggleShiny(mon.data.id)}
+          onOpenForm={onOpenForm}
+          onToggleCaught={() => onToggleCaught(id)}
+          onToggleShiny={() => onToggleShiny(id)}
+          onToggleGender={(key, gender) => onToggleGender(id, key, gender)}
         />
       ) : null}
     </div>
@@ -162,12 +175,17 @@ type MonBodyProps = {
   recordedGames: string[];
   gameName: string;
   displayName: string;
+  speciesName: string;
+  speciesId: number;
+  form: SpeciesForm | null;
   canRefreshAi: boolean;
   signedIn: boolean;
   onProgressRefresh?: () => void;
   onOpen: (id: number) => void;
+  onOpenForm: (id: number, form: SpeciesForm | null) => void;
   onToggleCaught: () => void;
   onToggleShiny: () => void;
+  onToggleGender: (key: MarkKey, gender: GenderChoice) => void;
 };
 
 function MonBody({
@@ -183,12 +201,17 @@ function MonBody({
   recordedGames,
   gameName,
   displayName,
+  speciesName,
+  speciesId,
+  form,
   canRefreshAi,
   signedIn,
   onProgressRefresh,
   onOpen,
+  onOpenForm,
   onToggleCaught,
   onToggleShiny,
+  onToggleGender,
 }: MonBodyProps) {
   const data = mon.data;
   const species = mon.species;
@@ -196,13 +219,18 @@ function MonBody({
   const abilities = [...(data.abilities || [])].sort((a, b) => (a.slot || 0) - (b.slot || 0));
   const defense = defensiveGroups(myTypes);
   const offense = offensiveGroups(myTypes);
+  const speciesSlug = species.name || data.name;
   const forms = (species.varieties || [])
     .filter((item) => !item.is_default)
-    .map((item) => ({
-      id: idFromUrl(item.pokemon.url || ""),
-      name: formVarietyLabel(item.pokemon.name, species.name || data.name),
-    }))
-    .filter((form) => form.id > 0);
+    .map((item) => {
+      const route = formFromVarietySlug(item.pokemon.name, speciesSlug);
+      return {
+        id: idFromUrl(item.pokemon.url || ""),
+        route,
+        name: route ? formDisplayName(speciesName, route) : formVarietyLabel(item.pokemon.name, speciesSlug),
+      };
+    })
+    .filter((entry) => entry.route && entry.id > 0);
   const gameLines = gamesForSpecies(data.game_indices || [], species.flavor_text_entries);
   const dexEntries = flavorTextsForGame(species.flavor_text_entries, game);
   const overview = mon.overview?.trim() || null;
@@ -252,7 +280,7 @@ function MonBody({
       return;
     }
     let cancelled = false;
-    fetchOwnedPokemon(data.id)
+    fetchOwnedPokemon(speciesId)
       .then((payload) => {
         if (cancelled || !payload) {
           return;
@@ -269,7 +297,7 @@ function MonBody({
     return () => {
       cancelled = true;
     };
-  }, [signedIn, data.id]);
+  }, [signedIn, speciesId]);
 
   const moveLookup = buildMoveLookup(learnset);
 
@@ -337,7 +365,7 @@ function MonBody({
                 <PokeBallIcon caught={!!(marks.caught || marks.shiny)} />
                 <div className="pk-identity-head">
                   <div className="pk-identity-meta">
-                    <span className="tag pk-dex-box">{dexNum(data.id)}</span>
+                    <span className="tag pk-dex-box">{dexNum(speciesId)}</span>
                     <div className="pk-types pk-identity-types">
                       {myTypes.map((type) => (
                         <TypeTag key={type} type={type} />
@@ -348,42 +376,40 @@ function MonBody({
                 </div>
                 <div className="pk-sprite-pair">
                   <figure>
-                    <PokemonSprite
+                    <GenderSprites
                       pokemonId={data.id}
+                      male={!!marks.caughtMale}
+                      female={!!marks.caughtFemale}
                       alt={displayName}
                       className={marks.caught ? undefined : "is-dim"}
                     />
                     <figcaption>Normal</figcaption>
                   </figure>
                   <figure>
-                    <PokemonSprite
+                    <GenderSprites
                       pokemonId={data.id}
                       shiny
+                      male={!!marks.shinyMale}
+                      female={!!marks.shinyFemale}
                       alt={`${displayName} shiny`}
                       className={marks.shiny ? undefined : "is-dim"}
                     />
                     <figcaption>Shiny</figcaption>
                   </figure>
                 </div>
-                <div className="pk-toggles">
-                  <CaughtMark
-                    kind="normal"
-                    active={!!marks.caught}
-                    canMark={obtainable === true}
-                    onClick={onToggleCaught}
-                  />
-                  <CaughtMark
-                    kind="shiny"
-                    active={!!marks.shiny}
-                    canMark={obtainable === true}
-                    onClick={onToggleShiny}
-                  />
-                </div>
-                {obtainable === false ? (
-                  <span className="pk-unavailable pk-unavailable-detail">Not available in {gameName}</span>
-                ) : obtainable === undefined ? (
-                  <span className="pk-unavailable pk-unavailable-detail">Checking obtainability…</span>
-                ) : null}
+                <MarkToggles
+                  caught={!!marks.caught}
+                  shiny={!!marks.shiny}
+                  caughtMale={!!marks.caughtMale}
+                  caughtFemale={!!marks.caughtFemale}
+                  shinyMale={!!marks.shinyMale}
+                  shinyFemale={!!marks.shinyFemale}
+                  available={obtainable}
+                  unavailableLabel={`Not available in ${gameName}`}
+                  onCaught={onToggleCaught}
+                  onShiny={onToggleShiny}
+                  onGender={onToggleGender}
+                />
                 <div className="pk-recorded">
                   <span>
                     {obtainable === true
@@ -532,15 +558,26 @@ function MonBody({
                 <Blueprint className="pk-forms">
                   <h3>Alternate forms</h3>
                   <div className="pk-evo-row">
-                    {forms.map((form) => (
+                    {form ? (
                       <button
-                        key={form.id}
                         type="button"
                         className="pk-nav pk-evo-cell"
-                        onClick={() => onOpen(form.id)}
+                        onClick={() => onOpenForm(speciesId, null)}
                       >
-                        <img src={spriteUrl(form.id)} alt={form.name} />
-                        <span>{form.name}</span>
+                        <img src={spriteUrl(speciesId)} alt={speciesName} />
+                        <span>{speciesName}</span>
+                      </button>
+                    ) : null}
+                    {forms.map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        className="pk-nav pk-evo-cell"
+                        aria-current={entry.route && formsEqual(form, entry.route) ? "page" : undefined}
+                        onClick={() => entry.route && onOpenForm(speciesId, entry.route)}
+                      >
+                        <img src={spriteUrl(entry.id)} alt={entry.name} />
+                        <span>{entry.name}</span>
                       </button>
                     ))}
                   </div>
@@ -553,8 +590,8 @@ function MonBody({
 
       {showSpecimens ? (
         <OwnedCollectionPanel
-          pokemonId={data.id}
-          speciesSlug={data.name}
+          pokemonId={speciesId}
+          speciesSlug={species.name || data.name}
           types={myTypes}
           game={game}
           gameName={gameName}
@@ -772,34 +809,6 @@ function flavorTextsForGame(
     }
   }
   return results;
-}
-
-function CaughtMark({
-  kind,
-  active,
-  canMark,
-  onClick,
-}: {
-  kind: "normal" | "shiny";
-  active: boolean;
-  canMark: boolean;
-  onClick: () => void;
-}) {
-  const shiny = kind === "shiny";
-  const style = pillStyle(active, shiny, { fontSize: 14, padding: "9px 10px", cursor: canMark ? "pointer" : "default" });
-  const label = active ? (shiny ? "✓ Shiny" : "✓ Normal") : canMark ? (shiny ? "Mark shiny" : "Mark normal") : shiny ? "Shiny" : "Normal";
-  if (canMark) {
-    return (
-      <button type="button" className="pk-toggle" style={style} onClick={onClick}>
-        {label}
-      </button>
-    );
-  }
-  return (
-    <span className="pk-toggle" style={style}>
-      {label}
-    </span>
-  );
 }
 
 function speciesDisplayName(names: DexIndex["names"], id: number, mon: MonPayload): string {

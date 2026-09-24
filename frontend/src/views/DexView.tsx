@@ -2,13 +2,14 @@ import { Blueprint } from "../components/Blueprint";
 import { DexToolbar } from "../components/DexToolbar";
 import { GameKeyTag } from "../components/GameTag";
 import { MarkToggles } from "../components/MarkToggles";
-import { PokemonSprite } from "../components/PokemonSprite";
+import { GenderSprites } from "../components/GenderSprites";
 import { TypeTag } from "../components/TypeTag";
 import { dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
 import { dexNum } from "../format";
 import type { RegionalDex } from "../pokeapi";
 import { gameLabel, unionFor } from "../progress";
-import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
+import type { GenderChoice } from "../progress";
+import type { DexIndex, DexScope, MarkKey, Progress, StatusFilter } from "../types";
 
 type DexViewProps = {
   index: DexIndex;
@@ -30,6 +31,7 @@ type DexViewProps = {
   onOpen: (id: number) => void;
   onToggleCaught: (id: number) => void;
   onToggleShiny: (id: number) => void;
+  onToggleGender: (id: number, key: MarkKey, gender: GenderChoice) => void;
 };
 
 export function DexView({
@@ -52,6 +54,7 @@ export function DexView({
   onOpen,
   onToggleCaught,
   onToggleShiny,
+  onToggleGender,
 }: DexViewProps) {
   const candidateIds = dexCandidateIds(scope, game, regional, gen, region);
   const grid = filterDexIds(candidateIds, index, prog, status, q);
@@ -96,9 +99,11 @@ export function DexView({
                     {marks.caught && marks.shiny ? "NORMAL + SHINY" : marks.shiny ? "SHINY" : marks.caught ? "NORMAL" : ""}
                   </span>
                 </span>
-                <PokemonSprite
+                <GenderSprites
                   pokemonId={id}
-                  shiny={!!marks.shiny}
+                  shiny={!!marks.shiny && !(marks.caughtMale && marks.caughtFemale)}
+                  male={!!(marks.caughtMale && marks.caughtFemale ? marks.caughtMale : marks.shiny ? marks.shinyMale : marks.caughtMale)}
+                  female={!!(marks.caughtMale && marks.caughtFemale ? marks.caughtFemale : marks.shiny ? marks.shinyFemale : marks.caughtFemale)}
                   alt={index.names[id]}
                   loading="lazy"
                   className={marked || !dimUncaught ? "pk-mon-sprite" : "pk-mon-sprite is-dim"}
@@ -120,10 +125,15 @@ export function DexView({
               <MarkToggles
                 caught={!!marks.caught}
                 shiny={!!marks.shiny}
+                caughtMale={!!marks.caughtMale}
+                caughtFemale={!!marks.caughtFemale}
+                shinyMale={!!marks.shinyMale}
+                shinyFemale={!!marks.shinyFemale}
                 available={available}
                 unavailableLabel={`Not In ${gameLabel(game)}`}
                 onCaught={() => onToggleCaught(id)}
                 onShiny={() => onToggleShiny(id)}
+                onGender={(key, gender) => onToggleGender(id, key, gender)}
               />
             </Blueprint>
           );

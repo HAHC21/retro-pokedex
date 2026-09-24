@@ -9,14 +9,18 @@ from app.db.documents import PokemonAiMovesetDocument
 
 
 class PokemonAiMovesetRepository:
-    def get(self, pokemon_id: int, game: str) -> PokemonAiMovesetDocument | None:
-        return PokemonAiMovesetDocument.objects(pokemon_id=pokemon_id, game=game).first()
+    def get(self, pokemon_id: int, game: str, form: str = "base") -> PokemonAiMovesetDocument | None:
+        doc = PokemonAiMovesetDocument.objects(pokemon_id=pokemon_id, game=game, form=form).first()
+        if doc is None and form == "base":
+            doc = PokemonAiMovesetDocument.objects(pokemon_id=pokemon_id, game=game, form__exists=False).first()
+        return doc
 
     def upsert(
         self,
         *,
         pokemon_id: int,
         game: str,
+        form: str = "base",
         available: bool,
         provider: str | None,
         model: str | None,
@@ -24,9 +28,9 @@ class PokemonAiMovesetRepository:
         sets: list[dict[str, Any]],
     ) -> PokemonAiMovesetDocument:
         now = datetime.now(timezone.utc)
-        doc = self.get(pokemon_id, game)
+        doc = self.get(pokemon_id, game, form)
         if doc is None:
-            doc = PokemonAiMovesetDocument(pokemon_id=pokemon_id, game=game, generated_at=now)
+            doc = PokemonAiMovesetDocument(pokemon_id=pokemon_id, game=game, form=form, generated_at=now)
         doc.available = bool(available)
         doc.provider = provider
         doc.model = model

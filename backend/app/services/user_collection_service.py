@@ -26,14 +26,20 @@ class UserCollectionService:
         *,
         game: str,
         pokemon_id: int,
+        form: str = "base",
         mark: dict[str, Any],
     ) -> dict[str, Any] | None:
         return self._repo.upsert_mark(
             user_id=user_id,
             game=game,
             pokemon_id=pokemon_id,
+            form=form,
             caught=bool(mark.get("caught")),
             caught_at=mark.get("caughtAt"),
+            caught_male=bool(mark.get("caughtMale")),
+            caught_female=bool(mark.get("caughtFemale")),
             shiny=bool(mark.get("shiny")),
             shiny_at=mark.get("shinyAt"),
+            shiny_male=bool(mark.get("shinyMale")),
+            shiny_female=bool(mark.get("shinyFemale")),
         )

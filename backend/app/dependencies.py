@@ -10,6 +10,7 @@ from app.integrations.gemini.client import GeminiMovesetClient
 from app.integrations.oidc import OidcClientRegistry
 from app.integrations.pokeapi.client import PokeApiClient
 from app.integrations.smogon.client import SmogonSetsClient
+from app.repositories.login_event_repository import LoginEventRepository
 from app.repositories.json_collection_repository import JsonFileCollectionRepository
 from app.repositories.mongo_user_repository import MongoUserRepository
 from app.repositories.pokeapi_cache_repository import PokeApiCacheRepository
@@ -18,6 +19,7 @@ from app.repositories.owned_pokemon_repository import OwnedPokemonRepository
 from app.repositories.pokemon_ai_moveset_repository import PokemonAiMovesetRepository
 from app.repositories.pokemon_overview_repository import PokemonOverviewRepository
 from app.repositories.user_collection_repository import UserCollectionRepository
+from app.services.admin_stats_service import AdminStatsService
 from app.services.auth_service import AuthService
 from app.services.moveset_service import MovesetService
 from app.services.owned_pokemon_service import OwnedPokemonService
@@ -128,8 +130,21 @@ def get_owned_pokemon_service() -> OwnedPokemonService:
     return OwnedPokemonService(get_owned_pokemon_repository(), get_user_collection_repository())
 
 
+@lru_cache
+def get_login_event_repository() -> LoginEventRepository:
+    return LoginEventRepository()
+
+
+def get_admin_stats_service() -> AdminStatsService:
+    return AdminStatsService(get_login_event_repository())
+
+
 def get_auth_service() -> AuthService:
-    return AuthService(get_user_repository(), build_email_sender())
+    return AuthService(
+        get_user_repository(),
+        build_email_sender(),
+        get_login_event_repository(),
+    )
 
 
 def get_current_user(

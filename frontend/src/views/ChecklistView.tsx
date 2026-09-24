@@ -2,15 +2,15 @@ import { useEffect, useState } from "react";
 import { Blueprint } from "../components/Blueprint";
 import { DexToolbar } from "../components/DexToolbar";
 import { MarkToggles } from "../components/MarkToggles";
-import { PokemonSprite } from "../components/PokemonSprite";
+import { GenderSprites } from "../components/GenderSprites";
 import { acquisitionFallback, resolveAcquisitionForIds } from "../acquisition";
 import { versionLabel } from "../catalog";
 import { CHECKLIST_STATUSES, dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
 import { dexNum, navBtnStyle } from "../format";
 import { resolveExclusiveVersionsForIds } from "../obtainability";
 import type { RegionalDex } from "../pokeapi";
-import { gameLabel, unionFor } from "../progress";
-import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
+import { gameLabel, unionFor, type GenderChoice } from "../progress";
+import type { DexIndex, DexScope, MarkKey, Progress, StatusFilter } from "../types";
 
 type ChecklistViewProps = {
   index: DexIndex;
@@ -32,6 +32,7 @@ type ChecklistViewProps = {
   onSpawns: (id: number) => void;
   onToggleCaught: (id: number) => void;
   onToggleShiny: (id: number) => void;
+  onToggleGender: (id: number, key: MarkKey, gender: GenderChoice) => void;
 };
 
 export function ChecklistView({
@@ -54,6 +55,7 @@ export function ChecklistView({
   onSpawns,
   onToggleCaught,
   onToggleShiny,
+  onToggleGender,
 }: ChecklistViewProps) {
   const [methods, setMethods] = useState<Record<number, string>>({});
   const [exclusives, setExclusives] = useState<Record<number, string | null>>({});
@@ -136,9 +138,11 @@ export function ChecklistView({
                 {numberLabel}
               </button>
               <button type="button" className="pk-nav pk-check-sprite-btn" onClick={() => onOpen(id)}>
-                <PokemonSprite
+                <GenderSprites
                   pokemonId={id}
-                  shiny={!!marks.shiny}
+                  shiny={!!marks.shiny && !(marks.caughtMale && marks.caughtFemale)}
+                  male={!!(marks.caughtMale && marks.caughtFemale ? true : marks.shiny ? marks.shinyMale : marks.caughtMale)}
+                  female={!!(marks.caughtMale && marks.caughtFemale ? true : marks.shiny ? marks.shinyFemale : marks.caughtFemale)}
                   alt=""
                   loading="lazy"
                   className={marked ? "pk-check-sprite" : "pk-check-sprite is-dim"}
@@ -159,10 +163,15 @@ export function ChecklistView({
                 <MarkToggles
                   caught={!!marks.caught}
                   shiny={!!marks.shiny}
+                  caughtMale={!!marks.caughtMale}
+                  caughtFemale={!!marks.caughtFemale}
+                  shinyMale={!!marks.shinyMale}
+                  shinyFemale={!!marks.shinyFemale}
                   available={available}
                   unavailableLabel={`Not In ${gameLabel(game)}`}
                   onCaught={() => onToggleCaught(id)}
                   onShiny={() => onToggleShiny(id)}
+                  onGender={(key, gender) => onToggleGender(id, key, gender)}
                 />
               </span>
             </Blueprint>

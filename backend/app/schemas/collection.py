@@ -31,8 +31,12 @@ class CaughtPokemonRead(BaseModel):
 class MarkEntryWrite(BaseModel):
     caught: bool = False
     caughtAt: int | None = None
+    caughtMale: bool = False
+    caughtFemale: bool = False
     shiny: bool = False
     shinyAt: int | None = None
+    shinyMale: bool = False
+    shinyFemale: bool = False
 
 
 class MarkEntryRead(BaseModel):

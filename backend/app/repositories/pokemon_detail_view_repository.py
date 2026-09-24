@@ -13,8 +13,10 @@ _CHUNK = 100
 
 
 class PokemonDetailViewRepository:
-    def get(self, pokemon_id: int) -> dict[str, Any] | None:
-        doc = PokemonDetailViewDocument.objects(pokemon_id=pokemon_id).first()
+    def get(self, pokemon_id: int, form: str = "base") -> dict[str, Any] | None:
+        doc = PokemonDetailViewDocument.objects(pokemon_id=pokemon_id, form=form).first()
+        if doc is None and form == "base":
+            doc = PokemonDetailViewDocument.objects(pokemon_id=pokemon_id, form__exists=False).first()
         if doc is None:
             return None
         payload = doc.payload

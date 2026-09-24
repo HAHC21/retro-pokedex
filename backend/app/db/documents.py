@@ -9,6 +9,7 @@ from mongoengine import (
     EmbeddedDocumentField,
     IntField,
     ListField,
+    ObjectIdField,
     StringField,
 )
 
@@ -91,18 +92,55 @@ class MoveDocument(Document):
     synced_at = DateTimeField(required=True)
 
 
+class PokemonStats(EmbeddedDocument):
+    """Base stats for one form. They belong to that form's database row."""
+
+    hp = IntField(required=True)
+    attack = IntField(required=True)
+    defense = IntField(required=True)
+    special_attack = IntField(required=True)
+    special_defense = IntField(required=True)
+    speed = IntField(required=True)
+
+
+class PokemonDocument(Document):
+    """One form of a species.
+
+    ``pokedex_id`` is the National Dex number and is shared by every form.
+    ``form`` is the specificity: base, regional-alola, mega, mega-x, mega-y, gigantamax.
+    The document id is what overviews and other per-form rows reference.
+    """
+
+    meta = {
+        "collection": "pokemon",
+        "indexes": [
+            {"fields": ["pokedex_id", "form"], "unique": True},
+            {"fields": ["resource_id"], "unique": True},
+            {"fields": ["pokedex_id"]},
+        ],
+    }
+
+    pokedex_id = IntField(required=True)
+    form = StringField(required=True)
+    name = StringField(required=True)
+    resource_id = IntField(required=True)
+    types = ListField(StringField(), default=list)
+    stats = EmbeddedDocumentField(PokemonStats, null=True)
+    updated_at = DateTimeField(required=True)
+
+
 class PokemonOverviewDocument(Document):
-    """Gemini-generated lore overview for a National Dex species."""
+    """Lore overview for one Pokémon row, referenced by that row's database id."""
 
     meta = {
         "collection": "pokemon_overviews",
         "indexes": [
-            {"fields": ["pokemon_id"], "unique": True},
+            {"fields": ["pokemon"], "unique": True},
             {"fields": ["name"]},
         ],
     }
 
-    pokemon_id = IntField(required=True)
+    pokemon = ObjectIdField(required=True)
     name = StringField(required=True)
     overview = StringField(required=True)
     source = StringField(required=True, default="gemini")
@@ -187,11 +225,12 @@ class PokemonSpawnsDocument(Document):
     meta = {
         "collection": "pokemon_spawns",
         "indexes": [
-            {"fields": ["pokemon_id"], "unique": True},
+            {"fields": ["pokemon_id", "form"], "unique": True},
         ],
     }
 
     pokemon_id = IntField(required=True)
+    form = StringField(required=True, default="base")
     enc = ListField(DictField(), default=list)
     built_at = DateTimeField(required=True)
 
@@ -202,11 +241,12 @@ class PokemonEvolutionDocument(Document):
     meta = {
         "collection": "pokemon_evolution",
         "indexes": [
-            {"fields": ["pokemon_id"], "unique": True},
+            {"fields": ["pokemon_id", "form"], "unique": True},
         ],
     }
 
     pokemon_id = IntField(required=True)
+    form = StringField(required=True, default="base")
     steps = ListField(DictField(), default=list)
     parent_id = IntField(null=True)
     parent_name = StringField(null=True)
@@ -250,11 +290,12 @@ class PokemonDetailViewDocument(Document):
     meta = {
         "collection": "pokemon_detail_view",
         "indexes": [
-            {"fields": ["pokemon_id"], "unique": True},
+            {"fields": ["pokemon_id", "form"], "unique": True},
         ],
     }
 
     pokemon_id = IntField(required=True)
+    form = StringField(required=True, default="base")
     payload = DictField(required=True)
     built_at = DateTimeField(required=True)
 
@@ -265,12 +306,13 @@ class PokemonAiMovesetDocument(Document):
     meta = {
         "collection": "pokemon_ai_movesets",
         "indexes": [
-            {"fields": ["pokemon_id", "game"], "unique": True},
+            {"fields": ["pokemon_id", "form", "game"], "unique": True},
             {"fields": ["game"]},
         ],
     }
 
     pokemon_id = IntField(required=True)
+    form = StringField(required=True, default="base")
     game = StringField(required=True)
     available = BooleanField(required=True, default=True)
     provider = StringField(null=True)
@@ -287,7 +329,7 @@ class UserCollectionMarkDocument(Document):
     meta = {
         "collection": "user_collection_marks",
         "indexes": [
-            {"fields": ["user_id", "game", "pokemon_id"], "unique": True},
+            {"fields": ["user_id", "game", "pokemon_id", "form"], "unique": True},
             {"fields": ["user_id", "game"]},
             {"fields": ["user_id"]},
         ],
@@ -296,10 +338,15 @@ class UserCollectionMarkDocument(Document):
     user_id = StringField(required=True)
     game = StringField(required=True)
     pokemon_id = IntField(required=True)
+    form = StringField(required=True, default="base")
     caught = BooleanField(required=True, default=False)
     caught_at = IntField(null=True)  # epoch ms, matches frontend
+    caught_male = BooleanField(required=True, default=False)
+    caught_female = BooleanField(required=True, default=False)
     shiny = BooleanField(required=True, default=False)
     shiny_at = IntField(null=True)
+    shiny_male = BooleanField(required=True, default=False)
+    shiny_female = BooleanField(required=True, default=False)
     updated_at = DateTimeField(required=True)
 
 

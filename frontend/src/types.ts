@@ -5,8 +5,12 @@ export type MarkKey = "caught" | "shiny";
 export type MarkEntry = {
   caught?: boolean;
   caughtAt?: number | null;
+  caughtMale?: boolean;
+  caughtFemale?: boolean;
   shiny?: boolean;
   shinyAt?: number | null;
+  shinyMale?: boolean;
+  shinyFemale?: boolean;
 };
 
 export type Progress = Record<string, Record<string, MarkEntry>>;

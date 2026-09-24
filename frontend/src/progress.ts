@@ -1,5 +1,8 @@
 import { GAMES, PROG_KEY } from "./catalog";
+import { markKey, type SpeciesForm } from "./forms";
 import type { MarkEntry, MarkKey, Progress } from "./types";
+
+export type GenderChoice = "male" | "female";
 
 export function loadProgress(): Progress {
   try {
@@ -33,43 +36,97 @@ export function clearProgress() {
   }
 }
 
-export function entryFor(prog: Progress, game: string, id: number): MarkEntry {
-  return prog[game]?.[String(id)] || {};
+export function entryFor(prog: Progress, game: string, id: number, form: SpeciesForm | null = null): MarkEntry {
+  return prog[game]?.[markKey(id, form)] || {};
 }
 
-export function unionFor(prog: Progress, id: number) {
+export function unionFor(prog: Progress, id: number, form: SpeciesForm | null = null) {
+  const key = markKey(id, form);
   let caught = false;
   let shiny = false;
+  let caughtMale = false;
+  let caughtFemale = false;
+  let shinyMale = false;
+  let shinyFemale = false;
   const where: string[] = [];
-  Object.keys(prog).forEach((key) => {
-    const entry = prog[key]?.[String(id)];
+  Object.keys(prog).forEach((gameKey) => {
+    const entry = prog[gameKey]?.[key];
     if (entry && (entry.caught || entry.shiny)) {
       caught = caught || !!entry.caught;
       shiny = shiny || !!entry.shiny;
-      where.push(key);
+      caughtMale = caughtMale || !!entry.caughtMale;
+      caughtFemale = caughtFemale || !!entry.caughtFemale;
+      shinyMale = shinyMale || !!entry.shinyMale;
+      shinyFemale = shinyFemale || !!entry.shinyFemale;
+      where.push(gameKey);
     }
   });
   const order = new Map(GAMES.map((game, index) => [game.k, index]));
   where.sort((left, right) => (order.get(left) ?? 999) - (order.get(right) ?? 999));
-  return { caught, shiny, where };
+  return { caught, shiny, caughtMale, caughtFemale, shinyMale, shinyFemale, where };
 }
 
-export function patchMark(prog: Progress, game: string, id: number, patch: MarkEntry): Progress {
+export function patchMark(
+  prog: Progress,
+  game: string,
+  id: number,
+  patch: MarkEntry,
+  form: SpeciesForm | null = null,
+): Progress {
+  const key = markKey(id, form);
   return {
     ...prog,
     [game]: {
       ...(prog[game] || {}),
-      [String(id)]: { ...(prog[game]?.[String(id)] || {}), ...patch },
+      [key]: { ...(prog[game]?.[key] || {}), ...patch },
     },
   };
 }
 
-export function toggleMark(prog: Progress, game: string, id: number, key: MarkKey): Progress {
-  const next = !entryFor(prog, game, id)[key];
-  return patchMark(prog, game, id, {
-    [key]: next,
-    [`${key}At`]: next ? Date.now() : null,
-  });
+export function toggleMark(
+  prog: Progress,
+  game: string,
+  id: number,
+  key: MarkKey,
+  form: SpeciesForm | null = null,
+): Progress {
+  const next = !entryFor(prog, game, id, form)[key];
+  const cleared: MarkEntry =
+    key === "caught"
+      ? { caughtMale: false, caughtFemale: false }
+      : { shinyMale: false, shinyFemale: false };
+  return patchMark(
+    prog,
+    game,
+    id,
+    {
+      [key]: next,
+      [`${key}At`]: next ? Date.now() : null,
+      ...(next ? {} : cleared),
+    },
+    form,
+  );
+}
+
+const GENDER_FIELD: Record<MarkKey, Record<GenderChoice, keyof MarkEntry>> = {
+  caught: { male: "caughtMale", female: "caughtFemale" },
+  shiny: { male: "shinyMale", female: "shinyFemale" },
+};
+
+export function toggleGenderMark(
+  prog: Progress,
+  game: string,
+  id: number,
+  key: MarkKey,
+  gender: GenderChoice,
+  form: SpeciesForm | null = null,
+): Progress {
+  const entry = entryFor(prog, game, id, form);
+  if (!entry[key]) {
+    return prog;
+  }
+  const field = GENDER_FIELD[key][gender];
+  return patchMark(prog, game, id, { [field]: !entry[field] }, form);
 }
 
 export function unionSets(prog: Progress) {
@@ -125,10 +182,22 @@ function mergeMarkEntry(left: MarkEntry, right: MarkEntry): MarkEntry {
   if (caught) {
     next.caught = true;
     next.caughtAt = newerStamp(left.caughtAt, right.caughtAt);
+    if (left.caughtMale || right.caughtMale) {
+      next.caughtMale = true;
+    }
+    if (left.caughtFemale || right.caughtFemale) {
+      next.caughtFemale = true;
+    }
   }
   if (shiny) {
     next.shiny = true;
     next.shinyAt = newerStamp(left.shinyAt, right.shinyAt);
+    if (left.shinyMale || right.shinyMale) {
+      next.shinyMale = true;
+    }
+    if (left.shinyFemale || right.shinyFemale) {
+      next.shinyFemale = true;
+    }
   }
   return next;
 }

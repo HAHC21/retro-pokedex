@@ -43,18 +43,26 @@ export async function upsertCollectionMark(
   game: string,
   pokemonId: number,
   mark: MarkEntry,
+  form = "base",
 ): Promise<void> {
-  const response = await fetch(`${API}/marks/${encodeURIComponent(game)}/${pokemonId}`, {
+  const response = await fetch(
+    `${API}/marks/${encodeURIComponent(game)}/${pokemonId}?form=${encodeURIComponent(form)}`,
+    {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       caught: !!mark.caught,
       caughtAt: mark.caughtAt ?? null,
+      caughtMale: !!mark.caughtMale,
+      caughtFemale: !!mark.caughtFemale,
       shiny: !!mark.shiny,
       shinyAt: mark.shinyAt ?? null,
+      shinyMale: !!mark.shinyMale,
+      shinyFemale: !!mark.shinyFemale,
     }),
-  });
+  },
+  );
   if (response.status === 401) {
     return;
   }

@@ -55,6 +55,7 @@ class Settings(BaseSettings):
                     *self.cors_origins,
                     frontend,
                     "http://localhost:5173",
+                    "http://localhost:5174",
                     *PRODUCTION_SITE_ORIGINS,
                 ]
             )

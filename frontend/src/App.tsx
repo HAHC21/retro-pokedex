@@ -16,14 +16,53 @@ import {
   type LearnsetGroup,
   type RegionalDex,
 } from "./pokeapi";
-import { buildAppPath, parseAppPath, saveDexPrefs, loadListView, saveListView, type DetailSection, type ListView } from "./paths";
-import { entryFor, loadProgress, mergeProgress, saveProgress, clearProgress, isProgressEmpty, toggleMark } from "./progress";
-import type { DexIndex, DexScope, MarkKey, MonPayload, Progress } from "./types";
+import { idFromUrl } from "./format";
+import { formFromVarietySlug, formStorageKey, formsEqual, type SpeciesForm } from "./forms";
+import { buildAppPath, parseAppPath, saveDexPrefs, loadDexPrefs, loadListView, saveListView, type DetailSection, type ListView } from "./paths";
+import { entryFor, loadProgress, mergeProgress, saveProgress, clearProgress, isProgressEmpty, toggleGenderMark, toggleMark, type GenderChoice } from "./progress";
+import type { DexIndex, DexScope, MarkKey, MonPayload, Progress, StatusFilter } from "./types";
 import { AuthView } from "./views/AuthView";
 import { DashboardView } from "./views/DashboardView";
 import { ChecklistView } from "./views/ChecklistView";
 import { DexView } from "./views/DexView";
 import { DetailView } from "./views/DetailView";
+
+async function monForForm(payload: MonPayload, form: SpeciesForm | null): Promise<MonPayload | null> {
+  if (!form) {
+    return payload;
+  }
+  const speciesSlug = payload.species.name || payload.data.name;
+  const match = (payload.species.varieties || []).find((item) =>
+    formsEqual(formFromVarietySlug(item.pokemon.name, speciesSlug), form),
+  );
+  const formId = match ? idFromUrl(match.pokemon.url || "") : 0;
+  if (!formId) {
+    return null;
+  }
+  const formMon = await fetchMon(formId);
+  return { ...payload, data: formMon.data, overview: formMon.overview };
+}
+
+type ListContext = {
+  gen: number;
+  region: string | null;
+  scope: DexScope;
+  q: string;
+  status: StatusFilter;
+};
+
+function initialList(pathname: string): ListContext {
+  const parsed = parseAppPath(pathname);
+  const prefs = loadDexPrefs(parsed.game);
+  const onList = parsed.view === "dex" || parsed.view === "checklist";
+  return {
+    gen: onList ? parsed.gen : (prefs?.gen ?? 1),
+    region: onList ? parsed.region : null,
+    scope: parsed.region ? "generation" : (prefs?.scope ?? "national"),
+    q: "",
+    status: "all",
+  };
+}
 
 export default function App() {
   const location = useLocation();
@@ -49,9 +88,27 @@ export default function App() {
   const [obtainable, setObtainable] = useState<Record<number, boolean>>({});
   const [listView, setListView] = useState<ListView>(() => loadListView());
   const openIdRef = useRef<number | null>(null);
+  const openFormRef = useRef("");
   const obtainGameRef = useRef(route.game);
 
-  const { view, game, gen, region, id, section, q, status, scope } = route;
+  const { view, game, id, form, section } = route;
+  const [list, setList] = useState<ListContext>(() => initialList(location.pathname));
+  const { gen, region, q, status, scope } = list;
+
+  useEffect(() => {
+    if (view !== "dex" && view !== "checklist") {
+      return;
+    }
+    setList((prev) => {
+      const nextRegion = route.region;
+      const nextGen = route.gen;
+      const nextScope = nextRegion ? "generation" : prev.scope;
+      if (prev.gen === nextGen && prev.region === nextRegion && prev.scope === nextScope) {
+        return prev;
+      }
+      return { ...prev, gen: nextGen, region: nextRegion, scope: nextScope };
+    });
+  }, [route.gen, route.region, view]);
 
   useEffect(() => {
     if (view === "dex" || view === "checklist" || view === "mon") {
@@ -167,32 +224,6 @@ export default function App() {
   }, [game]);
 
   useEffect(() => {
-    if (view !== "mon" || !id) {
-      return;
-    }
-    let cancelled = false;
-    setLearnsetLoading(true);
-    fetchLearnset(id, game)
-      .then((payload) => {
-        if (cancelled || openIdRef.current !== id) {
-          return;
-        }
-        setLearnset(payload.groups);
-        setLearnsetLoading(false);
-      })
-      .catch(() => {
-        if (cancelled || openIdRef.current !== id) {
-          return;
-        }
-        setLearnset([]);
-        setLearnsetLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [game, id, view]);
-
-  useEffect(() => {
     let cancelled = false;
     setRegionalLoading(true);
     fetchRegionalDex(game)
@@ -264,67 +295,74 @@ export default function App() {
   useEffect(() => {
     if (view !== "mon" || !id) {
       openIdRef.current = null;
+      openFormRef.current = "";
       return;
     }
+    const requestKey = `${id}:${form?.kind ?? ""}:${form?.name ?? ""}`;
     openIdRef.current = id;
+    openFormRef.current = requestKey;
     setMon(null);
     setSpawns([]);
     setLearnset([]);
     setMonLoading(true);
     setSpawnsLoading(true);
+    setLearnsetLoading(true);
     let cancelled = false;
 
     fetchMon(id)
       .then(async (payload) => {
-        if (cancelled || openIdRef.current !== id) {
+        if (cancelled || openFormRef.current !== requestKey) {
           return;
         }
-        setMon(payload);
+        const shown = await monForForm(payload, form);
+        if (cancelled || openFormRef.current !== requestKey) {
+          return;
+        }
+        if (form && !shown) {
+          go({ view: "mon", game, id, form: null, section }, true);
+          return;
+        }
+        const shownMon = shown ?? payload;
+        setMon(shownMon);
         setMonLoading(false);
+        const resourceId = shownMon.data.id;
+        const [enc, learn] = await Promise.all([fetchSpawns(resourceId), fetchLearnset(resourceId, game)]);
+        if (cancelled || openFormRef.current !== requestKey) {
+          return;
+        }
+        setSpawns(enc);
+        setSpawnsLoading(false);
+        setLearnset(learn.groups);
+        setLearnsetLoading(false);
         const value = await isObtainableInGame(id, obtainGameRef.current);
-        if (cancelled || openIdRef.current !== id) {
+        if (cancelled || openFormRef.current !== requestKey) {
           return;
         }
         setObtainable((prev) => ({ ...prev, [id]: value }));
       })
       .catch(() => {
-        if (cancelled || openIdRef.current !== id) {
+        if (cancelled || openFormRef.current !== requestKey) {
           return;
         }
         setMonLoading(false);
         setSpawnsLoading(false);
-      });
-
-    fetchSpawns(id)
-      .then((enc) => {
-        if (cancelled || openIdRef.current !== id) {
-          return;
-        }
-        setSpawns(enc);
-        setSpawnsLoading(false);
-      })
-      .catch(() => {
-        if (cancelled || openIdRef.current !== id) {
-          return;
-        }
-        setSpawns([]);
-        setSpawnsLoading(false);
+        setLearnsetLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [id, view]);
+  }, [form?.kind, form?.name, game, go, id, section, view]);
 
   const persist = useCallback(
-    (next: Progress, mark?: { game: string; pokemonId: number }) => {
+    (next: Progress, mark?: { game: string; pokemonId: number; form?: SpeciesForm | null }) => {
       setProg(next);
       if (authUser) {
         if (!mark) {
           return;
         }
-        const entry = entryFor(next, mark.game, mark.pokemonId);
-        void upsertCollectionMark(mark.game, mark.pokemonId, entry).catch(() => {
+        const entry = entryFor(next, mark.game, mark.pokemonId, mark.form ?? null);
+        void upsertCollectionMark(mark.game, mark.pokemonId, entry, formStorageKey(mark.form)).catch(() => {
           void fetchCollectionProgress().then((remote) => {
             if (remote) {
               setProg(remote);
@@ -352,12 +390,19 @@ export default function App() {
 
   const open = useCallback(
     (pokemonId: number, nextSection: DetailSection = "home") => {
-      go({ view: "mon", game, id: pokemonId, section: nextSection, gen, region, q, status, scope });
+      go({ view: "mon", game, id: pokemonId, form: null, section: nextSection });
     },
-    [game, gen, go, q, region, scope, status],
+    [game, go],
   );
 
-  async function toggle(pokemonId: number, key: MarkKey) {
+  const openForm = useCallback(
+    (pokemonId: number, nextForm: SpeciesForm | null, nextSection: DetailSection = "home") => {
+      go({ view: "mon", game, id: pokemonId, form: nextForm, section: nextSection });
+    },
+    [game, go],
+  );
+
+  async function toggle(pokemonId: number, key: MarkKey, nextForm: SpeciesForm | null = null) {
     const known = obtainable[pokemonId];
     const ok = known === true || (known === undefined && (await isObtainableInGame(pokemonId, game)));
     if (!ok) {
@@ -366,7 +411,16 @@ export default function App() {
     if (known === undefined) {
       setObtainable((prev) => ({ ...prev, [pokemonId]: true }));
     }
-    persist(toggleMark(prog, game, pokemonId, key), { game, pokemonId });
+    persist(toggleMark(prog, game, pokemonId, key, nextForm), { game, pokemonId, form: nextForm });
+  }
+
+  async function toggleGender(pokemonId: number, key: MarkKey, gender: GenderChoice, nextForm: SpeciesForm | null = null) {
+    const known = obtainable[pokemonId];
+    const ok = known === true || (known === undefined && (await isObtainableInGame(pokemonId, game)));
+    if (!ok) {
+      return;
+    }
+    persist(toggleGenderMark(prog, game, pokemonId, key, gender, nextForm), { game, pokemonId, form: nextForm });
   }
 
   function dexContextForGame(gameKey: string, fallbackGen = 1): { gen: number; scope: DexScope } {
@@ -379,16 +433,17 @@ export default function App() {
 
   function selectGame(gameKey: string) {
     const next = dexContextForGame(gameKey);
+    setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope }));
     if (view === "mon" && id) {
-      go({ view: "mon", game: gameKey, id, section, gen: next.gen, q, status, scope: next.scope });
+      go({ view: "mon", game: gameKey, id, form, section });
       return;
     }
     if (view === "dex") {
-      go({ view: "dex", game: gameKey, gen: next.gen, q, status, scope: next.scope });
+      go({ view: "dex", game: gameKey, gen: next.gen });
       return;
     }
     if (view === "checklist") {
-      go({ view: "checklist", game: gameKey, gen: next.gen, q, status, scope: next.scope });
+      go({ view: "checklist", game: gameKey, gen: next.gen });
       return;
     }
     go({ view: "dash", game: gameKey, gen: next.gen });
@@ -412,7 +467,7 @@ export default function App() {
     const canonical = buildAppPath(route);
     const canonicalPath = canonical.split("?")[0];
     const actualPath = location.pathname.replace(/\/+$/, "") || "/";
-    if (actualPath !== canonicalPath) {
+    if (actualPath !== canonicalPath || location.search) {
       return <Navigate to={canonical} replace />;
     }
   }
@@ -427,19 +482,22 @@ export default function App() {
       onDash={goDash}
       onDex={() => {
         if (view === "checklist" || view === "mon") {
-          go({ view: "dex", game, gen, region, q, status: status === "exclusives" ? "all" : status, scope });
+          setList((prev) => ({ ...prev, status: prev.status === "exclusives" ? "all" : prev.status }));
+          go({ view: "dex", game, gen, region });
           return;
         }
         const next = dexContextForGame(game, gen);
-        go({ view: "dex", game, gen: next.gen, q: "", status: "all", scope: next.scope });
+        setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope, q: "", status: "all" }));
+        go({ view: "dex", game, gen: next.gen });
       }}
       onChecklist={() => {
         if (view === "dex" || view === "mon") {
-          go({ view: "checklist", game, gen, region, q, status, scope });
+          go({ view: "checklist", game, gen, region });
           return;
         }
         const next = dexContextForGame(game, gen);
-        go({ view: "checklist", game, gen: next.gen, q: "", status: "all", scope: next.scope });
+        setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope, q: "", status: "all" }));
+        go({ view: "checklist", game, gen: next.gen });
       }}
       onSignIn={() => go({ view: "signin", game })}
       onLogIn={() => go({ view: "login", game })}
@@ -460,28 +518,22 @@ export default function App() {
           onImported={refreshProgressFromServer}
           onOpen={open}
           onOpenRegion={(slug) => {
-            go({
-              view: "dex",
-              game: "home",
-              region: slug,
-              q: "",
-              status: "all",
-              scope: "generation",
-            });
+            setList((prev) => ({ ...prev, region: slug, q: "", status: "all", scope: "generation" }));
+            go({ view: "dex", game: "home", region: slug });
           }}
           onOpenDex={() => {
             const next = dexContextForGame(game, gen);
-            go({
-              view: "dex",
-              game,
-              gen: next.gen,
-              q: "",
-              status: "all",
-              scope: next.scope,
-            });
+            setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope, q: "", status: "all" }));
+            go({ view: "dex", game, gen: next.gen });
           }}
-          onOpenMissing={() => go({ view: "dex", game, gen, q: "", status: "missing", scope: "national" })}
-          onOpenShinies={() => go({ view: "dex", game, gen, q: "", status: "shiny", scope: "national" })}
+          onOpenMissing={() => {
+            setList((prev) => ({ ...prev, q: "", status: "missing", scope: "national", region: null }));
+            go({ view: "dex", game, gen });
+          }}
+          onOpenShinies={() => {
+            setList((prev) => ({ ...prev, q: "", status: "shiny", scope: "national", region: null }));
+            go({ view: "dex", game, gen });
+          }}
         />
       ) : null}
       {view === "dex" ? (
@@ -498,11 +550,12 @@ export default function App() {
           regional={regional}
           regionalLoading={regionalLoading}
           obtainable={obtainable}
-          onQuery={(nextQ) => go({ view: "dex", game, gen, region, q: nextQ, status, scope }, true)}
-          onStatus={(nextStatus) => go({ view: "dex", game, gen, region, q, status: nextStatus, scope })}
+          onQuery={(nextQ) => setList((prev) => ({ ...prev, q: nextQ }))}
+          onStatus={(nextStatus) => setList((prev) => ({ ...prev, status: nextStatus }))}
           onScope={(nextScope) => {
             const next = nextScope === "generation" ? dexContextForGame(game, gen) : { gen, scope: nextScope };
-            go({ view: "dex", game, gen: next.gen, q, status, scope: next.scope });
+            setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope }));
+            go({ view: "dex", game, gen: next.gen });
           }}
           onOpen={open}
           onToggleCaught={(pokemonId) => {
@@ -510,6 +563,9 @@ export default function App() {
           }}
           onToggleShiny={(pokemonId) => {
             void toggle(pokemonId, "shiny");
+          }}
+          onToggleGender={(pokemonId, key, gender) => {
+            void toggleGender(pokemonId, key, gender);
           }}
         />
       ) : null}
@@ -527,11 +583,12 @@ export default function App() {
           regional={regional}
           regionalLoading={regionalLoading}
           obtainable={obtainable}
-          onQuery={(nextQ) => go({ view: "checklist", game, gen, region, q: nextQ, status, scope }, true)}
-          onStatus={(nextStatus) => go({ view: "checklist", game, gen, region, q, status: nextStatus, scope })}
+          onQuery={(nextQ) => setList((prev) => ({ ...prev, q: nextQ }))}
+          onStatus={(nextStatus) => setList((prev) => ({ ...prev, status: nextStatus }))}
           onScope={(nextScope) => {
             const next = nextScope === "generation" ? dexContextForGame(game, gen) : { gen, scope: nextScope };
-            go({ view: "checklist", game, gen: next.gen, q, status, scope: next.scope });
+            setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope }));
+            go({ view: "checklist", game, gen: next.gen });
           }}
           onOpen={open}
           onSpawns={(pokemonId) => open(pokemonId, "spawns")}
@@ -540,6 +597,9 @@ export default function App() {
           }}
           onToggleShiny={(pokemonId) => {
             void toggle(pokemonId, "shiny");
+          }}
+          onToggleGender={(pokemonId, key, gender) => {
+            void toggleGender(pokemonId, key, gender);
           }}
         />
       ) : null}
@@ -559,16 +619,21 @@ export default function App() {
           authUser={authUser}
           section={section}
           listView={listView}
-          onSection={(nextSection) => go({ view: "mon", game, id, section: nextSection, gen, region, q, status, scope })}
-          onBack={() => go({ view: listView, game, gen, region, q, status, scope })}
+          onSection={(nextSection) => go({ view: "mon", game, id, form, section: nextSection })}
+          onBack={() => go({ view: listView, game, gen, region })}
           onPrev={() => open(Math.max(1, id - 1), section)}
           onNext={() => open(Math.min(1025, id + 1), section)}
+          form={form}
           onOpen={open}
+          onOpenForm={openForm}
           onToggleCaught={(pokemonId) => {
-            void toggle(pokemonId, "caught");
+            void toggle(pokemonId, "caught", form);
           }}
           onToggleShiny={(pokemonId) => {
-            void toggle(pokemonId, "shiny");
+            void toggle(pokemonId, "shiny", form);
+          }}
+          onToggleGender={(pokemonId, key, gender) => {
+            void toggleGender(pokemonId, key, gender, form);
           }}
           onProgressRefresh={refreshProgressFromServer}
         />

@@ -1,4 +1,5 @@
 import { GAMES, clampGen, gameByKey, regionBySlug } from "./catalog";
+import { formPath, isFormKind, type SpeciesForm } from "./forms";
 import type { DexScope, StatusFilter, View } from "./types";
 
 export type DetailSection = "home" | "spawns" | "specimens" | "moves";
@@ -12,15 +13,6 @@ export const DETAIL_SECTIONS: Array<{ id: DetailSection; label: string }> = [
 
 const GAME_KEYS = new Set(GAMES.map((entry) => entry.k));
 const DETAIL_SECTION_IDS = new Set<string>(DETAIL_SECTIONS.map((entry) => entry.id));
-const STATUS_VALUES = new Set<string>([
-  "all",
-  "exclusives",
-  "missing",
-  "missing-normal",
-  "missing-shiny",
-  "normal",
-  "shiny",
-]);
 
 export type AppPath = {
   view: View;
@@ -28,6 +20,7 @@ export type AppPath = {
   gen: number;
   region: string | null;
   id: number | null;
+  form: SpeciesForm | null;
   section: DetailSection;
   q: string;
   status: StatusFilter;
@@ -40,6 +33,7 @@ const DEFAULT_PATH: AppPath = {
   gen: 1,
   region: null,
   id: null,
+  form: null,
   section: "home",
   q: "",
   status: "all",
@@ -69,7 +63,7 @@ export function saveListView(view: ListView) {
 
 type DexPrefs = { gen: number; scope: DexScope };
 
-function loadDexPrefs(game: string): DexPrefs | null {
+export function loadDexPrefs(game: string): DexPrefs | null {
   try {
     const raw = JSON.parse(localStorage.getItem(DEX_PREFS_KEY) || "{}") as Record<string, unknown>;
     const entry = raw[game];
@@ -123,28 +117,31 @@ function parseSection(raw: string | undefined): DetailSection {
   return "home";
 }
 
-function parseStatus(raw: string | null): StatusFilter {
-  if (raw && STATUS_VALUES.has(raw)) {
-    return raw as StatusFilter;
+/** Segments after the species id: kind, optional form name, then an optional section. */
+function parseFormTail(tail: string[]): { form: SpeciesForm | null; section: DetailSection } {
+  const [kind, second, third] = tail;
+  if (!isFormKind(kind)) {
+    return { form: null, section: parseSection(kind) };
   }
-  return "all";
-}
-
-function parseScope(raw: string | null): DexScope {
-  if (raw === "regional" || raw === "generation") {
-    return raw;
+  if (!second || DETAIL_SECTION_IDS.has(second)) {
+    if (kind === "regional") {
+      return { form: null, section: "home" };
+    }
+    return { form: { kind, name: null }, section: parseSection(second) };
   }
-  return "national";
+  if (kind === "gmax") {
+    return { form: { kind, name: null }, section: parseSection(second) };
+  }
+  return { form: { kind, name: second }, section: parseSection(third) };
 }
 
 function parseRegionSlug(raw: string | null | undefined): string | null {
   return regionBySlug(raw)?.slug ?? null;
 }
 
-/** Parse the browser location into app navigation state. */
-export function parseAppPath(pathname: string, search = ""): AppPath {
+/** Parse the browser location into app navigation state. Filters live in React state. */
+export function parseAppPath(pathname: string, _search = ""): AppPath {
   const path = pathname.replace(/\/+$/, "") || "/";
-  const params = new URLSearchParams(search);
 
   if (path === "/signin") {
     return { ...DEFAULT_PATH, view: "signin" };
@@ -164,9 +161,6 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
   }
 
   const game = gameByKey(gameKey)?.k || "home";
-  const q = params.get("q") || "";
-  const status = parseStatus(params.get("status"));
-  const scope = parseScope(params.get("scope"));
 
   if (parts.length === 1) {
     return {
@@ -174,9 +168,6 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
       view: "dash",
       game,
       gen: 1,
-      q,
-      status,
-      scope,
     };
   }
 
@@ -190,58 +181,34 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
         game,
         region: regionSlug,
         scope: "generation",
-        q,
-        status,
       };
     }
-    const gen =
-      parts[2] === "gen" ? parseGen(parts[3]) : clampGen(Number(params.get("gen")) || 1);
+    const gen = parts[2] === "gen" ? parseGen(parts[3]) : 1;
     return {
       ...DEFAULT_PATH,
       view: listView,
       game,
       gen,
-      q,
-      status,
-      scope,
     };
   }
 
   if (parts[1] === "pokemon") {
     const id = parsePokemonId(parts[2]);
-    const stored = loadDexPrefs(game);
-    const region = parseRegionSlug(params.get("region"));
-    const gen = clampGen(Number(params.get("gen")) || stored?.gen || 1);
-    const scope = params.has("scope")
-      ? parseScope(params.get("scope"))
-      : region
-        ? "generation"
-        : params.has("gen")
-          ? "national"
-          : (stored?.scope ?? "national");
     if (id == null) {
       return {
         ...DEFAULT_PATH,
         view: "dex",
         game,
-        gen,
-        region,
-        q,
-        status,
-        scope,
       };
     }
+    const tail = parseFormTail(parts.slice(3));
     return {
       ...DEFAULT_PATH,
       view: "mon",
       game,
-      gen,
-      region,
       id,
-      section: parseSection(parts[3]),
-      q,
-      status,
-      scope,
+      form: tail.form,
+      section: tail.section,
     };
   }
 
@@ -253,42 +220,7 @@ export function parseAppPath(pathname: string, search = ""): AppPath {
   };
 }
 
-function dexSearch(path: AppPath): string {
-  const params = new URLSearchParams();
-  if (path.q.trim()) {
-    params.set("q", path.q.trim());
-  }
-  if (path.status !== "all") {
-    params.set("status", path.status);
-  }
-  if (!regionBySlug(path.region) && (path.scope === "regional" || path.scope === "generation")) {
-    params.set("scope", path.scope);
-  }
-  const query = params.toString();
-  return query ? `?${query}` : "";
-}
-
-/** Persist dex context on detail URLs so Back / Prev / Next keep region + scope. */
-function detailSearch(path: AppPath): string {
-  const params = new URLSearchParams();
-  params.set("gen", String(clampGen(path.gen ?? 1)));
-  if (path.q.trim()) {
-    params.set("q", path.q.trim());
-  }
-  if (path.status !== "all") {
-    params.set("status", path.status);
-  }
-  const regionSlug = regionBySlug(path.region)?.slug;
-  if (regionSlug) {
-    params.set("region", regionSlug);
-  }
-  if (path.scope === "regional" || path.scope === "generation") {
-    params.set("scope", path.scope);
-  }
-  return `?${params.toString()}`;
-}
-
-/** Build a pathname (+ optional query) from navigation state. */
+/** Build a pathname from navigation state. Search, status, and scope stay in React state. */
 export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "game">): string {
   const game = GAME_KEYS.has(path.game) ? path.game : "home";
   const gen = clampGen(path.gen ?? 1);
@@ -303,38 +235,17 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
     return `/${game}`;
   }
   const region = regionBySlug(path.region)?.slug ?? null;
-  const listState: AppPath = {
-    view: path.view === "checklist" ? "checklist" : "dex",
-    game,
-    gen,
-    region,
-    id: null,
-    section: "home",
-    q: path.q ?? "",
-    status: path.status ?? "all",
-    scope: path.scope ?? "national",
-  };
 
   if (path.view === "dex" || path.view === "checklist") {
     if (region) {
-      return `/${game}/${path.view}/region/${region}${dexSearch(listState)}`;
+      return `/${game}/${path.view}/region/${region}`;
     }
-    return `/${game}/${path.view}/gen/${gen}${dexSearch(listState)}`;
+    return `/${game}/${path.view}/gen/${gen}`;
   }
 
   const id = Math.min(1025, Math.max(1, path.id ?? 1));
   const section = path.section && path.section !== "home" ? `/${path.section}` : "";
-  return `/${game}/pokemon/${id}${section}${detailSearch({
-    view: "mon",
-    game,
-    gen,
-    region,
-    id,
-    section: path.section ?? "home",
-    q: path.q ?? "",
-    status: path.status ?? "all",
-    scope: path.scope ?? "national",
-  })}`;
+  return `/${game}/pokemon/${id}${formPath(path.form)}${section}`;
 }
 
 export function isKnownGame(gameKey: string): boolean {

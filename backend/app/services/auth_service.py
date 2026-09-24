@@ -4,10 +4,11 @@ from uuid import uuid4
 
 from app.core.config import settings
 from app.core.security import hash_password, hash_token, new_confirmation_token, verify_password
-from app.domain.roles import ROLE_ADMIN, ROLE_DEVELOPER, ROLE_USER, normalize_role, role_for_email
+from app.domain.roles import ROLE_ADMIN, ROLE_DEVELOPER, ROLE_USER, is_staff, normalize_role, role_for_email
 from app.domain.user import Identity, User
 from app.integrations.email.sender import EmailSendError, EmailSender, uses_outbound_email
 from app.integrations.oidc.claims import OidcClaims
+from app.repositories.login_event_repository import LoginEventRepository
 from app.repositories.user_repository import UserRepository
 
 PASSWORD_PROVIDER = "password"
@@ -36,9 +37,25 @@ def _parse_email_list(raw: str) -> set[str]:
 
 
 class AuthService:
-    def __init__(self, users: UserRepository, mailer: EmailSender) -> None:
+    def __init__(
+        self,
+        users: UserRepository,
+        mailer: EmailSender,
+        login_events: LoginEventRepository | None = None,
+    ) -> None:
         self._users = users
         self._mailer = mailer
+        self._login_events = login_events
+
+    def _record_login(self, user: User, method: str, when: datetime) -> User:
+        if self._login_events is not None:
+            self._login_events.record(
+                user_id=user.id,
+                email=user.email,
+                method=method,
+                occurred_at=when,
+            )
+        return user
 
     def _elevated_role_for(self, email: str | None) -> str | None:
         return role_for_email(
@@ -88,7 +105,8 @@ class AuthService:
                 avatar_url=claims.avatar_url,
                 last_login_at=now,
             )
-            return self._apply_role_elevation(user, last_login_at=now)
+            user = self._apply_role_elevation(user, last_login_at=now)
+            return self._record_login(user, claims.provider, now)
 
         linked = None
         if claims.email_verified and claims.email:
@@ -110,7 +128,8 @@ class AuthService:
                 avatar_url=claims.avatar_url,
                 last_login_at=now,
             )
-            return self._apply_role_elevation(user, last_login_at=now)
+            user = self._apply_role_elevation(user, last_login_at=now)
+            return self._record_login(user, claims.provider, now)
 
         user_id = str(uuid4())
         user = User(
@@ -124,7 +143,7 @@ class AuthService:
             has_password=False,
             role=self._role_for_new_user(claims.email),
         )
-        return self._users.create(
+        created = self._users.create(
             user,
             Identity(
                 provider=claims.provider,
@@ -134,6 +153,7 @@ class AuthService:
             ),
             email_verified_at=now,
         )
+        return self._record_login(created, claims.provider, now)
 
     async def register(
         self,
@@ -215,7 +235,7 @@ class AuthService:
             confirm_url=confirm_url if expose_link else None,
         )
 
-    def login(self, email: str, password: str) -> User:
+    def _verified_password_user(self, email: str, password: str) -> User:
         normalized = email.strip().lower()
         user = self._users.find_by_email(normalized)
         if user is None or not user.has_password:
@@ -225,8 +245,21 @@ class AuthService:
             raise AuthError("invalid_credentials", "Email or password is incorrect.")
         if not user.email_verified:
             raise AuthError("email_unverified", "Confirm your email before logging in.")
+        return user
+
+    def login(self, email: str, password: str) -> User:
+        user = self._verified_password_user(email, password)
         now = datetime.now(timezone.utc)
-        return self._apply_role_elevation(user, last_login_at=now)
+        signed_in = self._apply_role_elevation(user, last_login_at=now)
+        return self._record_login(signed_in, PASSWORD_PROVIDER, now)
+
+    def login_staff(self, email: str, password: str) -> User:
+        """Dashboard entry. Does not write a website login event or last_login_at."""
+        user = self._verified_password_user(email, password)
+        user = self._sync_allowlist_role(user)
+        if not is_staff(user.role):
+            raise AuthError("not_staff", "Only admins and developers can log in.")
+        return user
 
     def confirm_email(self, token: str) -> User:
         now = datetime.now(timezone.utc)

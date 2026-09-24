@@ -56,6 +56,7 @@ def upsert_mark(
     game: str,
     pokemon_id: int,
     body: MarkEntryWrite,
+    form: str = "base",
     user: User = Depends(get_current_user),
     service: UserCollectionService = Depends(get_user_collection_service),
 ) -> MarkEntryRead:
@@ -65,6 +66,7 @@ def upsert_mark(
         user.id,
         game=game,
         pokemon_id=pokemon_id,
+        form=form or "base",
         mark=body.model_dump(),
     )
     return MarkEntryRead(game=game, pokemon_id=pokemon_id, mark=mark)

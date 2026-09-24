@@ -11,6 +11,7 @@ from app.integrations.pokeapi.client import PokeApiClient
 from app.integrations.smogon.client import SmogonSetsClient
 from app.repositories.move_repository import MoveRepository
 from app.repositories.pokemon_ai_moveset_repository import PokemonAiMovesetRepository
+from app.repositories.pokemon_form_repository import PokemonRepository
 from app.services.learnset_service import build_learnset
 from app.services.moveset_normalize import (
     filter_ai_set,
@@ -94,6 +95,20 @@ class MovesetService:
         self._gemini = gemini
         self._moves = moves or MoveRepository()
         self._ai_movesets = ai_movesets or PokemonAiMovesetRepository()
+        self._pokemon = PokemonRepository()
+
+    def _form_slot(self, resource_id: int) -> tuple[int, str]:
+        row = self._pokemon.get_by_resource_id(resource_id)
+        if row is None:
+            return resource_id, "base"
+        return int(row.pokedex_id), row.form
+
+    async def _cached_moveset(self, resource_id: int, game_key: str) -> PokemonAiMovesetDocument | None:
+        pokedex_id, form = await asyncio.to_thread(self._form_slot, resource_id)
+        cached = await asyncio.to_thread(self._ai_movesets.get, pokedex_id, game_key, form)
+        if cached is None and (form.startswith("mega") or form == "gigantamax"):
+            cached = await asyncio.to_thread(self._ai_movesets.get, pokedex_id, game_key, "base")
+        return cached
 
     async def smogon_movesets(self, pokemon_id: int, game_key: str) -> dict[str, Any]:
         data = await self._pokeapi.get_pokemon(pokemon_id)
@@ -145,7 +160,7 @@ class MovesetService:
 
     async def ai_movesets(self, pokemon_id: int, game_key: str, *, force: bool = False) -> dict[str, Any]:
         if not force:
-            cached = await asyncio.to_thread(self._ai_movesets.get, pokemon_id, game_key)
+            cached = await self._cached_moveset(pokemon_id, game_key)
             if cached is not None:
                 return self._ai_movesets.to_payload(cached)
 
@@ -166,10 +181,12 @@ class MovesetService:
         if result.get("available") or result.get("sets") or (
             result.get("message") and "Not enough learnset" in str(result.get("message"))
         ):
+            pokedex_id, form = await asyncio.to_thread(self._form_slot, pokemon_id)
             doc = await asyncio.to_thread(
                 self._ai_movesets.upsert,
-                pokemon_id=pokemon_id,
+                pokemon_id=pokedex_id,
                 game=game_key,
+                form=form,
                 available=bool(result.get("available")),
                 provider=result.get("provider"),
                 model=self._gemini.provider_label,
@@ -179,7 +196,7 @@ class MovesetService:
             return self._ai_movesets.to_payload(doc)
 
         if force:
-            cached = await asyncio.to_thread(self._ai_movesets.get, pokemon_id, game_key)
+            cached = await self._cached_moveset(pokemon_id, game_key)
             if cached is not None:
                 payload = self._ai_movesets.to_payload(cached)
                 payload["refresh_failed"] = True

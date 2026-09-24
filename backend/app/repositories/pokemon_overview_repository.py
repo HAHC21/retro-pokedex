@@ -1,26 +1,32 @@
-"""Persistence for Gemini-generated Pokémon lore overviews."""
+"""Persistence for lore overviews, one per Pokémon database id."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from bson import ObjectId
+
 from app.db.documents import PokemonOverviewDocument
+from app.repositories.pokemon_form_repository import PokemonRepository
 
 
 class PokemonOverviewRepository:
+    def __init__(self, pokemon: PokemonRepository | None = None) -> None:
+        self._pokemon = pokemon or PokemonRepository()
+
     def upsert(
         self,
         *,
-        pokemon_id: int,
+        pokemon: ObjectId,
         name: str,
         overview: str,
         source: str = "gemini",
         model: str | None = None,
     ) -> PokemonOverviewDocument:
         now = datetime.now(timezone.utc)
-        doc = PokemonOverviewDocument.objects(pokemon_id=pokemon_id).first()
+        doc = self.get(pokemon)
         if doc is None:
-            doc = PokemonOverviewDocument(pokemon_id=pokemon_id, generated_at=now)
+            doc = PokemonOverviewDocument(pokemon=pokemon, generated_at=now)
         doc.name = name.strip()
         doc.overview = overview.strip()
         doc.source = source
@@ -31,24 +37,29 @@ class PokemonOverviewRepository:
         doc.save()
         return doc
 
-    def get(self, pokemon_id: int) -> PokemonOverviewDocument | None:
-        return PokemonOverviewDocument.objects(pokemon_id=pokemon_id).first()
+    def get(self, pokemon: ObjectId) -> PokemonOverviewDocument | None:
+        return PokemonOverviewDocument.objects(pokemon=pokemon).first()
 
     def overview_map(self) -> dict[int, str]:
-        return {
-            int(doc.pokemon_id): str(doc.overview)
-            for doc in PokemonOverviewDocument.objects.only("pokemon_id", "overview")
-            if doc.overview
-        }
+        """Base-form overviews keyed by Pokédex number, for the National Dex compile."""
+        pokedex_by_id = self._pokemon.base_pokedex_ids()
+        mapped: dict[int, str] = {}
+        for doc in PokemonOverviewDocument.objects.only("pokemon", "overview"):
+            pokedex_id = pokedex_by_id.get(doc.pokemon)
+            if pokedex_id and doc.overview:
+                mapped[pokedex_id] = str(doc.overview)
+        return mapped
 
-    def exists(self, pokemon_id: int) -> bool:
-        return PokemonOverviewDocument.objects(pokemon_id=pokemon_id).count() > 0
+    def exists_for(self, pokemon: ObjectId) -> bool:
+        return PokemonOverviewDocument.objects(pokemon=pokemon).count() > 0
 
-    def existing_ids(self, pokemon_ids: list[int] | None = None) -> set[int]:
-        query = PokemonOverviewDocument.objects
-        if pokemon_ids is not None:
-            query = query(pokemon_id__in=list(pokemon_ids))
-        return {int(doc.pokemon_id) for doc in query.only("pokemon_id")}
+    def existing_resource_ids(self, resource_ids: list[int]) -> set[int]:
+        found: set[int] = set()
+        for resource_id in resource_ids:
+            row = self._pokemon.get_by_resource_id(resource_id)
+            if row is not None and self.exists_for(row.id):
+                found.add(resource_id)
+        return found
 
     def count(self) -> int:
         return int(PokemonOverviewDocument.objects.count())

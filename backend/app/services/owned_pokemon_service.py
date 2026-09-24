@@ -333,6 +333,10 @@ class OwnedPokemonService:
         owned = self._owned.list_owned(user_id, game_key=game_key, pokemon_id=pokemon_id)
         has_normal = any(not entry.shiny for entry in owned)
         has_shiny = any(entry.shiny for entry in owned)
+        caught_male = any(not entry.shiny and entry.gender == "male" for entry in owned)
+        caught_female = any(not entry.shiny and entry.gender == "female" for entry in owned)
+        shiny_male = any(entry.shiny and entry.gender == "male" for entry in owned)
+        shiny_female = any(entry.shiny and entry.gender == "female" for entry in owned)
         now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
         existing = (self._marks.list_progress(user_id).get(game_key) or {}).get(str(pokemon_id)) or {}
         self._marks.upsert_mark(
@@ -341,6 +345,10 @@ class OwnedPokemonService:
             pokemon_id=pokemon_id,
             caught=has_normal,
             caught_at=existing.get("caughtAt") or (now_ms if has_normal else None),
+            caught_male=caught_male,
+            caught_female=caught_female,
             shiny=has_shiny,
             shiny_at=existing.get("shinyAt") or (now_ms if has_shiny else None),
+            shiny_male=shiny_male,
+            shiny_female=shiny_female,
         )
