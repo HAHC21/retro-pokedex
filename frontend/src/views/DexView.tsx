@@ -8,8 +8,7 @@ import { dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
 import { dexNum } from "../format";
 import type { RegionalDex } from "../pokeapi";
 import { gameLabel, unionFor } from "../progress";
-import type { GenderChoice } from "../progress";
-import type { DexIndex, DexScope, MarkKey, Progress, StatusFilter } from "../types";
+import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
 
 type DexViewProps = {
   index: DexIndex;
@@ -31,7 +30,6 @@ type DexViewProps = {
   onOpen: (id: number) => void;
   onToggleCaught: (id: number) => void;
   onToggleShiny: (id: number) => void;
-  onToggleGender: (id: number, key: MarkKey, gender: GenderChoice) => void;
 };
 
 export function DexView({
@@ -54,7 +52,6 @@ export function DexView({
   onOpen,
   onToggleCaught,
   onToggleShiny,
-  onToggleGender,
 }: DexViewProps) {
   const candidateIds = dexCandidateIds(scope, game, regional, gen, region);
   const grid = filterDexIds(candidateIds, index, prog, status, q);
@@ -125,15 +122,10 @@ export function DexView({
               <MarkToggles
                 caught={!!marks.caught}
                 shiny={!!marks.shiny}
-                caughtMale={!!marks.caughtMale}
-                caughtFemale={!!marks.caughtFemale}
-                shinyMale={!!marks.shinyMale}
-                shinyFemale={!!marks.shinyFemale}
                 available={available}
                 unavailableLabel={`Not In ${gameLabel(game)}`}
                 onCaught={() => onToggleCaught(id)}
                 onShiny={() => onToggleShiny(id)}
-                onGender={(key, gender) => onToggleGender(id, key, gender)}
               />
             </Blueprint>
           );

@@ -149,6 +149,9 @@ export function parseAppPath(pathname: string, _search = ""): AppPath {
   if (path === "/login") {
     return { ...DEFAULT_PATH, view: "login" };
   }
+  if (path === "/changelog") {
+    return { ...DEFAULT_PATH, view: "changelog" };
+  }
 
   const parts = path.split("/").filter(Boolean);
   if (!parts.length) {
@@ -230,6 +233,9 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
   }
   if (path.view === "login") {
     return "/login";
+  }
+  if (path.view === "changelog") {
+    return "/changelog";
   }
   if (path.view === "dash") {
     return `/${game}`;

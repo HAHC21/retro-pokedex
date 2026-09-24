@@ -26,6 +26,7 @@ import { DashboardView } from "./views/DashboardView";
 import { ChecklistView } from "./views/ChecklistView";
 import { DexView } from "./views/DexView";
 import { DetailView } from "./views/DetailView";
+import { ChangelogView } from "./views/ChangelogView";
 
 async function monForForm(payload: MonPayload, form: SpeciesForm | null): Promise<MonPayload | null> {
   if (!form) {
@@ -564,9 +565,6 @@ export default function App() {
           onToggleShiny={(pokemonId) => {
             void toggle(pokemonId, "shiny");
           }}
-          onToggleGender={(pokemonId, key, gender) => {
-            void toggleGender(pokemonId, key, gender);
-          }}
         />
       ) : null}
       {view === "checklist" ? (
@@ -597,9 +595,6 @@ export default function App() {
           }}
           onToggleShiny={(pokemonId) => {
             void toggle(pokemonId, "shiny");
-          }}
-          onToggleGender={(pokemonId, key, gender) => {
-            void toggleGender(pokemonId, key, gender);
           }}
         />
       ) : null}
@@ -638,6 +633,7 @@ export default function App() {
           onProgressRefresh={refreshProgressFromServer}
         />
       ) : null}
+      {view === "changelog" ? <ChangelogView /> : null}
       {view === "signin" || view === "login" ? (
         <AuthView
           mode={view}

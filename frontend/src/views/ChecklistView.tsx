@@ -9,8 +9,8 @@ import { CHECKLIST_STATUSES, dexCandidateIds, dexHeadCopy, filterDexIds } from "
 import { dexNum, navBtnStyle } from "../format";
 import { resolveExclusiveVersionsForIds } from "../obtainability";
 import type { RegionalDex } from "../pokeapi";
-import { gameLabel, unionFor, type GenderChoice } from "../progress";
-import type { DexIndex, DexScope, MarkKey, Progress, StatusFilter } from "../types";
+import { gameLabel, unionFor } from "../progress";
+import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
 
 type ChecklistViewProps = {
   index: DexIndex;
@@ -32,7 +32,6 @@ type ChecklistViewProps = {
   onSpawns: (id: number) => void;
   onToggleCaught: (id: number) => void;
   onToggleShiny: (id: number) => void;
-  onToggleGender: (id: number, key: MarkKey, gender: GenderChoice) => void;
 };
 
 export function ChecklistView({
@@ -55,7 +54,6 @@ export function ChecklistView({
   onSpawns,
   onToggleCaught,
   onToggleShiny,
-  onToggleGender,
 }: ChecklistViewProps) {
   const [methods, setMethods] = useState<Record<number, string>>({});
   const [exclusives, setExclusives] = useState<Record<number, string | null>>({});
@@ -163,15 +161,10 @@ export function ChecklistView({
                 <MarkToggles
                   caught={!!marks.caught}
                   shiny={!!marks.shiny}
-                  caughtMale={!!marks.caughtMale}
-                  caughtFemale={!!marks.caughtFemale}
-                  shinyMale={!!marks.shinyMale}
-                  shinyFemale={!!marks.shinyFemale}
                   available={available}
                   unavailableLabel={`Not In ${gameLabel(game)}`}
                   onCaught={() => onToggleCaught(id)}
                   onShiny={() => onToggleShiny(id)}
-                  onGender={(key, gender) => onToggleGender(id, key, gender)}
                 />
               </span>
             </Blueprint>

@@ -39,7 +39,7 @@ export function AppShell({
 }: AppShellProps) {
   const dexActive = view === "dex" || (view === "mon" && listView !== "checklist");
   const checklistActive = view === "checklist" || (view === "mon" && listView === "checklist");
-  const showGamePicker = view !== "signin" && view !== "login";
+  const showGamePicker = view !== "signin" && view !== "login" && view !== "changelog";
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();

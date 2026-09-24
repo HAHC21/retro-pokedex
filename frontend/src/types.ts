@@ -20,7 +20,7 @@ export type DexIndex = {
   types: Record<number, string[]>;
 };
 
-export type View = "dash" | "dex" | "checklist" | "mon" | "signin" | "login";
+export type View = "dash" | "dex" | "checklist" | "mon" | "signin" | "login" | "changelog";
 
 export type StatusFilter =
   | "all"

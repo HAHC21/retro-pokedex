@@ -61,7 +61,7 @@ export function MarkToggles({
 }
 
 function genderStyle(selected: boolean, borderColor: string): CSSProperties {
-  const idle = pillStyle(false);
+  const idle = pillStyle(false, false);
   if (!selected) {
     return { ...idle, width: "100%" };
   }
@@ -96,32 +96,34 @@ function MarkColumn({
       <button type="button" className="pk-toggle" style={pillStyle(active, shiny)} onClick={onClick}>
         {label}
       </button>
-      <span className={active && onGender ? "pk-gender-slot is-open" : "pk-gender-slot"}>
-        <span className="pk-gender-slot-inner">
-          <span className="pk-gender-choices">
-            <button
-              type="button"
-              className="pk-toggle"
-              style={genderStyle(male, "var(--color-accent)")}
-              aria-pressed={male}
-              aria-label={`${label} male`}
-              onClick={() => onGender?.("male")}
-            >
-              Male
-            </button>
-            <button
-              type="button"
-              className="pk-toggle"
-              style={genderStyle(female, "#e45b9a")}
-              aria-pressed={female}
-              aria-label={`${label} female`}
-              onClick={() => onGender?.("female")}
-            >
-              Female
-            </button>
+      {onGender ? (
+        <span className={active ? "pk-gender-slot is-open" : "pk-gender-slot"}>
+          <span className="pk-gender-slot-inner">
+            <span className="pk-gender-choices">
+              <button
+                type="button"
+                className="pk-toggle"
+                style={genderStyle(male, "var(--color-accent)")}
+                aria-pressed={male}
+                aria-label={`${label} male`}
+                onClick={() => onGender("male")}
+              >
+                Male
+              </button>
+              <button
+                type="button"
+                className="pk-toggle"
+                style={genderStyle(female, "#e45b9a")}
+                aria-pressed={female}
+                aria-label={`${label} female`}
+                onClick={() => onGender("female")}
+              >
+                Female
+              </button>
+            </span>
           </span>
         </span>
-      </span>
+      ) : null}
     </span>
   );
 }
