@@ -1,4 +1,5 @@
-import type { NatureStat, NatureInfo } from "./natures";
+import { localizedIv } from "./i18n/labels";
+import type { NatureInfo, NatureStat } from "./natures";
 import type { StatBlock } from "./collectionApi";
 
 export const IV_KEYS: Array<keyof StatBlock> = [
@@ -18,6 +19,10 @@ export const IV_LABELS: Record<keyof StatBlock, string> = {
   special_defense: "SpD",
   speed: "Spe",
 };
+
+export function ivLabel(key: keyof StatBlock): string {
+  return localizedIv(key) || IV_LABELS[key];
+}
 
 export const IV_NATURE_STAT: Record<keyof StatBlock, NatureStat | null> = {
   hp: null,

@@ -14,6 +14,34 @@ export type ChangelogRelease = {
 /** Newest player-visible release first. The shipped UI id is frontend/VERSION. */
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: "0.7.8",
+    date: "Sep 26, 2026",
+    title: "English and Spanish",
+    intro: "The site can run in Spanish. Labels, games, and a Pokémon’s page follow the language you pick.",
+    features: [
+      {
+        title: "EN and ES in the header",
+        body: "Switch between English and Spanish with EN and ES in the header. The choice is still there the next time you open the site. On a phone, both languages are in the menu.",
+      },
+      {
+        title: "An offer for the local language",
+        body: "The dashboard offers to switch when your connection is in a country that uses the other language. Mexico or Spain can offer Spanish. You can stay in the language you already have.",
+      },
+      {
+        title: "Labels in the language you pick",
+        body: "Sword / Shield is Espada / Escudo. Unova is Teselia. Fire is Fuego. Alolan Vulpix is Vulpix de Alola, and Gigantamax Charizard is Charizard Gigamax.",
+      },
+      {
+        title: "A Pokémon’s page in that language",
+        body: "The name, the Pokédex entry, and the written overview follow the language. A Spanish overview that is not written yet stays in English.",
+      },
+      {
+        title: "A narrower layout",
+        body: "On a narrow screen, Last caught is a list. Pokédex filters stack, and checklist rows put the catch buttons on their own line. Game tags on a Pokémon’s page use the full width.",
+      },
+    ],
+  },
+  {
     version: "0.7.7",
     date: "Sep 26, 2026",
     title: "Checklist Improvements",

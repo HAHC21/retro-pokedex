@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getMessages } from "../i18n/runtime";
 import { boxClass } from "../rarity";
 import type { SpeciesRarity } from "../types";
 import { AssignGameDialog } from "./AssignGameDialog";
@@ -59,6 +60,7 @@ export function PokemonCard({
   onMoveGame,
 }: PokemonCardProps) {
   const [assignFrom, setAssignFrom] = useState<string | null>(null);
+  const marks = getMessages().marks;
   const marked = capturable && (caught || shiny);
   const bothGenders = caughtMale && caughtFemale;
   const spriteClass = !capturable || marked || !dimUncaught ? "pk-mon-sprite" : "pk-mon-sprite is-dim";
@@ -69,7 +71,7 @@ export function PokemonCard({
           <span>{numberLabel}</span>
           {capturable ? (
             <span className="pk-mon-mark">
-              {caught && shiny ? "NORMAL + SHINY" : shiny ? "SHINY" : caught ? "NORMAL" : ""}
+              {caught && shiny ? marks.both : shiny ? marks.shinyOnly : caught ? marks.normalOnly : ""}
             </span>
           ) : null}
         </span>

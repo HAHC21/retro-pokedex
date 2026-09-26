@@ -83,6 +83,6 @@ export type MonPayload = {
   evo: EvolutionStep[];
   enc: WildEncounter[];
   games?: Array<{ version: string; ways: string[] }>;
-  overview?: string | null;
+  overview?: { en?: string; es?: string } | null;
   capture?: boolean;
 };

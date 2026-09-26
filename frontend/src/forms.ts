@@ -1,4 +1,5 @@
 import { idFromUrl, title } from "./format";
+import { fill, getMessages } from "./i18n/runtime";
 
 export type FormKind = "mega" | "regional" | "gmax" | "variant";
 
@@ -25,13 +26,6 @@ export type SpeciesFormEntry = {
 const FORM_KINDS = new Set<string>(["mega", "regional", "gmax", "variant"]);
 
 const REGIONAL_NAMES = new Set(["alola", "galar", "hisui", "paldea"]);
-
-const REGIONAL_ADJECTIVE: Record<string, string> = {
-  alola: "Alolan",
-  galar: "Galarian",
-  hisui: "Hisuian",
-  paldea: "Paldean",
-};
 
 /** Keep in step with backend UNTRACKED_SLUGS. These are not separate catches. */
 const UNTRACKED_SLUGS = new Set([
@@ -251,18 +245,19 @@ export function formsEqual(a: SpeciesForm | null | undefined, b: SpeciesForm | n
 }
 
 export function formDisplayName(speciesName: string, form: SpeciesForm): string {
+  const copy = getMessages().forms;
   if (form.kind === "gmax") {
-    return `Gigantamax ${speciesName}`;
+    return fill(copy.gigantamax, { species: speciesName });
   }
   if (form.kind === "mega") {
-    return form.name ? `Mega ${speciesName} ${form.name.toUpperCase()}` : `Mega ${speciesName}`;
+    return form.name ? fill(copy.megaNamed, { species: speciesName, name: form.name.toUpperCase() }) : fill(copy.mega, { species: speciesName });
   }
   if (form.kind === "variant") {
-    const label = form.name ? title(form.name) : "Variant";
-    return `${label} ${speciesName}`;
+    const label = form.name ? title(form.name) : copy.variantFallback;
+    return fill(copy.variant, { label, species: speciesName });
   }
-  const adjective = form.name ? REGIONAL_ADJECTIVE[form.name] || form.name : "Regional";
-  return `${adjective} ${speciesName}`;
+  const adjective = form.name ? copy[form.name as "alola" | "galar" | "hisui" | "paldea"] || form.name : copy.regionalFallback;
+  return fill(copy.regional, { adjective, species: speciesName });
 }
 
 type VarietyRef = { is_default: boolean; pokemon: { name: string; url?: string } };

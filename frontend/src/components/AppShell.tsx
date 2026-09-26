@@ -2,6 +2,9 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { GAMES } from "../catalog";
 import type { AuthUser } from "../auth";
 import { navBtnStyle } from "../format";
+import { useI18n } from "../i18n/context";
+import type { Locale } from "../i18n/runtime";
+import { gameLabel } from "../progress";
 import type { View } from "../types";
 import type { ListView } from "../paths";
 import { LegalFooter } from "./LegalFooter";
@@ -37,6 +40,7 @@ export function AppShell({
   onLogout,
   children,
 }: AppShellProps) {
+  const { locale, setLocale, messages: m } = useI18n();
   const dexActive = view === "dex" || (view === "mon" && listView !== "checklist");
   const checklistActive = view === "checklist" || (view === "mon" && listView === "checklist");
   const showGamePicker = view !== "signin" && view !== "login" && view !== "changelog" && view !== "roadmap";
@@ -82,13 +86,13 @@ export function AppShell({
         <div className="pk-header-tools">
           <span className="pk-header-nav pk-header-nav-desktop">
             <button type="button" className="btn pk-nav" style={navBtnStyle(view === "dash")} onClick={onDash}>
-              Dashboard
+              {m.nav.dashboard}
             </button>
             <button type="button" className="btn pk-nav" style={navBtnStyle(dexActive)} onClick={onDex}>
-              Pokédex
+              {m.nav.pokedex}
             </button>
             <button type="button" className="btn pk-nav" style={navBtnStyle(checklistActive)} onClick={onChecklist}>
-              Checklist
+              {m.nav.checklist}
             </button>
           </span>
           <span className="pk-header-nav pk-header-auth pk-header-nav-desktop">
@@ -97,14 +101,15 @@ export function AppShell({
             ) : (
               <>
                 <button type="button" className="btn pk-nav" style={navBtnStyle(view === "signin")} onClick={onSignIn}>
-                  Sign In
+                  {m.nav.signIn}
                 </button>
                 <button type="button" className="btn pk-nav" style={navBtnStyle(view === "login")} onClick={onLogIn}>
-                  Log In
+                  {m.nav.logIn}
                 </button>
               </>
             )}
           </span>
+          <LanguageSwitch locale={locale} onChange={setLocale} label={m.lang.group} enLabel={m.lang.en} esLabel={m.lang.es} english={m.lang.english} spanish={m.lang.spanish} />
 
           <div className="pk-header-menu" ref={menuRef}>
             <button
@@ -113,7 +118,7 @@ export function AppShell({
               style={navBtnStyle(menuOpen)}
               aria-expanded={menuOpen}
               aria-controls={menuId}
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-label={menuOpen ? m.nav.closeMenu : m.nav.openMenu}
               onClick={() => setMenuOpen((value) => !value)}
             >
               <span className={`pk-hamburger-icon${menuOpen ? " is-open" : ""}`} aria-hidden="true">
@@ -131,7 +136,7 @@ export function AppShell({
                   style={navBtnStyle(view === "dash")}
                   onClick={() => go(onDash)}
                 >
-                  Dashboard
+                  {m.nav.dashboard}
                 </button>
                 <button
                   type="button"
@@ -140,7 +145,7 @@ export function AppShell({
                   style={navBtnStyle(dexActive)}
                   onClick={() => go(onDex)}
                 >
-                  Pokédex
+                  {m.nav.pokedex}
                 </button>
                 <button
                   type="button"
@@ -149,13 +154,13 @@ export function AppShell({
                   style={navBtnStyle(checklistActive)}
                   onClick={() => go(onChecklist)}
                 >
-                  Checklist
+                  {m.nav.checklist}
                 </button>
                 <div className="pk-header-menu-divider" />
                 {authUser ? (
                   <>
                     <div className="pk-profile-meta">
-                      <strong>{authUser.name?.trim() || "Trainer"}</strong>
+                      <strong>{authUser.name?.trim() || m.nav.trainer}</strong>
                       {authUser.email ? <span>{authUser.email}</span> : null}
                       {authUser.role && authUser.role !== "user" ? (
                         <span className="pk-profile-role">{authUser.role}</span>
@@ -167,7 +172,7 @@ export function AppShell({
                       role="menuitem"
                       onClick={() => go(onLogout)}
                     >
-                      Log out
+                      {m.nav.logOut}
                     </button>
                   </>
                 ) : (
@@ -179,7 +184,7 @@ export function AppShell({
                       style={navBtnStyle(view === "signin")}
                       onClick={() => go(onSignIn)}
                     >
-                      Sign In
+                      {m.nav.signIn}
                     </button>
                     <button
                       type="button"
@@ -188,10 +193,31 @@ export function AppShell({
                       style={navBtnStyle(view === "login")}
                       onClick={() => go(onLogIn)}
                     >
-                      Log In
+                      {m.nav.logIn}
                     </button>
                   </>
                 )}
+                <div className="pk-header-menu-divider" />
+                <button
+                  type="button"
+                  className="btn pk-nav"
+                  role="menuitem"
+                  style={navBtnStyle(locale === "en")}
+                  aria-pressed={locale === "en"}
+                  onClick={() => go(() => setLocale("en"))}
+                >
+                  {m.lang.english}
+                </button>
+                <button
+                  type="button"
+                  className="btn pk-nav"
+                  role="menuitem"
+                  style={navBtnStyle(locale === "es")}
+                  aria-pressed={locale === "es"}
+                  onClick={() => go(() => setLocale("es"))}
+                >
+                  {m.lang.spanish}
+                </button>
               </div>
             ) : null}
           </div>
@@ -201,22 +227,16 @@ export function AppShell({
         <div className="pk-game-picker">
           <label className="pk-game-label">
             <span className="pk-game-label-row">
-              <span>Game</span>
-              <InfoTip label="About the game selector" wide>
-                <p>
-                  Chooses which save you are tracking. Caught/shiny marks, My Specimens, wild spawn maps, and move
-                  learnsets are scoped to this game.
-                </p>
-                <p>
-                  <strong>Global Collection</strong> tracks catches across every game. Other options (e.g. HeartGold /
-                  SoulSilver) represent that specific cartridge or title.
-                </p>
+              <span>{m.game.label}</span>
+              <InfoTip label={m.game.about} wide>
+                <p>{m.game.body}</p>
+                <p>{m.game.global}</p>
               </InfoTip>
             </span>
             <select className="input" value={game} onChange={(event) => onGame(event.target.value)}>
               {GAMES.map((entry) => (
                 <option key={entry.k} value={entry.k}>
-                  {entry.l}
+                  {gameLabel(entry.k)}
                 </option>
               ))}
             </select>
@@ -230,10 +250,11 @@ export function AppShell({
 }
 
 function ProfileMenu({ user, onLogout }: { user: AuthUser; onLogout: () => void }) {
+  const { messages: m } = useI18n();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
-  const label = user.name?.trim() || user.email?.split("@")[0] || "Profile";
+  const label = user.name?.trim() || user.email?.split("@")[0] || m.nav.profile;
 
   useEffect(() => {
     if (!open) {
@@ -272,7 +293,7 @@ function ProfileMenu({ user, onLogout }: { user: AuthUser; onLogout: () => void 
       {open ? (
         <div className="pk-profile-menu" id={menuId} role="menu">
           <div className="pk-profile-meta">
-            <strong>{user.name?.trim() || "Trainer"}</strong>
+            <strong>{user.name?.trim() || m.nav.trainer}</strong>
             {user.email ? <span>{user.email}</span> : null}
             {user.role && user.role !== "user" ? <span className="pk-profile-role">{user.role}</span> : null}
           </div>
@@ -285,10 +306,53 @@ function ProfileMenu({ user, onLogout }: { user: AuthUser; onLogout: () => void 
               onLogout();
             }}
           >
-            Log out
+            {m.nav.logOut}
           </button>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function LanguageSwitch({
+  locale,
+  onChange,
+  label,
+  enLabel,
+  esLabel,
+  english,
+  spanish,
+}: {
+  locale: Locale;
+  onChange: (locale: Locale) => void;
+  label: string;
+  enLabel: string;
+  esLabel: string;
+  english: string;
+  spanish: string;
+}) {
+  return (
+    <span className="pk-header-lang" role="group" aria-label={label}>
+      <button
+        type="button"
+        className="btn pk-nav pk-lang"
+        style={navBtnStyle(locale === "en")}
+        aria-pressed={locale === "en"}
+        aria-label={english}
+        onClick={() => onChange("en")}
+      >
+        {enLabel}
+      </button>
+      <button
+        type="button"
+        className="btn pk-nav pk-lang"
+        style={navBtnStyle(locale === "es")}
+        aria-pressed={locale === "es"}
+        aria-label={spanish}
+        onClick={() => onChange("es")}
+      >
+        {esLabel}
+      </button>
+    </span>
   );
 }

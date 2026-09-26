@@ -1,4 +1,6 @@
 import { API_ORIGIN } from "./apiBase";
+import { localizedVersion } from "./i18n/labels";
+import { getMessages } from "./i18n/runtime";
 
 export const API = `${API_ORIGIN}/api/poke`;
 export const SPRITE_BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
@@ -397,7 +399,7 @@ export function versionsForGame(gameKey: string): string[] | null {
 }
 
 export function versionLabel(name: string) {
-  return VERSIONS[name]?.[1];
+  return localizedVersion(name) || VERSIONS[name]?.[1];
 }
 
 export function versionGen(name: string) {
@@ -514,21 +516,12 @@ export function gamesForSpecies(
   return groupVersionNames(names);
 }
 
-export const GAME_WAY_LABELS: Record<string, string> = {
-  wild: "Wild",
-  starter: "Starter",
-  gift: "Gift",
-  static: "Static",
-  trade: "Trade",
-  snag: "Snag",
-  event: "Event",
-  pokedex: "Pokédex",
-  mega: "Mega Evolution",
-  gigantamax: "Gigantamax",
-};
-
 export function gameWayLabel(way: string) {
-  return GAME_WAY_LABELS[way] || way;
+  const ways = getMessages().ways;
+  if (Object.prototype.hasOwnProperty.call(ways, way)) {
+    return ways[way as keyof typeof ways];
+  }
+  return way;
 }
 
 export type GameAvailability = { version: string; ways: string[] };

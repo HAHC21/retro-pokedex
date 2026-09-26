@@ -2,6 +2,23 @@
 
 All notable changes to Retro Pokédex, taken from the versioned commits on `main`. v0.5 is the first release. Dates are the commit dates.
 
+## [0.7.8] - 2026-09-26
+
+### Added
+
+- English and Spanish for the site. `frontend/src/i18n` holds `en.ts`, `es.ts`, `I18nProvider`, and `readStoredLocale` (`pokedex-locale`). The header shows EN and ES. The phone menu lists English and Spanish. The document title, description, and Open Graph tags follow the locale.
+- A language prompt on the dashboard. `LanguagePrompt` calls `detectLocationLanguage`, which reads the country from ipwho.is and offers Spanish for Spanish-speaking countries and English for English-speaking ones. Dismissing it stores `pokedex-lang-prompt-dismissed`.
+- On a species page, the identity name, Pokédex flavor text, and overview follow the language. `speciesDisplayName` uses the species `names` entry. `flavorTextsForGame` prefers the active language and falls back to English. `overviewForLocale` prefers `overview.es` and falls back to `overview.en`.
+- `PokemonOverviewDocument.overview_es`. `scripts.generate_overviews --lang es` writes the Spanish paragraph only after an English overview exists (`need-en` otherwise). The token CSV adds a `language` column. Spanish prompts use official Spanish type names and form names (`Gigamax`, `Mega-`, `de Alola`).
+- `PokeProxyService` returns `overview` as `{en, es}` through `overview_texts`. `_project_species` keeps English and Spanish flavor text. `fetchMon` accepts a string or that object.
+- On a narrow screen, Last caught renders as `pk-recent-list` instead of the card grid. The Pokédex toolbar and status filters stack. Checklist rows put actions on their own line. Species-page game tags use the full width. The game selector stacks, and the header language buttons hide in favor of the menu.
+
+### Changed
+
+- Nav, dashboard, dex and checklist filters, detail, marks, specimens, bulk import, auth, footer, types, stats, natures, games, versions, regions, evolution lines, acquisition fallbacks, matchup labels, and form names read from the active catalog. `displayEvolutionCond` rewrites stored English evolution phrases when the language is Spanish. `gameLabel`, `gameWayLabel`, and `versionLabel` use the catalog.
+- The changelog and roadmap use `localizedChangelog` and `localizedRoadmap` in `frontend/src/i18n/narrative.ts`. Spanish changelog dates are day, month, year. Auth errors are stored as `confirm_failed` and `signin_failed` so the message can change with the language.
+- `.cursor/rules/rebuild-docker.mdc` states that `docker compose up -d --build` may run without an approval prompt.
+
 ## [0.7.7] - 2026-09-26
 
 ### Added

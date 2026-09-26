@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { catchableGameKeys, GAMES, GENS } from "../catalog";
 import { navBtnStyle } from "../format";
+import { useI18n } from "../i18n/context";
 import { fetchMon } from "../pokeapi";
 import { gameLabel } from "../progress";
 import { GameKeyTag } from "./GameTag";
@@ -17,14 +18,6 @@ type AssignGameDialogProps = {
   onApply: (fromGame: string, toGame: string) => void;
 };
 
-const columns = [
-  { label: "Collection", games: GAMES.filter((game) => game.g === 0) },
-  ...GENS.map((gen) => ({
-    label: `Gen ${gen.roman}`,
-    games: GAMES.filter((game) => game.g === gen.id),
-  })),
-].filter((column) => column.games.length > 0);
-
 export function AssignGameDialog({
   open,
   name,
@@ -35,6 +28,14 @@ export function AssignGameDialog({
   onClose,
   onApply,
 }: AssignGameDialogProps) {
+  const { messages: m, fill } = useI18n();
+  const columns = [
+    { label: m.assign.collection, games: GAMES.filter((game) => game.g === 0) },
+    ...GENS.map((gen) => ({
+      label: fill(m.assign.gen, { roman: gen.roman }),
+      games: GAMES.filter((game) => game.g === gen.id),
+    })),
+  ].filter((column) => column.games.length > 0);
   const [selected, setSelected] = useState(fromGame ?? "");
   const [allowed, setAllowed] = useState<Set<string> | null>(null);
   const [checkFailed, setCheckFailed] = useState(false);
@@ -91,14 +92,13 @@ export function AssignGameDialog({
         .filter((column) => column.games.length > 0);
 
   return (
-    <Modal open={open && !!fromGame} title={`Move ${name}`} onClose={onClose} size="wide">
+    <Modal open={open && !!fromGame} title={fill(m.assign.title, { name })} onClose={onClose} size="wide">
       <p className="pk-assign-note">
-        Currently recorded in {fromGame ? gameLabel(fromGame) : "this game"}. Games listed here are ones where{" "}
-        {name} can be caught, received, or evolved without a trade.
+        {fill(m.assign.note, { game: fromGame ? gameLabel(fromGame) : m.assign.thisGame, name })}
       </p>
-      {waiting ? <p className="pk-assign-note">Checking where {name} can be obtained…</p> : null}
+      {waiting ? <p className="pk-assign-note">{fill(m.assign.checking, { name })}</p> : null}
       {checkFailed ? (
-        <p className="pk-assign-note">Could not check obtainability, so every game is listed.</p>
+        <p className="pk-assign-note">{m.assign.failed}</p>
       ) : null}
       {waiting ? null : (
         <div className="pk-game-columns pk-assign-columns">
@@ -120,11 +120,11 @@ export function AssignGameDialog({
         </div>
       )}
       {combines ? (
-        <p className="pk-assign-note">This Pokémon is already recorded in {gameLabel(selected)}. Both marks stay together.</p>
+        <p className="pk-assign-note">{fill(m.assign.combines, { game: gameLabel(selected) })}</p>
       ) : null}
       <div className="dialog-actions">
         <button type="button" className="btn pk-nav" style={navBtnStyle(false)} onClick={onClose}>
-          Cancel
+          {m.assign.cancel}
         </button>
         <button
           type="button"
@@ -137,7 +137,7 @@ export function AssignGameDialog({
             }
           }}
         >
-          Apply
+          {m.assign.apply}
         </button>
       </div>
     </Modal>

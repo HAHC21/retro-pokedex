@@ -1,22 +1,26 @@
 import { gameByKey, genById, idsInRegion, idsIntroducedInGen, introducedIdsForGame, nationalIdsForGame, regionBySlug } from "./catalog";
+import { localizedRegion } from "./i18n/labels";
+import { fill, getMessages } from "./i18n/runtime";
 import { gameLabel, unionSets } from "./progress";
 import type { RegionalDex } from "./pokeapi";
 import type { DexIndex, DexScope, Progress, StatusFilter } from "./types";
 
-export const DEX_STATUSES: Array<[StatusFilter, string]> = [
-  ["all", "All"],
-  ["missing", "Missing"],
-  ["missing-normal", "Missing Normal"],
-  ["missing-shiny", "Missing Shiny"],
-  ["normal", "Owned Normal"],
-  ["shiny", "Owned Shiny"],
-];
+export function dexStatuses(): Array<[StatusFilter, string]> {
+  const copy = getMessages().dex;
+  return [
+    ["all", copy.all],
+    ["missing", copy.missing],
+    ["missing-normal", copy.missingNormal],
+    ["missing-shiny", copy.missingShiny],
+    ["normal", copy.ownedNormal],
+    ["shiny", copy.ownedShiny],
+  ];
+}
 
-export const CHECKLIST_STATUSES: Array<[StatusFilter, string]> = [
-  ["all", "All"],
-  ["exclusives", "Exclusives"],
-  ...DEX_STATUSES.slice(1),
-];
+export function checklistStatuses(): Array<[StatusFilter, string]> {
+  const copy = getMessages().dex;
+  return [["all", copy.all], ["exclusives", copy.exclusives], ...dexStatuses().slice(1)];
+}
 
 /** Homepage region list: a known region slug, independent of generation. */
 export function isRegionBrowseMode(region: string | null): boolean {
@@ -24,7 +28,11 @@ export function isRegionBrowseMode(region: string | null): boolean {
 }
 
 export function regionBrowseLabel(region: string | null): string {
-  return regionBySlug(region)?.name.toUpperCase() ?? "";
+  const origin = regionBySlug(region);
+  if (!origin) {
+    return "";
+  }
+  return (localizedRegion(origin.slug) || origin.name).toUpperCase();
 }
 
 export function activeDexScope(scope: DexScope, _game: string): DexScope {
@@ -99,16 +107,17 @@ export function dexScopeButtons(
   _scope: DexScope,
   region: string | null = null,
 ): Array<[DexScope, string]> {
+  const copy = getMessages().dex;
   if (isRegionBrowseMode(region)) {
     return [["generation", regionBrowseLabel(region)]];
   }
   const scopes: Array<[DexScope, string]> = [
-    ["regional", "Regional"],
-    ["national", "National"],
+    ["regional", copy.scopeRegional],
+    ["national", copy.scopeNational],
   ];
   const meta = gameByKey(game);
   if (meta && meta.g > 0) {
-    scopes.push(["generation", `GEN ${genById(meta.g).roman}`]);
+    scopes.push(["generation", fill(copy.scopeGen, { roman: genById(meta.g).roman })]);
   }
   return scopes;
 }
@@ -122,31 +131,37 @@ export function dexHeadCopy(
   _gen = 1,
   region: string | null = null,
 ): { title: string; meta: string } {
+  const copy = getMessages().dex;
   const active = activeDexScope(scope, game);
   const meta = gameByKey(game);
   const nativeGen = meta && meta.g > 0 ? genById(meta.g) : null;
   const origin = regionBySlug(region);
+  const labelFor = gameLabel(game);
   if (origin) {
-    const label = origin.name.toUpperCase();
+    const label = (localizedRegion(origin.slug) || origin.name).toUpperCase();
+    const regionName = localizedRegion(origin.slug) || origin.name;
     return {
-      title: kind === "checklist" ? `${label} Checklist` : label,
-      meta: `Introduced in ${origin.name} · ${shown} of ${total} shown`,
+      title: kind === "checklist" ? fill(copy.regionChecklist, { region: label }) : label,
+      meta: fill(copy.regionMeta, { region: regionName, shown, total }),
     };
   }
   if (active === "regional") {
     return {
-      title: kind === "checklist" ? `Regional Checklist · ${gameLabel(game)}` : `Regional Dex · ${gameLabel(game)}`,
-      meta: `Regional · ${shown} of ${total || "…"} shown`,
+      title: kind === "checklist" ? fill(copy.regionalChecklist, { game: labelFor }) : fill(copy.regionalDex, { game: labelFor }),
+      meta: fill(copy.regionalMeta, { shown, total: total || "…" }),
     };
   }
   if (active === "generation" && nativeGen) {
     return {
-      title: kind === "checklist" ? `GEN ${nativeGen.roman} Checklist · ${gameLabel(game)}` : `GEN ${nativeGen.roman} · ${gameLabel(game)}`,
-      meta: `New in GEN ${nativeGen.roman} · ${shown} of ${total} shown`,
+      title:
+        kind === "checklist"
+          ? fill(copy.genChecklist, { roman: nativeGen.roman, game: labelFor })
+          : fill(copy.genDex, { roman: nativeGen.roman, game: labelFor }),
+      meta: fill(copy.genMeta, { roman: nativeGen.roman, shown, total }),
     };
   }
   return {
-    title: kind === "checklist" ? `National Checklist · ${gameLabel(game)}` : `National Dex · ${gameLabel(game)}`,
-    meta: `National · ${shown} of ${total} shown`,
+    title: kind === "checklist" ? fill(copy.nationalChecklist, { game: labelFor }) : fill(copy.nationalDex, { game: labelFor }),
+    meta: fill(copy.nationalMeta, { shown, total }),
   };
 }

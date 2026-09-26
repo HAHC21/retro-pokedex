@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Blueprint } from "../components/Blueprint";
+import { LastCaughtCard } from "../components/LastCaughtCard";
 import { PkBulkImport } from "../components/PkBulkImport";
 import { PokemonCard } from "../components/PokemonCard";
 import { ProgressBar } from "../components/ProgressBar";
+import { LanguagePrompt } from "../components/LanguagePrompt";
 import { REGIONS, genById } from "../catalog";
 import { filterDexIds } from "../dexList";
-import { dexNum, kindStyle, spriteUrl, whenText } from "../format";
-import { FORM_LISTS, formDisplayName, formListOf, formStorageKey, formsEqual, parseMarkKey, type FormList, type SpeciesForm } from "../forms";
+import { dexNum } from "../format";
+import { formDisplayName, formListOf, formStorageKey, formsEqual, parseMarkKey, type FormList, type SpeciesForm } from "../forms";
+import { useI18n } from "../i18n/context";
+import { formListCopy, localizedRegion, localizedRegionGames, notInGame } from "../i18n/labels";
 import type { CatalogForm } from "../pokeapi";
 import { gameLabel, unionFor, unionSets } from "../progress";
 import type { DexIndex, MarkKey, Progress } from "../types";
@@ -45,32 +49,13 @@ type OriginBox = {
 function originProgressBoxes(onOpenRegion: (slug: string) => void): OriginBox[] {
   return REGIONS.map((entry) => ({
     key: entry.slug,
-    title: entry.name,
-    subtitle: entry.games,
+    title: localizedRegion(entry.slug) || entry.name,
+    subtitle: localizedRegionGames(entry.slug) || entry.games,
     from: entry.from,
     to: entry.to,
     open: () => onOpenRegion(entry.slug),
   }));
 }
-
-const WELCOME_FEATURES = [
-  {
-    title: "Game selector",
-    body: "Pick the save you are playing; marks, specimens, spawns, and learnsets follow that game.",
-  },
-  {
-    title: "Pokédex & Checklist",
-    body: "Browse or tick off the list with Regional, National, or generation scopes, plus missing and owned filters.",
-  },
-  {
-    title: "Species pages",
-    body: "Overviews, Pokédex entries, base stats, abilities and natures, defensive matchups, wild spawns, and recommended movesets.",
-  },
-  {
-    title: "My Specimens",
-    body: "When signed in, log multiple catches of the same species (manual or PK file upload) with ability, nature, IVs, and EVs.",
-  },
-];
 
 type DashboardViewProps = {
   index: DexIndex;
@@ -121,6 +106,7 @@ export function DashboardView({
   onOpenMissing,
   onOpenShinies,
 }: DashboardViewProps) {
+  const { messages: m, fill } = useI18n();
   const [query, setQuery] = useState("");
   const ids = Object.keys(index.names).map(Number);
   const total = ids.length || 1025;
@@ -133,10 +119,10 @@ export function DashboardView({
   const currentGen = genById(gen);
 
   const kpis = [
-    { label: "Registered", value: String(registered), sub: `of ${total} in the National Pokedex` },
-    { label: "Completion", value: `${Math.round((registered / total) * 100)}%`, sub: `${total - registered} left to catch` },
-    { label: "Shiny", value: String(shiny), sub: `${caught} tracked as normal` },
-    { label: "Active game", value: String(activeCaught), sub: `Caught in ${gameLabel(game)}` },
+    { label: m.dash.registered, value: String(registered), sub: fill(m.dash.registeredSub, { total }) },
+    { label: m.dash.completion, value: `${Math.round((registered / total) * 100)}%`, sub: fill(m.dash.completionSub, { count: total - registered }) },
+    { label: m.dash.shiny, value: String(shiny), sub: fill(m.dash.shinySub, { count: caught }) },
+    { label: m.dash.activeGame, value: String(activeCaught), sub: fill(m.dash.activeGameSub, { game: gameLabel(game) }) },
   ];
 
   const events: Array<{ id: number; form: SpeciesForm | null; kind: "Normal" | "Shiny"; at: number; game: string }> = [];
@@ -155,7 +141,14 @@ export function DashboardView({
     });
   });
   events.sort((a, b) => b.at - a.at);
-  const recent = events.slice(0, 6);
+  const recentRows = events.slice(0, 6).map((item) => {
+    const catalog = item.form
+      ? forms.find((entry) => entry.pokedexId === item.id && formsEqual(entry.form, item.form))
+      : undefined;
+    const species = index.names[item.id] || fill(m.dash.numberFallback, { id: item.id });
+    const name = item.form ? formDisplayName(species, item.form) : species;
+    return { item, name, sprite: recentSprite(item.id, item.form, catalog), catalog };
+  });
   const needle = query.trim();
   const searching = needle.length >= MIN_SEARCH_LENGTH;
   const matches = useMemo(() => {
@@ -191,67 +184,52 @@ export function DashboardView({
     });
   }, [forms, index, needle, prog, searching]);
 
+  const recentIds = recentRows.map((row) => row.item.id);
   useEffect(() => {
-    if (matches.length) {
-      onEnsureObtainable(matches.map((hit) => hit.id));
+    const ids = [...matches.map((hit) => hit.id), ...recentIds];
+    if (ids.length) {
+      onEnsureObtainable(ids);
     }
-  }, [matches, onEnsureObtainable]);
+  }, [matches, onEnsureObtainable, recentIds.join(",")]);
 
   return (
     <div className="pk-page pk-dash">
+      <LanguagePrompt />
       <Blueprint className="pk-welcome">
         <div className="pk-welcome-head">
-          <h2>Welcome to Retro Pokédex</h2>
-          <span className="pk-kicker">Collection tracker · encyclopedia · spawn guide</span>
+          <h2>{m.dash.welcome}</h2>
+          <span className="pk-kicker">{m.dash.kicker}</span>
         </div>
-        <p className="pk-welcome-lead">
-          Retro Pokédex helps you track every Pokémon you catch across games — normals and shinies separately — then dig
-          into stats, abilities, natures, spawn maps, learnsets, and recommended movesets.
-        </p>
+        <p className="pk-welcome-lead">{m.dash.lead}</p>
         <div className="pk-welcome-grid">
-          {WELCOME_FEATURES.map((feature) => (
+          {[
+            { title: m.dash.features.selectorTitle, body: m.dash.features.selectorBody },
+            { title: m.dash.features.dexTitle, body: m.dash.features.dexBody },
+            { title: m.dash.features.speciesTitle, body: m.dash.features.speciesBody },
+            { title: m.dash.features.specimensTitle, body: m.dash.features.specimensBody },
+          ].map((feature) => (
             <Blueprint key={feature.title} className="pk-welcome-box">
               <h3>{feature.title}</h3>
               <p>{feature.body}</p>
             </Blueprint>
           ))}
         </div>
-        <p className="pk-welcome-note">
-          Look for the{" "}
-          <span className="pk-info-tip-btn is-static" aria-hidden="true">
-            i
-          </span>{" "}
-          icons next to the game selector and dex filters for quick explainers.
-        </p>
+        <p className="pk-welcome-note">{m.dash.note}</p>
       </Blueprint>
-
-      <div className="pk-kpi-grid">
-        {kpis.map((kpi) => (
-          <Blueprint key={kpi.label} className="pk-kpi">
-            <div className="pk-kicker">{kpi.label}</div>
-            <div className="pk-kpi-value">{kpi.value}</div>
-            <div className="pk-kpi-sub">{kpi.sub}</div>
-          </Blueprint>
-        ))}
-      </div>
-
-      <PkBulkImport isStaff={isStaff} game={game} onImported={onImported} />
 
       <section className="pk-section" aria-labelledby="dash-search-title">
         <div className="pk-section-head">
-          <h2 id="dash-search-title">Search</h2>
+          <h2 id="dash-search-title">{m.dash.search}</h2>
         </div>
         <Blueprint className="pk-search-box">
-          <p className="pk-dash-find-note">
-            Type at least two characters of a name or a National Dex number. Matching species, alternate forms, and variants show up here as cards.
-          </p>
+          <p className="pk-dash-find-note">{m.dash.searchNote}</p>
           <label className="field pk-field pk-search" htmlFor="dash-pokemon-search">
             <input
               id="dash-pokemon-search"
               className="input"
               type="search"
-              placeholder="Name or number"
-              aria-label="Search by name or National Dex number"
+              placeholder={m.dash.searchPlaceholder}
+              aria-label={m.dash.searchLabel}
               value={query}
               autoComplete="off"
               onChange={(event) => setQuery(event.target.value)}
@@ -259,9 +237,9 @@ export function DashboardView({
           </label>
           {searching ? (
             indexLoading || (formsLoading && matches.length === 0) ? (
-              <div className="pk-status">{formsLoading && !indexLoading ? "Loading forms…" : "Loading index from PokéAPI…"}</div>
+              <div className="pk-status">{formsLoading && !indexLoading ? m.dash.loadingForms : m.dash.loadingIndex}</div>
             ) : matches.length === 0 ? (
-              <div className="pk-status">No results for these filters</div>
+              <div className="pk-status">{m.dash.noResults}</div>
             ) : (
               <div className="pk-grid">
                 {matches.map((hit) => {
@@ -287,7 +265,7 @@ export function DashboardView({
                       shinyFemale={!!marks.shinyFemale}
                       games={marks.where}
                       obtainable={obtainable[hit.id]}
-                      unavailableLabel={`Not In ${gameLabel(game)}`}
+                      unavailableLabel={notInGame(gameLabel(game))}
                       onOpen={() => (form ? onOpenForm(hit.id, form.form) : onOpen(hit.id))}
                       onToggleCaught={() => (form ? onToggleForm(hit.id, form.form, "caught") : onToggleCaught(hit.id))}
                       onToggleShiny={() => (form ? onToggleForm(hit.id, form.form, "shiny") : onToggleShiny(hit.id))}
@@ -301,56 +279,90 @@ export function DashboardView({
         </Blueprint>
       </section>
 
+      <section className="pk-section" aria-labelledby="dash-stats-title">
+        <div className="pk-section-head">
+          <h2 id="dash-stats-title">{m.dash.stats}</h2>
+        </div>
+        <div className="pk-kpi-grid">
+        {kpis.map((kpi) => (
+          <Blueprint key={kpi.label} className="pk-kpi">
+            <div className="pk-kicker">{kpi.label}</div>
+            <div className="pk-kpi-value">{kpi.value}</div>
+            <div className="pk-kpi-sub">{kpi.sub}</div>
+          </Blueprint>
+        ))}
+        </div>
+      </section>
+
+      <PkBulkImport isStaff={isStaff} game={game} onImported={onImported} />
+
       <section className="pk-section">
         <div className="pk-section-head">
-          <h2>Last caught</h2>
-          <span>Most recent marks across every game</span>
+          <h2>{m.dash.lastCaught}</h2>
+          <span>{m.dash.lastCaughtSub}</span>
         </div>
-        {recent.length === 0 ? (
-          <Blueprint className="pk-empty">Nothing marked yet — open the Pokédex to start</Blueprint>
+        {recentRows.length === 0 ? (
+          <Blueprint className="pk-empty">{m.dash.nothingMarked}</Blueprint>
         ) : (
-          <div className="pk-recent-grid">
-            {recent.map((item) => {
-              const catalog = item.form
-                ? forms.find((entry) => entry.pokedexId === item.id && formsEqual(entry.form, item.form))
-                : undefined;
-              const species = index.names[item.id] || `No. ${item.id}`;
-              const name = item.form ? formDisplayName(species, item.form) : species;
-              const sprite = recentSprite(item.id, item.form, catalog);
-              return (
-              <button
-                key={`${item.game}-${item.id}-${formStorageKey(item.form)}-${item.kind}`}
-                type="button"
-                className="blueprint pk-cell pk-nav pk-recent"
-                onClick={() => (item.form ? onOpenForm(item.id, item.form) : onOpen(item.id))}
-              >
-                <i className="corner tl" aria-hidden="true" />
-                <i className="corner tr" aria-hidden="true" />
-                <i className="corner bl" aria-hidden="true" />
-                <i className="corner br" aria-hidden="true" />
-                <span className="pk-recent-top">
-                  <span className="pk-dex-num">{dexNum(item.id)}</span>
-                  <span className="tag" style={kindStyle(item.kind)}>
-                    {item.kind}
-                  </span>
-                </span>
-                <img src={spriteUrl(sprite.pokemonId, item.kind === "Shiny", false, sprite.formName)} alt={name} loading="lazy" />
-                <span className="pk-name">{name}</span>
-                <span className="pk-recent-game">{gameLabel(item.game)}</span>
-                <span className="pk-when">{whenText(item.at)}</span>
-              </button>
-              );
-            })}
-          </div>
+          <>
+            <div className="pk-grid pk-recent-grid">
+              {recentRows.map(({ item, name, catalog }) => {
+                const form = catalog ?? null;
+                const marks = unionFor(prog, item.id, item.form);
+                return (
+                  <PokemonCard
+                    key={`${item.game}-${item.id}-${formStorageKey(item.form)}-${item.kind}`}
+                    id={item.id}
+                    spriteId={form ? form.resourceId : undefined}
+                    formName={form?.spriteForm}
+                    capturable={form ? form.capture : true}
+                    name={name}
+                    types={form ? form.types : index.types[item.id] || []}
+                    rarity={index.rarity[item.id]}
+                    numberLabel={dexNum(item.id)}
+                    caught={!!marks.caught}
+                    shiny={!!marks.shiny}
+                    caughtMale={!!marks.caughtMale}
+                    caughtFemale={!!marks.caughtFemale}
+                    shinyMale={!!marks.shinyMale}
+                    shinyFemale={!!marks.shinyFemale}
+                    games={marks.where}
+                    obtainable={obtainable[item.id]}
+                    unavailableLabel={notInGame(gameLabel(game))}
+                    onOpen={() => (item.form ? onOpenForm(item.id, item.form) : onOpen(item.id))}
+                    onToggleCaught={() => (item.form ? onToggleForm(item.id, item.form, "caught") : onToggleCaught(item.id))}
+                    onToggleShiny={() => (item.form ? onToggleForm(item.id, item.form, "shiny") : onToggleShiny(item.id))}
+                    onMoveGame={(fromGame, toGame) => onMoveGame(item.id, item.form, fromGame, toGame)}
+                  />
+                );
+              })}
+            </div>
+            <div className="pk-recent-list">
+              {recentRows.map(({ item, name, sprite }) => (
+                <LastCaughtCard
+                  key={`${item.game}-${item.id}-${formStorageKey(item.form)}-${item.kind}-row`}
+                  id={item.id}
+                  name={name}
+                  rarity={index.rarity[item.id]}
+                  spriteId={sprite.pokemonId}
+                  formName={sprite.formName}
+                  kind={item.kind}
+                  game={item.game}
+                  at={item.at}
+                  onOpen={() => (item.form ? onOpenForm(item.id, item.form) : onOpen(item.id))}
+                />
+              ))}
+            </div>
+          </>
         )}
       </section>
 
       <section className="pk-section">
         <div className="pk-section-head">
-          <h2>Progress by region</h2>
-          <span>Species introduced in each region</span>
+          <h2>{m.dash.regions}</h2>
+          <span>{m.dash.regionsSub}</span>
         </div>
-        <div className="pk-gen-grid">
+        <div className="pk-gen-grid pk-region-grid">
           {originProgressBoxes(onOpenRegion).map((entry) => {
             let c = 0;
             let s = 0;
@@ -380,7 +392,7 @@ export function DashboardView({
                   <span className="pk-gen-frac">
                     {c} / {n}
                   </span>
-                  <span className="pk-gen-shiny">Shinies: {s}</span>
+                  <span className="pk-gen-shiny">{fill(m.dash.shinies, { count: s })}</span>
                 </span>
               </button>
             );
@@ -390,12 +402,13 @@ export function DashboardView({
 
       <section className="pk-section">
         <div className="pk-section-head">
-          <h2>Forms</h2>
-          <span>Mega Evolutions, Gigantamax, and regional forms</span>
+          <h2>{m.dash.forms}</h2>
+          <span>{m.dash.formsSub}</span>
         </div>
         <div className="pk-gen-grid">
-          {FORM_LISTS.map((entry) => {
-            const rows = forms.filter((form) => formListOf(form.form) === entry.id);
+          {(["mega", "gmax", "regional"] as const).map((id) => {
+            const entry = formListCopy(id);
+            const rows = forms.filter((form) => formListOf(form.form) === id);
             const temporary = rows.length > 0 && rows.every((form) => !form.capture);
             let caught = 0;
             if (!temporary) {
@@ -409,7 +422,7 @@ export function DashboardView({
             const total = rows.length;
             const pct = total ? Math.round((caught / total) * 100) : 0;
             return (
-              <button key={entry.id} type="button" className="blueprint pk-cell pk-nav pk-gen-box" onClick={() => onOpenFormList(entry.id)}>
+              <button key={id} type="button" className="blueprint pk-cell pk-nav pk-gen-box" onClick={() => onOpenFormList(id)}>
                 <i className="corner tl" aria-hidden="true" />
                 <i className="corner tr" aria-hidden="true" />
                 <i className="corner bl" aria-hidden="true" />
@@ -421,7 +434,7 @@ export function DashboardView({
                 <span className="pk-gen-pct">{temporary ? total || "—" : total ? `${pct}%` : "—"}</span>
                 {temporary ? null : <ProgressBar pct={pct} tall />}
                 <span className="pk-gen-box-foot">
-                  <span className="pk-gen-frac">{temporary ? (total ? `${total} forms` : "None stored") : `${caught} / ${total || "—"}`}</span>
+                  <span className="pk-gen-frac">{temporary ? (total ? fill(m.dash.formsCount, { count: total }) : m.dash.noneStored) : `${caught} / ${total || "—"}`}</span>
                 </span>
               </button>
             );
@@ -431,16 +444,16 @@ export function DashboardView({
 
       <div className="pk-shortcut-grid">
         {[
-          { title: "Pick up where I left off", body: `Open generation ${currentGen.roman}.`, go: onOpenDex },
-          { title: "See what is missing", body: "Open the National Dex filtered to species with no mark yet.", go: onOpenMissing },
-          { title: "My shinies", body: "Open the National Dex filtered to recorded shinies.", go: onOpenShinies },
+          { title: m.dash.resumeTitle, body: fill(m.dash.resumeBody, { roman: currentGen.roman }), go: onOpenDex },
+          { title: m.dash.missingTitle, body: m.dash.missingBody, go: onOpenMissing },
+          { title: m.dash.shiniesTitle, body: m.dash.shiniesBody, go: onOpenShinies },
         ].map((item) => (
           <button key={item.title} type="button" className="blueprint pk-cell pk-nav pk-shortcut" onClick={item.go}>
             <i className="corner tl" aria-hidden="true" />
             <i className="corner tr" aria-hidden="true" />
             <i className="corner bl" aria-hidden="true" />
             <i className="corner br" aria-hidden="true" />
-            <span className="pk-kicker">Shortcut</span>
+            <span className="pk-kicker">{m.dash.shortcut}</span>
             <span className="pk-shortcut-title">{item.title}</span>
             <span className="pk-shortcut-body">{item.body}</span>
           </button>

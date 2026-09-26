@@ -12,7 +12,9 @@ import {
 } from "../collectionApi";
 import { spriteUrl, title } from "../format";
 import { NATURES } from "../natures";
-import { IV_KEYS, IV_LABELS, emptyIvs } from "../ownedStats";
+import { useI18n } from "../i18n/context";
+import { natureName } from "../natures";
+import { IV_KEYS, emptyIvs, ivLabel } from "../ownedStats";
 import { parsePkFile, type ParsedPkSpecimen } from "../pkParse";
 import { GAMES } from "../catalog";
 import { gameLabel } from "../progress";
@@ -50,6 +52,7 @@ export function OwnedCollectionPanel({
   onChanged,
   onCollectedTraits,
 }: OwnedCollectionPanelProps) {
+  const { messages: m, fill } = useI18n();
   const [items, setItems] = useState<OwnedPokemon[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -87,7 +90,7 @@ export function OwnedCollectionPanel({
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Could not load owned Pokémon.");
+          setError(err instanceof Error ? err.message : m.specimens.loadFailed);
         }
       })
       .finally(() => {
@@ -162,7 +165,7 @@ export function OwnedCollectionPanel({
       closeModal();
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add Pokémon.");
+      setError(err instanceof Error ? err.message : m.specimens.addFailed);
     } finally {
       setBusy(false);
     }
@@ -181,7 +184,7 @@ export function OwnedCollectionPanel({
       const parsed = await parsePkFile(file, game);
       if (parsed.pokemon_id !== pokemonId) {
         throw new Error(
-          `This file is National Dex #${parsed.pokemon_id}, but this page is #${pokemonId}. Open the matching species to upload it.`,
+          fill(m.specimens.wrongFile, { file: parsed.pokemon_id, page: pokemonId }),
         );
       }
       setUploadPreview({
@@ -190,7 +193,7 @@ export function OwnedCollectionPanel({
       });
     } catch (err) {
       setUploadFile(null);
-      setError(err instanceof Error ? err.message : "Could not parse Pokémon file.");
+      setError(err instanceof Error ? err.message : m.specimens.parseFailed);
     } finally {
       setBusy(false);
     }
@@ -209,13 +212,13 @@ export function OwnedCollectionPanel({
         ...uploadPreview,
         filename: uploadFile.name,
       });
-      setUploadMessage("Specimen saved from decrypted PK data.");
+      setUploadMessage(m.specimens.saved);
       setUploadFile(null);
       setUploadPreview(null);
       await refresh();
       closeModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save uploaded Pokémon.");
+      setError(err instanceof Error ? err.message : m.specimens.saveFailed);
     } finally {
       setBusy(false);
     }
@@ -228,7 +231,7 @@ export function OwnedCollectionPanel({
       await deleteOwnedPokemon(ownedId);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not remove Pokémon.");
+      setError(err instanceof Error ? err.message : m.specimens.removeFailed);
     } finally {
       setBusy(false);
     }
@@ -239,12 +242,11 @@ export function OwnedCollectionPanel({
   if (!signedIn) {
     return (
       <Blueprint className="pk-owned">
-        <h3>Your specimens</h3>
+        <h3>{m.specimens.title}</h3>
         <div className="pk-owned-empty">
           <img src={spriteUrl(pokemonId)} alt="" className="pk-owned-empty-sprite is-dim" />
           <p className="pk-owned-note">
-            Sign in to open this species’ trainer file. Uploaded PK files are assigned to the game they were met in, not
-            the save currently selected in the header.
+            {m.specimens.signIn}
           </p>
         </div>
       </Blueprint>
@@ -254,32 +256,29 @@ export function OwnedCollectionPanel({
   return (
     <Blueprint className="pk-owned">
       <div className="pk-owned-head">
-        <h3>Your specimens</h3>
+        <h3>{m.specimens.title}</h3>
         <div className="pk-owned-actions">
           <button type="button" className="btn pk-nav" disabled={busy} onClick={() => setModal("add")}>
-            Add specimen
+            {m.specimens.add}
           </button>
           <button type="button" className="btn pk-nav" disabled={busy} onClick={() => setModal("upload")}>
-            Upload specimen
+            {m.specimens.upload}
           </button>
         </div>
       </div>
-      <p className="pk-owned-note">
-        Every registered catch for this species, across all saves. PK uploads use the origin game in the file (for
-        example SoulSilver stays on HeartGold / SoulSilver even if Red / Blue is selected).
-      </p>
+      <p className="pk-owned-note">{m.specimens.note}</p>
       {error && modal === null ? <p className="pk-spawn-empty">{error}</p> : null}
-      {loading ? <p className="pk-none">Loading trainer file…</p> : null}
+      {loading ? <p className="pk-none">{m.specimens.loading}</p> : null}
       {!loading && !items.length ? (
         <div className="pk-owned-empty">
           <img src={spriteUrl(pokemonId)} alt="" className="pk-owned-empty-sprite is-dim" />
-          <p className="pk-none">No specimens recorded yet. Add one by hand or upload a PK file.</p>
+          <p className="pk-none">{m.specimens.empty}</p>
         </div>
       ) : null}
       {items.length
         ? groupSpecimens(items).map((group) => (
             <section key={group.gameKey || "none"} className="pk-owned-group">
-              <h4>{group.gameKey ? gameLabel(group.gameKey) : "Unassigned"}</h4>
+              <h4>{group.gameKey ? gameLabel(group.gameKey) : m.specimens.unassigned}</h4>
               <ul className="pk-owned-list">
                 {group.items.map((item) => (
                   <li key={item.owned_id}>
@@ -288,7 +287,7 @@ export function OwnedCollectionPanel({
                       types={types}
                       speciesName={speciesName}
                       abilities={abilities}
-                      gameName={item.game_key ? gameLabel(item.game_key) : "Unassigned"}
+                      gameName={item.game_key ? gameLabel(item.game_key) : m.specimens.unassigned}
                       baseStats={baseStats}
                       busy={busy}
                       onRemove={() => void onRemove(item.owned_id)}
@@ -300,32 +299,32 @@ export function OwnedCollectionPanel({
           ))
         : null}
 
-      <Modal open={modal === "add"} title="Add specimen" onClose={closeModal} size="wide">
+      <Modal open={modal === "add"} title={m.specimens.add} onClose={closeModal} size="wide">
         <form className="pk-owned-form" onSubmit={onAdd}>
-          <p className="pk-owned-note">Manual entry for {gameName}.</p>
+          <p className="pk-owned-note">{fill(m.specimens.manualFor, { game: gameName })}</p>
           {error && modal === "add" ? <p className="pk-spawn-empty">{error}</p> : null}
           <label className="field pk-field">
-            <span>Form</span>
+            <span>{m.specimens.form}</span>
             <select className="input" value={shiny ? "shiny" : "normal"} onChange={(event) => setShiny(event.target.value === "shiny")}>
-              <option value="normal">Normal</option>
-              <option value="shiny">Shiny</option>
+              <option value="normal">{m.marks.normal}</option>
+              <option value="shiny">{m.marks.shiny}</option>
             </select>
           </label>
           <label className="field pk-field">
-            <span>Gender</span>
+            <span>{m.specimens.gender}</span>
             <select className="input" value={gender} onChange={(event) => setGender(event.target.value)}>
-              <option value="">Unknown</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="genderless">Genderless</option>
+              <option value="">{m.specimens.unknown}</option>
+              <option value="male">{m.marks.male}</option>
+              <option value="female">{m.marks.female}</option>
+              <option value="genderless">{m.specimens.genderless}</option>
             </select>
           </label>
           <label className="field pk-field">
-            <span>Nickname</span>
+            <span>{m.specimens.nickname}</span>
             <input className="input" value={nickname} onChange={(event) => setNickname(event.target.value)} maxLength={40} />
           </label>
           <label className="field pk-field">
-            <span>Level</span>
+            <span>{m.specimens.level}</span>
             <input
               className="input"
               type="number"
@@ -336,48 +335,47 @@ export function OwnedCollectionPanel({
             />
           </label>
           <label className="field pk-field">
-            <span>Ability</span>
+            <span>{m.specimens.ability}</span>
             <select className="input" value={abilityName} onChange={(event) => setAbilityName(event.target.value)} required>
               {abilities.map((entry) => (
                 <option key={`${entry.slot}-${entry.name}`} value={entry.name}>
                   {title(entry.name)}
-                  {entry.is_hidden ? " (Hidden)" : ""}
+                  {entry.is_hidden ? ` (${m.detail.hidden})` : ""}
                 </option>
               ))}
             </select>
           </label>
           <label className="field pk-field">
-            <span>Nature</span>
+            <span>{m.specimens.nature}</span>
             <select className="input" value={nature} onChange={(event) => setNature(event.target.value)} required>
               {NATURES.map((entry) => (
                 <option key={entry.name} value={entry.name}>
-                  {entry.name}
+                  {natureName(entry.name)}
                 </option>
               ))}
             </select>
           </label>
-          <StatFields label="IVs (0–31)" values={ivs} max={31} onChange={setIvs} />
-          <StatFields label="EVs (0–252)" values={evs} max={252} onChange={setEvs} />
+          <StatFields label={m.specimens.ivs} values={ivs} max={31} onChange={setIvs} />
+          <StatFields label={m.specimens.evs} values={evs} max={252} onChange={setEvs} />
           <div className="dialog-actions">
             <button type="button" className="btn pk-nav" disabled={busy} onClick={closeModal}>
-              Cancel
+              {m.specimens.cancel}
             </button>
             <button type="submit" className="btn pk-nav" disabled={busy}>
-              {busy ? "Saving…" : "Save specimen"}
+              {busy ? m.specimens.saving : m.specimens.save}
             </button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={modal === "upload"} title="Upload specimen" onClose={closeModal} size="xl">
+      <Modal open={modal === "upload"} title={m.specimens.upload} onClose={closeModal} size="xl">
         <form className="pk-owned-form pk-upload-form" onSubmit={onUpload}>
           <div className="pk-upload-intro">
             <p className="pk-owned-note">
-              Choose a .pk* / .pb7 file. It is decrypted in your browser. The specimen is assigned to the game stored in
-              the file (met/origin), not {gameName}, unless that data is missing.
+              {fill(m.specimens.uploadHelp, { game: gameName })}
             </p>
             <label className="field pk-field pk-upload-file">
-              <span>PK file</span>
+              <span>{m.specimens.pkFile}</span>
               <input
                 className="input"
                 type="file"
@@ -403,10 +401,10 @@ export function OwnedCollectionPanel({
           ) : null}
           <div className="dialog-actions">
             <button type="button" className="btn pk-nav" disabled={busy} onClick={closeModal}>
-              Cancel
+              {m.specimens.cancel}
             </button>
             <button type="submit" className="btn pk-nav" disabled={busy || !uploadPreview}>
-              {busy ? "Saving…" : "Save specimen"}
+              {busy ? m.specimens.saving : m.specimens.save}
             </button>
           </div>
         </form>
@@ -432,7 +430,7 @@ function StatFields({
       <div className="pk-owned-stat-grid">
         {IV_KEYS.map((key) => (
           <label key={key} className="field pk-field">
-            <span>{IV_LABELS[key]}</span>
+            <span>{ivLabel(key)}</span>
             <input
               className="input"
               type="number"

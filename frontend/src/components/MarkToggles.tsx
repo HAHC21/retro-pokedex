@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { pillStyle } from "../format";
+import { getMessages } from "../i18n/runtime";
 import type { GenderChoice } from "../progress";
 import type { MarkKey } from "../types";
 
@@ -30,11 +31,16 @@ export function MarkToggles({
   onShiny,
   onGender,
 }: MarkTogglesProps) {
+  const marks = getMessages().marks;
   if (available === true) {
     return (
       <span className="pk-toggles">
         <MarkColumn
-          label="Normal"
+          label={marks.normal}
+          maleLabel={marks.male}
+          femaleLabel={marks.female}
+          maleAria={marks.normalMale}
+          femaleAria={marks.normalFemale}
           active={caught}
           shiny={false}
           male={!!caughtMale}
@@ -43,7 +49,11 @@ export function MarkToggles({
           onGender={onGender ? (gender) => onGender("caught", gender) : undefined}
         />
         <MarkColumn
-          label="Shiny"
+          label={marks.shiny}
+          maleLabel={marks.male}
+          femaleLabel={marks.female}
+          maleAria={marks.shinyMale}
+          femaleAria={marks.shinyFemale}
           active={shiny}
           shiny
           male={!!shinyMale}
@@ -57,7 +67,7 @@ export function MarkToggles({
   if (available === false) {
     return <span className="pk-unavailable">{unavailableLabel}</span>;
   }
-  return <span className="pk-unavailable">Checking obtainability…</span>;
+  return <span className="pk-unavailable">{getMessages().marks.checking}</span>;
 }
 
 function genderStyle(selected: boolean, borderColor: string): CSSProperties {
@@ -76,6 +86,10 @@ function genderStyle(selected: boolean, borderColor: string): CSSProperties {
 
 function MarkColumn({
   label,
+  maleLabel,
+  femaleLabel,
+  maleAria,
+  femaleAria,
   active,
   shiny,
   male,
@@ -84,6 +98,10 @@ function MarkColumn({
   onGender,
 }: {
   label: string;
+  maleLabel: string;
+  femaleLabel: string;
+  maleAria: string;
+  femaleAria: string;
   active: boolean;
   shiny: boolean;
   male: boolean;
@@ -105,20 +123,20 @@ function MarkColumn({
                 className="pk-toggle"
                 style={genderStyle(male, "var(--color-accent)")}
                 aria-pressed={male}
-                aria-label={`${label} male`}
+                aria-label={maleAria}
                 onClick={() => onGender("male")}
               >
-                Male
+                {maleLabel}
               </button>
               <button
                 type="button"
                 className="pk-toggle"
                 style={genderStyle(female, "#e45b9a")}
                 aria-pressed={female}
-                aria-label={`${label} female`}
+                aria-label={femaleAria}
                 onClick={() => onGender("female")}
               >
-                Female
+                {femaleLabel}
               </button>
             </span>
           </span>

@@ -1,4 +1,5 @@
 import { API, gameByKey, isAvailableInGame, isEventObtainableInGame } from "./catalog";
+import { fill, getMessages } from "./i18n/runtime";
 import { gameLabel } from "./progress";
 
 const cache = new Map<string, string>();
@@ -42,25 +43,26 @@ export function acquisitionFallback(
   obtainable: boolean | undefined,
   apiText: string,
 ): string {
+  const copy = getMessages().acquire;
   if (gameKey === "home") {
-    return "Pokémon HOME";
+    return copy.home;
   }
   if (isEventObtainableInGame(pokemonId, gameKey)) {
-    return apiText || "Event distribution";
+    return apiText || copy.event;
   }
   if (obtainable === false) {
     if (isAvailableInGame(pokemonId, gameKey) && gameByKey(gameKey)) {
-      return "Trade from another game";
+      return copy.trade;
     }
-    return `Not available in ${gameLabel(gameKey)}`;
+    return fill(copy.notAvailable, { game: gameLabel(gameKey) });
   }
   if (apiText) {
     return apiText;
   }
   if (obtainable === true) {
-    return `Available in ${gameLabel(gameKey)}`;
+    return fill(copy.available, { game: gameLabel(gameKey) });
   }
-  return "Checking…";
+  return copy.checking;
 }
 
 async function mapPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {

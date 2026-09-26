@@ -13,14 +13,17 @@ import { SpriteImage } from "../components/PokemonSprite";
 import { RegionMap } from "../components/RegionMap";
 import { TypeTag } from "../components/TypeTag";
 import { GameTag } from "../components/GameTag";
-import { STAT_LABELS, gamesFromAvailability, versionLabel, versionsForGame } from "../catalog";
+import { gamesFromAvailability, versionLabel, versionsForGame } from "../catalog";
+import { useI18n } from "../i18n/context";
+import { localizedMethod, localizedStat } from "../i18n/labels";
+import { getLocale, getMessages } from "../i18n/runtime";
 import {
   filterEncountersForGame,
   groupEncounters,
   regionGraphsFromEncounters,
   type WildEncounter,
 } from "../encounters";
-import { dexNum, navBtnStyle, spriteUrl, title } from "../format";
+import { dexNum, displayEvolutionCond, navBtnStyle, spriteUrl, title } from "../format";
 import {
   formDisplayName,
   formIsCapturable,
@@ -31,7 +34,7 @@ import {
   type SpeciesFormEntry,
 } from "../forms";
 import { defensiveGroups, offensiveGroups } from "../matchups";
-import { NATURES, natureModifierLabel } from "../natures";
+import { NATURES, natureModifierLabel, natureName } from "../natures";
 import { baseStatsFromPokeApi } from "../ownedStats";
 import { DETAIL_SECTIONS, type DetailSection, type ListView } from "../paths";
 import {
@@ -104,6 +107,7 @@ export function DetailView({
   onToggleGender,
   onProgressRefresh,
 }: DetailViewProps) {
+  const { messages: m, fill } = useI18n();
   const marks = unionFor(prog, id, form);
   const prevId = Math.max(1, id - 1);
   const nextId = Math.min(1025, id + 1);
@@ -113,7 +117,7 @@ export function DetailView({
     <div className="pk-page pk-detail">
       <div className="pk-detail-actions">
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onBack}>
-          ← Back to {listView === "checklist" ? "Checklist" : "Pokédex"}
+          ← {fill(m.detail.back, { view: listView === "checklist" ? m.nav.checklist : m.nav.pokedex })}
         </button>
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onPrev}>
           ← {dexNum(prevId)} {names[prevId] || ""}
@@ -127,7 +131,7 @@ export function DetailView({
       </div>
 
       {mon?.capture === false ? null : (
-      <div className="pk-detail-sections" role="tablist" aria-label="Pokémon detail sections">
+      <div className="pk-detail-sections" role="tablist" aria-label={m.detail.sections}>
         {DETAIL_SECTIONS.map((item) => (
           <button
             key={item.id}
@@ -138,13 +142,19 @@ export function DetailView({
             style={{ ...navBtnStyle(section === item.id), padding: "8px 14px", fontSize: 13 }}
             onClick={() => onSection(item.id)}
           >
-            {item.label}
+            {item.id === "home"
+              ? m.detail.home
+              : item.id === "spawns"
+                ? m.detail.spawns
+                : item.id === "moves"
+                  ? m.detail.moves
+                  : m.detail.specimens}
           </button>
         ))}
       </div>
       )}
 
-      {loading ? <div className="pk-status">Loading entry…</div> : null}
+      {loading ? <div className="pk-status">{m.detail.loading}</div> : null}
 
       {mon ? (
         <MonBody
@@ -226,15 +236,16 @@ function FormPicker({
   markedCaught: (speciesForm: SpeciesForm | null) => boolean;
   onOpenForm: (id: number, form: SpeciesForm | null) => void;
 }) {
+  const copy = getMessages().detail;
   const groups = [
-    { id: "alternate" as const, label: "Alternate forms", entries: alternateForms },
-    { id: "variant" as const, label: "Variants", entries: variantForms },
+    { id: "alternate" as const, label: copy.alternate, entries: alternateForms },
+    { id: "variant" as const, label: copy.variants, entries: variantForms },
   ].filter((group) => group.entries.length || showBaseIn === group.id);
   const both = groups.length > 1;
 
   return (
     <Blueprint className="pk-forms">
-      {both ? <h3>Forms</h3> : <h3>{groups[0]?.label ?? "Forms"}</h3>}
+      {both ? <h3>{copy.forms}</h3> : <h3>{groups[0]?.label ?? copy.forms}</h3>}
       <div className="pk-form-groups">
         {groups.map((group) => (
           <div key={group.id} className="pk-form-group">
@@ -300,6 +311,7 @@ function MonBody({
   onToggleShiny,
   onToggleGender,
 }: MonBodyProps) {
+  const { locale, messages: m, fill } = useI18n();
   const capturable = mon.capture !== false;
   const data = mon.data;
   const species = mon.species;
@@ -322,9 +334,9 @@ function MonBody({
   const spriteId = spriteForm ? speciesId : data.id;
   const gameLines = gamesFromAvailability(mon.games);
   const dexEntries = flavorTextsForGame(species.flavor_text_entries, game);
-  const overview = mon.overview?.trim() || null;
+  const overview = overviewForLocale(mon.overview, locale);
   const stats = data.stats.map((stat) => ({
-    label: STAT_LABELS[stat.stat.name] || title(stat.stat.name),
+    label: localizedStat(stat.stat.name) || title(stat.stat.name),
     value: stat.base_stat,
     pct: Math.min(100, Math.round((stat.base_stat / 180) * 100)),
   }));
@@ -438,7 +450,7 @@ function MonBody({
       const payload = await refreshAiMovesets(data.id, game);
       setAi(payload);
     } catch (error) {
-      setAiRefreshError(error instanceof Error ? error.message : "Could not refresh Gemini suggestions.");
+      setAiRefreshError(error instanceof Error ? error.message : m.detail.geminiFailed);
     } finally {
       setAiRefreshing(false);
     }
@@ -458,7 +470,7 @@ function MonBody({
                     {rarity ? (
                       <span className="tag pk-rarity-box">
                         {rarityLabel(rarity)}
-                        <InfoTip label={`About ${rarityLabel(rarity)} Pokémon`}>
+                        <InfoTip label={fill(getMessages().detail.aboutRarity, { label: rarityLabel(rarity) })}>
                           <p>{rarityNote(rarity)}</p>
                         </InfoTip>
                       </span>
@@ -482,7 +494,7 @@ function MonBody({
                       alt={displayName}
                       className={capturable && !marks.caught ? "is-dim" : undefined}
                     />
-                    <figcaption>Normal</figcaption>
+                    <figcaption>{getMessages().detail.normal}</figcaption>
                   </figure>
                   <figure>
                     <GenderSprites
@@ -495,7 +507,7 @@ function MonBody({
                       alt={`${displayName} shiny`}
                       className={capturable && !marks.shiny ? "is-dim" : undefined}
                     />
-                    <figcaption>Shiny</figcaption>
+                    <figcaption>{getMessages().detail.shiny}</figcaption>
                   </figure>
                 </div>
                 {capturable ? (
@@ -507,7 +519,7 @@ function MonBody({
                     shinyMale={!!marks.shinyMale}
                     shinyFemale={!!marks.shinyFemale}
                     available={obtainable}
-                    unavailableLabel={`Not available in ${gameName}`}
+                    unavailableLabel={fill(m.detail.notAvailable, { game: gameName })}
                     onCaught={onToggleCaught}
                     onShiny={onToggleShiny}
                     onGender={onToggleGender}
@@ -517,12 +529,12 @@ function MonBody({
                 <div className="pk-recorded">
                   <span>
                     {obtainable === true
-                      ? `Caught across all saves — marking updates ${gameName}`
-                      : "Caught across all saves"}
+                      ? fill(m.detail.caughtAcrossGame, { game: gameName })
+                      : m.detail.caughtAcross}
                   </span>
                   {recordedGames.length ? (
                     <div className="pk-recorded-games">
-                      <span className="pk-recorded-label">Recorded in</span>
+                      <span className="pk-recorded-label">{getMessages().detail.recordedIn}</span>
                       <span className="pk-recorded-tags">
                         {recordedGames.map((name) => (
                           <span key={name} className="tag pk-recorded-game">
@@ -532,7 +544,7 @@ function MonBody({
                       </span>
                     </div>
                   ) : (
-                    <span className="pk-recorded-empty">Not recorded in any game</span>
+                    <span className="pk-recorded-empty">{getMessages().detail.notRecorded}</span>
                   )}
                 </div>
                 ) : null}
@@ -540,14 +552,14 @@ function MonBody({
 
               {overview ? (
                 <Blueprint className="pk-dex-entry pk-overview">
-                  <h3>Overview</h3>
+                  <h3>{getMessages().detail.overview}</h3>
                   <p className="pk-dex-entry-text">{overview}</p>
                 </Blueprint>
               ) : null}
 
               {capturable ? (
               <Blueprint className="pk-dex-entry">
-                <h3>Pokédex entry</h3>
+                <h3>{getMessages().detail.entry}</h3>
                 {dexEntries.length ? (
                   dexEntries.map((entry) => (
                     <div key={entry.version || entry.source} className="pk-dex-entry-block">
@@ -556,20 +568,20 @@ function MonBody({
                     </div>
                   ))
                 ) : (
-                  <p className="pk-none">No Pokédex entry for {gameName}.</p>
+                  <p className="pk-none">{fill(getMessages().detail.noEntry, { game: gameName })}</p>
                 )}
               </Blueprint>
               ) : null}
 
               {mon.evo.length > 1 ? (
                 <Blueprint className="pk-evo">
-                  <h3>Evolution line</h3>
+                  <h3>{getMessages().detail.evolution}</h3>
                   <div className="pk-evo-row">
                     {mon.evo.map((step) => (
                       <button key={step.id} type="button" className="pk-nav pk-evo-cell" onClick={() => onOpen(step.id)}>
                         <img src={spriteUrl(step.id)} alt={step.name} />
                         <span>{step.name}</span>
-                        <span>{step.cond}</span>
+                        <span>{displayEvolutionCond(step.cond)}</span>
                         {markedCaught(step.id, null) ? <PokeBallIcon caught /> : null}
                       </button>
                     ))}
@@ -578,7 +590,7 @@ function MonBody({
               ) : null}
 
               <Blueprint className="pk-forms">
-                <h3>Games</h3>
+                <h3>{getMessages().detail.games}</h3>
                 <div className="pk-game-columns">
                   {gameLines.map((row) => (
                     <div key={row.gen} className="pk-game-column">
@@ -595,14 +607,14 @@ function MonBody({
                   ))}
                 </div>
                 <span className="pk-none">
-                  {gameLines.length ? "" : "PokéAPI lists no wild encounters, events, or Pokédex entries for this form."}
+                  {gameLines.length ? "" : m.detail.noWays}
                 </span>
               </Blueprint>
             </div>
 
             <div className="pk-side-stack">
               <Blueprint className="pk-stats">
-                <h3>Base stats</h3>
+                <h3>{getMessages().detail.stats}</h3>
                 {stats.map((stat) => (
                   <div key={stat.label} className="pk-stat-row">
                     <span>{stat.label}</span>
@@ -613,20 +625,20 @@ function MonBody({
                   </div>
                 ))}
                 <div className="pk-stat-total">
-                  <span>Total</span>
+                  <span>{getMessages().detail.total}</span>
                   <span>{statTotal}</span>
                 </div>
                 <div className="pk-measure">
-                  <span>Height {(data.height / 10).toFixed(1)} m</span>
-                  <span>Weight {(data.weight / 10).toFixed(1)} kg</span>
+                  <span>{fill(getMessages().detail.height, { value: (data.height / 10).toFixed(1) })}</span>
+                  <span>{fill(getMessages().detail.weight, { value: (data.weight / 10).toFixed(1) })}</span>
                 </div>
               </Blueprint>
 
               {capturable ? (
               <Blueprint className="pk-traits">
-                <h3>Abilities &amp; natures</h3>
+                <h3>{getMessages().detail.traits}</h3>
                 <div className="pk-traits-block">
-                  <span className="pk-traits-label">Abilities</span>
+                  <span className="pk-traits-label">{getMessages().detail.abilities}</span>
                   {abilities.length ? (
                     <ul className="pk-ability-list">
                       {abilities.map((entry) => {
@@ -636,8 +648,8 @@ function MonBody({
                           <li key={`${entry.slot}-${entry.ability.name}`} className={collected ? "is-collected" : undefined}>
                             <div className="pk-ability-head">
                               <span className="pk-ability-name">{title(entry.ability.name)}</span>
-                              {entry.is_hidden ? <span className="pk-ability-tag">Hidden</span> : null}
-                              {collected ? <span className="pk-ability-tag is-owned">Collected</span> : null}
+                              {entry.is_hidden ? <span className="pk-ability-tag">{getMessages().detail.hidden}</span> : null}
+                              {collected ? <span className="pk-ability-tag is-owned">{getMessages().detail.collected}</span> : null}
                             </div>
                             {entry.description ? <p className="pk-ability-desc">{entry.description}</p> : null}
                           </li>
@@ -645,19 +657,19 @@ function MonBody({
                       })}
                     </ul>
                   ) : (
-                    <p className="pk-none">No abilities listed.</p>
+                    <p className="pk-none">{getMessages().detail.noAbilities}</p>
                   )}
                 </div>
                 <div className="pk-traits-block">
-                  <span className="pk-traits-label">Natures</span>
+                  <span className="pk-traits-label">{getMessages().detail.natures}</span>
                   <div className="pk-nature-grid">
                     {NATURES.map((nature) => {
                       const collected = collectedNatures.includes(nature.name.toLowerCase());
                       return (
                         <span key={nature.name} className={`pk-nature-chip${collected ? " is-collected" : ""}`}>
-                          <span className="pk-nature-name">{nature.name}</span>
+                          <span className="pk-nature-name">{natureName(nature.name)}</span>
                           <span className="pk-nature-mod">{natureModifierLabel(nature)}</span>
-                          {collected ? <span className="pk-nature-owned">Collected</span> : null}
+                          {collected ? <span className="pk-nature-owned">{getMessages().detail.collected}</span> : null}
                         </span>
                       );
                     })}
@@ -666,8 +678,8 @@ function MonBody({
               </Blueprint>
               ) : null}
 
-              <MatchupPanel title="Defensive matchups" groups={defense} />
-              <MatchupPanel title="Offensive matchups" groups={offense} />
+              <MatchupPanel title={getMessages().detail.defensive} groups={defense} />
+              <MatchupPanel title={getMessages().detail.offensive} groups={offense} />
 
               {forms.length ? (
                 <FormPicker
@@ -711,12 +723,12 @@ function MonBody({
       {showSpawns ? (
         <Blueprint className="pk-spawns">
           <div className="pk-spawn-head">
-            <h3>Where it spawns</h3>
-            <span>Wild encounters in {gameName}</span>
+            <h3>{getMessages().detail.spawns}</h3>
+            <span>{fill(getMessages().detail.spawnsSub, { game: gameName })}</span>
           </div>
           {spawnsLoading ? (
             <div className="pk-spawn-loading" aria-busy="true" aria-live="polite">
-              <span className="pk-spawn-loading-label">Loading spawn locations…</span>
+              <span className="pk-spawn-loading-label">{getMessages().detail.loadingSpawns}</span>
               <span className="pk-bar pk-bar-tall pk-spawn-loading-bar">
                 <span className="pk-bar-fill pk-spawn-loading-fill" />
               </span>
@@ -751,7 +763,7 @@ function MonBody({
               ) : null}
             </>
           ) : (
-            <p className="pk-spawn-empty">No available spawns for selected game. Please check the Games section further below.</p>
+            <p className="pk-spawn-empty">{getMessages().detail.noSpawns}</p>
           )}
         </Blueprint>
       ) : null}
@@ -759,24 +771,24 @@ function MonBody({
       {showMoves ? (
         <Blueprint className="pk-moves">
           <div className="pk-spawn-head">
-            <h3>Moves</h3>
+            <h3>{getMessages().detail.moves}</h3>
             <span>
-              {game === "home" ? "Learnset across every game" : `Learnset in ${gameName}`}
+              {game === "home" ? m.detail.learnsetAcross : fill(m.detail.learnsetIn, { game: gameName })}
             </span>
           </div>
 
           <div className="pk-moveset-block">
             <div className="pk-moveset-block-head">
-              <h4>Recommended movesets</h4>
+              <h4>{getMessages().detail.recommended}</h4>
               <span>
-                Data from{" "}
+                {m.detail.smogonCredit}{" "}
                 <a href={smogon?.attribution_url || "https://www.smogon.com/"} target="_blank" rel="noreferrer">
                   Smogon
                 </a>
               </span>
             </div>
             {smogonLoading ? (
-              <p className="pk-spawn-empty">Loading Smogon sets…</p>
+              <p className="pk-spawn-empty">{getMessages().detail.loadingSmogon}</p>
             ) : smogon?.sets?.length ? (
               <div className="pk-moveset-grid">
                 {smogon.sets.map((set) => (
@@ -784,13 +796,13 @@ function MonBody({
                 ))}
               </div>
             ) : (
-              <p className="pk-spawn-empty">No Smogon sets found for this Pokémon in the selected game’s generation.</p>
+              <p className="pk-spawn-empty">{getMessages().detail.noSmogon}</p>
             )}
           </div>
 
           <div className="pk-moveset-block">
             <div className="pk-moveset-block-head">
-              <h4>Moves Suggested by Gemini</h4>
+              <h4>{getMessages().detail.gemini}</h4>
               {canRefreshAi ? (
                 <button
                   type="button"
@@ -800,13 +812,13 @@ function MonBody({
                     void handleRefreshAi();
                   }}
                 >
-                  {aiRefreshing ? "Refreshing…" : "Refresh with Gemini"}
+                  {aiRefreshing ? m.detail.refreshing : m.detail.refreshGemini}
                 </button>
               ) : null}
             </div>
             {aiRefreshError ? <p className="pk-spawn-empty">{aiRefreshError}</p> : null}
             {aiLoading ? (
-              <p className="pk-spawn-empty">Loading Gemini suggestions…</p>
+              <p className="pk-spawn-empty">{getMessages().detail.loadingGemini}</p>
             ) : ai?.sets?.length ? (
               <div className="pk-moveset-grid">
                 {ai.sets.map((set) => (
@@ -816,22 +828,22 @@ function MonBody({
             ) : (
               <p className="pk-spawn-empty">
                 {aiRefreshing
-                  ? "Refreshing Gemini suggestions…"
-                  : ai?.message || "We apologize, AI suggestions by Gemini is not available right now."}
+                  ? m.detail.refreshingGemini
+                  : ai?.message || m.detail.geminiUnavailable}
               </p>
             )}
           </div>
 
           <div className="pk-moveset-block">
             <div className="pk-moveset-block-head">
-              <h4>Full learnset</h4>
-              <span>{game === "home" ? "All games" : gameName}</span>
+              <h4>{getMessages().detail.learnset}</h4>
+              <span>{game === "home" ? m.detail.allGames : gameName}</span>
             </div>
             {obtainable === false ? (
-              <p className="pk-spawn-empty">Not available in {gameName}.</p>
+              <p className="pk-spawn-empty">{fill(getMessages().detail.notAvailable, { game: gameName })}</p>
             ) : learnsetLoading ? (
               <div className="pk-spawn-loading" aria-busy="true" aria-live="polite">
-                <span className="pk-spawn-loading-label">Loading moves…</span>
+                <span className="pk-spawn-loading-label">{getMessages().detail.loadingMoves}</span>
                 <span className="pk-bar pk-bar-tall pk-spawn-loading-bar">
                   <span className="pk-bar-fill pk-spawn-loading-fill" />
                 </span>
@@ -841,7 +853,7 @@ function MonBody({
                 {learnset.map((group) => (
                   <div key={group.method} className="pk-move-group">
                     <span className="pk-move-group-head">
-                      <span className="pk-move-group-label">{group.label}</span>
+                      <span className="pk-move-group-label">{localizedMethod(group.method) || group.label}</span>
                       <span className="pk-move-group-count">{group.moves.length}</span>
                     </span>
                     <div className="pk-move-list">
@@ -849,7 +861,7 @@ function MonBody({
                         <span key={`${group.method}-${move.id}`} className="pk-move-row">
                           <MoveNameTag name={move.name} type={move.type} damageClass={move.damage_class} />
                           {group.method === "level-up" ? (
-                            <span className="pk-move-meta">{move.level > 0 ? `Lv ${move.level}` : "Lv —"}</span>
+                            <span className="pk-move-meta">{move.level > 0 ? fill(getMessages().detail.level, { level: move.level }) : getMessages().detail.levelEmpty}</span>
                           ) : null}
                         </span>
                       ))}
@@ -858,7 +870,7 @@ function MonBody({
                 ))}
               </div>
             ) : (
-              <p className="pk-spawn-empty">No learnset data for the selected game.</p>
+              <p className="pk-spawn-empty">{getMessages().detail.noLearnset}</p>
             )}
           </div>
         </Blueprint>
@@ -867,13 +879,26 @@ function MonBody({
   );
 }
 
+function overviewForLocale(overview: MonPayload["overview"], locale: string): string | null {
+  if (!overview) {
+    return null;
+  }
+  const text = (locale === "es" ? overview.es || overview.en : overview.en) || "";
+  const trimmed = text.trim();
+  return trimmed || null;
+}
+
 function flavorTextsForGame(
   entries: MonPayload["species"]["flavor_text_entries"],
   gameKey: string,
 ): Array<{ text: string; source: string; version: string }> {
-  const english = (entries || []).filter(
-    (entry) => entry.language?.name === "en" && (entry.flavor_text || "").trim(),
+  const locale = getLocale();
+  const preferred = (entries || []).filter(
+    (entry) => entry.language?.name === locale && (entry.flavor_text || "").trim(),
   );
+  const english = preferred.length
+    ? preferred
+    : (entries || []).filter((entry) => entry.language?.name === "en" && (entry.flavor_text || "").trim());
   if (!english.length) {
     return [];
   }
@@ -889,7 +914,7 @@ function flavorTextsForGame(
     return [
       {
         text: clean(latest.flavor_text),
-        source: versionLabel(latest.version.name) || "Pokémon HOME",
+        source: versionLabel(latest.version.name) || getMessages().detail.pokemonHome,
         version: latest.version.name,
       },
     ];
@@ -910,6 +935,13 @@ function flavorTextsForGame(
 }
 
 function speciesDisplayName(names: DexIndex["names"], id: number, mon: MonPayload): string {
+  const locale = getLocale();
+  if (locale !== "en") {
+    const localized = mon.species.names?.find((entry) => entry.language?.name === locale)?.name;
+    if (localized) {
+      return localized;
+    }
+  }
   if (names[id]) {
     return names[id];
   }

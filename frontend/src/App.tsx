@@ -93,7 +93,7 @@ export default function App() {
     [location.pathname, location.search],
   );
 
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<"confirm_failed" | "signin_failed" | null>(null);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [regional, setRegional] = useState<RegionalDex | null>(null);
   const [regionalLoading, setRegionalLoading] = useState(false);
@@ -200,9 +200,9 @@ export default function App() {
     const error = params.get("auth_error");
     if (params.get("signed_in") === "1" || error) {
       if (error === "confirm_failed") {
-        setAuthError("That confirmation link is invalid or expired.");
+        setAuthError("confirm_failed");
       } else if (error) {
-        setAuthError("Sign-in failed. Try Google, Microsoft, or email again.");
+        setAuthError("signin_failed");
       }
       navigate(error ? "/login" : "/home", { replace: true });
     }

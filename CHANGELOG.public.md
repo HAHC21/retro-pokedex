@@ -2,6 +2,14 @@
 
 Updates you can see in Retro Pokédex. Releases that only changed hosting, search listings, or internal data are left out.
 
+## 0.7.8 — September 26, 2026
+
+- Switch between English and Spanish with EN and ES in the header. The choice is still there the next time you open the site. On a phone, both languages are in the menu.
+- The dashboard offers to switch when your connection is in a country that uses the other language. Mexico or Spain can offer Spanish. You can stay in the language you already have.
+- Labels follow the language you pick. Sword / Shield is Espada / Escudo. Unova is Teselia. Fire is Fuego. Alolan Vulpix is Vulpix de Alola, and Gigantamax Charizard is Charizard Gigamax.
+- On a Pokémon’s page, the name, the Pokédex entry, and the written overview follow that language. A Spanish overview that is not written yet stays in English.
+- On a narrow screen, Last caught is a list. Pokédex filters stack, and checklist rows put the catch buttons on their own line. Game tags on a Pokémon’s page use the full width.
+
 ## 0.7.7 — September 26, 2026
 
 - The move dialog lists games where that Pokémon can be caught, received, or evolved without a trade. Clawitzer offers X / Y, Ultra Sun / Ultra Moon, Sword / Shield, and Scarlet / Violet. A trade evolution such as Alakazam stays off games where trading is the only way.

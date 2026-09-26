@@ -1,8 +1,9 @@
 import type { OwnedMove, OwnedPokemon, StatBlock } from "../collectionApi";
-import { NATURES, natureModifierLabel, type NatureInfo } from "../natures";
+import { NATURES, natureModifierLabel, natureName, type NatureInfo } from "../natures";
 import { dexNum, kindStyle, spriteUrl, title } from "../format";
 import { findMove } from "../moveCatalog";
-import { calculateStats, IV_KEYS, IV_LABELS, IV_NATURE_STAT } from "../ownedStats";
+import { fill, getMessages } from "../i18n/runtime";
+import { IV_KEYS, IV_NATURE_STAT, calculateStats, ivLabel } from "../ownedStats";
 import { MoveNameTag } from "./MoveNameTag";
 import { PokeBallIcon } from "./PokeBallIcon";
 import { TypeTag } from "./TypeTag";
@@ -99,8 +100,8 @@ export function SpecimenCard({
           <span className="tag" style={kindStyle(specimen.shiny ? "Shiny" : "Normal")}>
             {specimen.shiny ? "Shiny" : "Normal"}
           </span>
-          {specimen.fateful_encounter ? <span className="tag pk-specimen-fateful">Fateful encounter</span> : null}
-          {specimen.level != null ? <span className="tag pk-specimen-level">Lv. {specimen.level}</span> : null}
+          {specimen.fateful_encounter ? <span className="tag pk-specimen-fateful">{getMessages().specimens.fateful}</span> : null}
+          {specimen.level != null ? <span className="tag pk-specimen-level">{fill(getMessages().specimens.levelShort, { level: specimen.level })}</span> : null}
           {genderLabel(specimen.gender) ? <span className="tag pk-specimen-gender">{genderLabel(specimen.gender)}</span> : null}
         </div>
       </header>
@@ -113,18 +114,18 @@ export function SpecimenCard({
       <div className="pk-specimen-body">
         <figure className="pk-specimen-sprite">
           <img src={spriteUrl(specimen.pokemon_id, specimen.shiny)} alt={displayName} />
-          <figcaption>{specimen.shiny ? "Shiny" : "Normal"}</figcaption>
+          <figcaption>{specimen.shiny ? getMessages().marks.shiny : getMessages().marks.normal}</figcaption>
         </figure>
         <div className="pk-specimen-panels">
           <section className="pk-specimen-panel">
             <dl className="pk-specimen-facts">
-              <Fact label="Ability" value={specimen.ability_name ? title(specimen.ability_name) : "—"} note={hidden ? "Hidden" : null} />
+              <Fact label={getMessages().specimens.ability} value={specimen.ability_name ? title(specimen.ability_name) : "—"} note={hidden ? getMessages().detail.hidden : null} />
               <Fact
-                label="Nature"
-                value={nature?.name || specimen.nature || "—"}
+                label={getMessages().specimens.nature}
+                value={nature ? natureName(nature.name) : specimen.nature || "—"}
                 note={nature ? natureModifierLabel(nature) : null}
               />
-              <Fact label="Held item" value={specimen.held_item ? title(specimen.held_item) : "None"} />
+              <Fact label={getMessages().specimens.held} value={specimen.held_item ? title(specimen.held_item) : getMessages().specimens.none} />
               <Fact label="OT" value={specimen.ot_name?.trim() || "—"} />
               <Fact label="Ball" value={specimen.ball || "—"} />
             </dl>
@@ -133,11 +134,11 @@ export function SpecimenCard({
             <dl className="pk-specimen-facts">
               <Fact label="Save" value={gameName || "—"} />
               <Fact label="Origin" value={source} />
-              <Fact label="Met in" value={specimen.met_game || "—"} />
-              <Fact label="Met location" value={specimen.met_location || "—"} />
-              <Fact label="Met level" value={specimen.met_level != null ? String(specimen.met_level) : "—"} />
-              <Fact label="Met date" value={formatMetDate(specimen.met_date)} />
-              {specimen.egg_location ? <Fact label="Egg from" value={specimen.egg_location} /> : null}
+              <Fact label={getMessages().specimens.metIn} value={specimen.met_game || "—"} />
+              <Fact label={getMessages().specimens.metLocation} value={specimen.met_location || "—"} />
+              <Fact label={getMessages().specimens.metLevel} value={specimen.met_level != null ? String(specimen.met_level) : "—"} />
+              <Fact label={getMessages().specimens.metDate} value={formatMetDate(specimen.met_date)} />
+              {specimen.egg_location ? <Fact label={getMessages().specimens.eggFrom} value={specimen.egg_location} /> : null}
             </dl>
           </section>
         </div>
@@ -145,13 +146,13 @@ export function SpecimenCard({
 
       <div className="pk-specimen-spreads">
         {stats ? <StatSpread label="Stats" block={stats} max={statMax} nature={nature} /> : null}
-        <StatSpread label="Individual values" block={specimen.ivs} max={31} nature={nature} />
-        <StatSpread label="Effort values" block={specimen.evs} max={252} nature={nature} />
+        <StatSpread label={getMessages().specimens.ivSpread} block={specimen.ivs} max={31} nature={nature} />
+        <StatSpread label={getMessages().specimens.evSpread} block={specimen.evs} max={252} nature={nature} />
       </div>
 
       <div className="pk-specimen-moves-wrap">
-        <span className="pk-traits-label">Moves</span>
-        <div className="pk-specimen-moves" aria-label="Moves">
+        <span className="pk-traits-label">{getMessages().specimens.moves}</span>
+        <div className="pk-specimen-moves" aria-label={getMessages().specimens.moves}>
           {[0, 1, 2, 3].map((slot) => (
             <MoveSlot key={slot} move={moves.find((entry) => entry.slot === slot) ?? null} />
           ))}
@@ -160,10 +161,10 @@ export function SpecimenCard({
 
       {preview || onRemove ? (
         <footer className="pk-specimen-foot">
-          {preview ? <span className="pk-specimen-origin">Ready to register from parsed PK data</span> : null}
+          {preview ? <span className="pk-specimen-origin">{getMessages().specimens.ready}</span> : null}
           {onRemove ? (
             <button type="button" className="btn btn-ghost pk-nav" disabled={busy} onClick={onRemove}>
-              Release
+              {getMessages().specimens.release}
             </button>
           ) : null}
         </footer>
@@ -239,7 +240,7 @@ function StatSpread({
           .join(" ");
         return (
           <div key={key} className={className}>
-            <span>{IV_LABELS[key]}</span>
+            <span>{ivLabel(key)}</span>
             <span className="pk-bar">
               <span className="pk-bar-fill" style={{ width: `${pct}%` }} />
             </span>
@@ -260,25 +261,26 @@ function natureOf(name: string | null): NatureInfo | undefined {
 
 function genderLabel(gender: string | null): string | null {
   if (gender === "male") {
-    return "♂ Male";
+    return getMessages().specimens.male;
   }
   if (gender === "female") {
-    return "♀ Female";
+    return getMessages().specimens.female;
   }
   if (gender === "genderless") {
-    return "Genderless";
+    return getMessages().specimens.genderless;
   }
   return null;
 }
 
 function sourceLabel(sourceType: string, rawFormat?: string | null): string {
+  const copy = getMessages().specimens;
   if (sourceType === "pk") {
-    return rawFormat ? `PK file · .${rawFormat}` : "PK file";
+    return rawFormat ? fill(copy.pkNamed, { format: rawFormat }) : copy.pk;
   }
   if (sourceType === "sav") {
-    return "Save file";
+    return copy.saveFile;
   }
-  return "Manual entry";
+  return copy.manual;
 }
 
 function formatMetDate(value?: string | null): string {

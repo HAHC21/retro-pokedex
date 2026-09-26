@@ -1,0 +1,5 @@
+# COST CONTROL AND AGENT CONSTRAINT RULES
+- You are strictly forbidden from executing tasks using any "-fast" or high-speed premium variant models.
+- You must always fall back to standard, non-fast processing cues. 
+- Do not optimize for processing latency at the expense of token budget multipliers.
+- If you notice a sub-agent initializing a "Fast" runtime configuration, you must immediately halt and execute using base constraints.

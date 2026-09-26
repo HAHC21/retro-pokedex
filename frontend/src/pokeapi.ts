@@ -110,6 +110,26 @@ export async function fetchForms(): Promise<CatalogForm[]> {
   return forms;
 }
 
+function overviewFromPayload(value: unknown): MonPayload["overview"] {
+  if (!value) {
+    return null;
+  }
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text ? { en: text } : null;
+  }
+  if (typeof value !== "object") {
+    return null;
+  }
+  const record = value as { en?: unknown; es?: unknown };
+  const en = typeof record.en === "string" ? record.en.trim() : "";
+  const es = typeof record.es === "string" ? record.es.trim() : "";
+  if (!en && !es) {
+    return null;
+  }
+  return { ...(en ? { en } : {}), ...(es ? { es } : {}) };
+}
+
 export async function fetchMon(id: number): Promise<MonPayload> {
   const payload = await (await fetch(`${API}/pokemon/${id}`)).json();
   rememberObtainVersions(id, payload.obtain_versions || []);
@@ -119,7 +139,7 @@ export async function fetchMon(id: number): Promise<MonPayload> {
     species: payload.species,
     evo: (payload.evo || []) as EvolutionStep[],
     enc: [],
-    overview: typeof payload.overview === "string" ? payload.overview : null,
+    overview: overviewFromPayload(payload.overview),
     capture: payload.capture !== false,
     games: Array.isArray(payload.games) ? payload.games : [],
   };

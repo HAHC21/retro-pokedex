@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { SPRITE_BASE } from "./catalog";
+import { fill, getLocale, getMessages } from "./i18n/runtime";
 
 export function title(value: string) {
   if (!value) {
@@ -19,13 +20,14 @@ export function placeLabel(areaName: string) {
   name = name.replace(REGION_PREFIX, "");
   const safari = name.match(/^friend-safari(?:-(.+))?$/i);
   if (safari) {
-    return safari[1] ? `Friend Safari (${title(safari[1])})` : "Friend Safari";
+    const places = getMessages().places;
+    return safari[1] ? fill(places.friendSafariTyped, { type: title(safari[1]) }) : places.friendSafari;
   }
   const route = name.match(/^route-(\d+[a-z]?)$/i);
   if (route) {
-    return `Route ${route[1]}`;
+    return fill(getMessages().places.route, { number: route[1] });
   }
-  return title(name) || "Unknown";
+  return title(name) || getMessages().places.unknown;
 }
 
 export function idFromUrl(url: string) {
@@ -43,20 +45,21 @@ export function spriteUrl(id: number, shiny = false, female = false, formName?: 
 }
 
 export function whenText(stamp?: number | null) {
+  const time = getMessages().time;
   if (!stamp) {
-    return "Date not recorded";
+    return time.unrecorded;
   }
   const days = Math.floor((Date.now() - stamp) / 86400000);
   if (days <= 0) {
-    return "Today";
+    return time.today;
   }
   if (days === 1) {
-    return "Yesterday";
+    return time.yesterday;
   }
   if (days < 30) {
-    return `${days} days ago`;
+    return fill(time.daysAgo, { count: days });
   }
-  return new Date(stamp).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  return new Date(stamp).toLocaleDateString(getLocale(), { day: "numeric", month: "short", year: "numeric" });
 }
 
 export type EvolutionDetail = {
@@ -74,35 +77,65 @@ export function condText(detail?: EvolutionDetail) {
   if (!detail) {
     return "—";
   }
+  const evo = getMessages().evo;
   const parts: string[] = [];
   if (detail.min_level) {
-    parts.push(`Level ${detail.min_level}`);
+    parts.push(fill(evo.level, { level: detail.min_level }));
   }
   if (detail.item) {
     parts.push(title(detail.item.name));
   }
   if (detail.held_item) {
-    parts.push(`Holding ${title(detail.held_item.name)}`);
+    parts.push(fill(evo.holding, { item: title(detail.held_item.name) }));
   }
   if (detail.min_happiness) {
-    parts.push(`Friendship ${detail.min_happiness}`);
+    parts.push(fill(evo.friendship, { value: detail.min_happiness }));
   }
   if (detail.time_of_day) {
-    parts.push(detail.time_of_day === "day" ? "Daytime" : "Night");
+    parts.push(detail.time_of_day === "day" ? evo.day : evo.night);
   }
   if (detail.location) {
     parts.push(title(detail.location.name));
   }
   if (detail.known_move) {
-    parts.push(`Knows ${title(detail.known_move.name)}`);
+    parts.push(fill(evo.knows, { move: title(detail.known_move.name) }));
   }
   if (detail.trigger?.name === "trade") {
-    parts.push("Trade");
+    parts.push(evo.trade);
   }
   if (!parts.length && detail.trigger) {
     parts.push(title(detail.trigger.name));
   }
   return parts.join(" · ");
+}
+
+/** Evolution lines arrive as English phrases from the API. Show them in the active language. */
+export function displayEvolutionCond(cond: string): string {
+  if (!cond || cond === "—" || getLocale() === "en") {
+    return cond;
+  }
+  const evo = getMessages().evo;
+  if (cond === "Base") {
+    return evo.base;
+  }
+  const holding = /^Trade while holding (.+)$/.exec(cond);
+  if (holding) {
+    return fill(evo.tradeHolding, { item: holding[1] });
+  }
+  if (cond === "Trade") {
+    return evo.trade;
+  }
+  return cond
+    .replace(/^Level (\d+)/, (_match: string, level: string) => fill(evo.level, { level }))
+    .replace(/^Level up/, evo.levelUp)
+    .split("with high friendship").join(evo.highFriendship)
+    .split("with high affection").join(evo.highAffection)
+    .split("during the day").join(evo.duringDay)
+    .split("at night").join(evo.atNight)
+    .replace(/while holding ([^,]+)/g, (_match: string, item: string) => fill(evo.holding, { item: item.trim() }))
+    .replace(/while knowing a ([^,]+)-type move/g, (_match: string, type: string) => fill(evo.knowsType, { type: type.trim() }))
+    .replace(/while knowing ([^,]+)/g, (_match: string, move: string) => fill(evo.knows, { move: move.trim() }))
+    .split(" and ").join(evo.and);
 }
 
 export function navBtnStyle(active: boolean): CSSProperties {

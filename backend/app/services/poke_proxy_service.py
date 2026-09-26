@@ -28,7 +28,7 @@ from app.repositories.pokemon_evolution_repository import PokemonEvolutionReposi
 from app.repositories.pokemon_names_repository import PokemonNamesRepository
 from app.db.documents import PokemonDocument
 from app.repositories.pokemon_form_repository import PokemonRepository
-from app.repositories.pokemon_overview_repository import PokemonOverviewRepository
+from app.repositories.pokemon_overview_repository import PokemonOverviewRepository, overview_texts
 from app.repositories.pokemon_spawns_repository import PokemonSpawnsRepository
 from app.repositories.type_membership_repository import TypeMembershipRepository
 from app.services.learnset_service import build_learnset
@@ -519,11 +519,11 @@ def _project_pokemon_data(data: dict[str, Any], abilities: list[dict[str, Any]])
 
 
 def _project_species(species: dict[str, Any]) -> dict[str, Any]:
-    """Keep fields the detail UI reads; English flavor text only."""
+    """Keep fields the detail UI reads; English and Spanish flavor text."""
     flavors = [
         entry
         for entry in (species.get("flavor_text_entries") or [])
-        if isinstance(entry, dict) and (entry.get("language") or {}).get("name") == "en"
+        if isinstance(entry, dict) and (entry.get("language") or {}).get("name") in {"en", "es"}
     ]
     return {
         "name": species.get("name"),
@@ -1124,7 +1124,7 @@ class PokeProxyService:
         if record is None:
             return {**payload, "capture": True}
         overview_doc = await asyncio.to_thread(self._overviews.get, record.id)
-        payload = {**payload, "overview": overview_doc.overview if overview_doc else None, "capture": bool(record.capture)}
+        payload = {**payload, "overview": overview_texts(overview_doc), "capture": bool(record.capture)}
         if record.types:
             data = dict(payload.get("data") or {})
             data["types"] = [{"type": {"name": name}} for name in record.types]

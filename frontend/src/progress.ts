@@ -1,4 +1,5 @@
 import { GAMES, PROG_KEY } from "./catalog";
+import { localizedGame } from "./i18n/labels";
 import { markKey, type SpeciesForm } from "./forms";
 import type { MarkEntry, MarkKey, Progress } from "./types";
 
@@ -179,7 +180,7 @@ export function unionSets(prog: Progress) {
 }
 
 export function gameLabel(key: string) {
-  return GAMES.find((game) => game.k === key)?.l ?? key;
+  return localizedGame(key) || GAMES.find((game) => game.k === key)?.l || key;
 }
 
 /** Union two progress maps: true wins; newer timestamp wins when both set. */

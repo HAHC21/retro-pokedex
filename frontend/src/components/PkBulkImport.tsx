@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Blueprint } from "./Blueprint";
+import { fill, getMessages } from "../i18n/runtime";
 import { uploadParsedOwnedPokemonBatch, type OwnedPokemonInput } from "../collectionApi";
 import { isPkFilename, parsePkFile } from "../pkParse";
 
@@ -28,13 +29,14 @@ export function PkBulkImport({ isStaff, game, onImported }: PkBulkImportProps) {
       return;
     }
     const unique = uniquePkFiles([...list]);
+    const copy = getMessages().import;
     if (!unique.length) {
-      setError("No .pk* or .pb7 files in that selection.");
+      setError(copy.none);
       return;
     }
     setError(null);
     setPhase("parsing");
-    setProgress(`Reading 0 / ${unique.length}`);
+    setProgress(fill(copy.reading, { done: 0, total: unique.length }));
     const items: Array<OwnedPokemonInput & { filename?: string }> = [];
     for (let index = 0; index < unique.length; index += 1) {
       const file = unique[index];
@@ -45,48 +47,46 @@ export function PkBulkImport({ isStaff, game, onImported }: PkBulkImportProps) {
         /* skip unreadable dumps */
       }
       if (index === unique.length - 1 || index % 20 === 19) {
-        setProgress(`Reading ${index + 1} / ${unique.length}`);
+        setProgress(fill(getMessages().import.reading, { done: index + 1, total: unique.length }));
         await yieldUi();
       }
     }
     if (!items.length) {
       setPhase("idle");
-      setError(`Could not parse any of ${unique.length} files.`);
+      setError(fill(getMessages().import.noneParsed, { count: unique.length }));
       return;
     }
     setPhase("saving");
-    setProgress(`Saving ${items.length} specimens…`);
+    setProgress(fill(getMessages().import.savingCount, { count: items.length }));
     try {
       const result = await uploadParsedOwnedPokemonBatch(items, `${unique.length} pk files`);
       const skipped = unique.length - items.length + result.failed;
       setPhase("done");
+      const copy = getMessages().import;
       setProgress(
         skipped
-          ? `Saved ${result.saved}. Skipped ${skipped} (unreadable or invalid).`
-          : `Saved ${result.saved} specimens from PK files.`,
+          ? fill(copy.savedSkipped, { saved: result.saved, skipped })
+          : fill(copy.saved, { count: result.saved }),
       );
       onImported();
     } catch (err) {
       setPhase("idle");
-      setError(err instanceof Error ? err.message : "Could not save those Pokémon files.");
+      setError(err instanceof Error ? err.message : getMessages().import.failed);
     }
   }
 
   return (
     <Blueprint className="pk-import">
       <div className="pk-import-copy">
-        <h2>Import PK files</h2>
-        <p>
-          Choose a folder or many files. Each specimen is assigned to the game it was met in. Duplicate copies of the
-          same filename and size are skipped.
-        </p>
+        <h2>{getMessages().import.title}</h2>
+        <p>{getMessages().import.body}</p>
       </div>
       <div className="pk-import-actions">
         <button type="button" className="btn pk-nav" disabled={busy} onClick={() => fileRef.current?.click()}>
-          Choose files
+          {getMessages().import.files}
         </button>
         <button type="button" className="btn pk-nav" disabled={busy} onClick={() => folderRef.current?.click()}>
-          Choose folder
+          {getMessages().import.folder}
         </button>
       </div>
       <input

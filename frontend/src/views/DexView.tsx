@@ -2,7 +2,9 @@ import { DexToolbar } from "../components/DexToolbar";
 import { PokemonCard } from "../components/PokemonCard";
 import { dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
 import { dexNum } from "../format";
-import { FORM_LISTS, formDisplayName, formListOf, formStorageKey, type FormList, type SpeciesForm } from "../forms";
+import { formDisplayName, formListOf, formStorageKey, type FormList, type SpeciesForm } from "../forms";
+import { useI18n } from "../i18n/context";
+import { formListCopy, notInGame } from "../i18n/labels";
 import type { CatalogForm, RegionalDex } from "../pokeapi";
 import { gameLabel, unionFor } from "../progress";
 import type { DexIndex, DexScope, Progress, StatusFilter } from "../types";
@@ -62,9 +64,10 @@ export function DexView({
   onToggleForm,
   onMoveGame,
 }: DexViewProps) {
+  const { messages: m, fill } = useI18n();
   const candidateIds = dexCandidateIds(scope, game, regional, gen, region);
   const grid = filterDexIds(candidateIds, index, prog, status, q);
-  const formTitle = FORM_LISTS.find((entry) => entry.id === formList)?.title ?? "";
+  const formTitle = formList ? formListCopy(formList).title : "";
   const formRows = formList
     ? forms.filter((entry) => {
         if (formListOf(entry.form) !== formList) {
@@ -97,7 +100,10 @@ export function DexView({
   const head = formList
     ? {
         title: formTitle,
-        meta: `${formRows.length} of ${forms.filter((entry) => formListOf(entry.form) === formList).length} shown`,
+        meta: fill(m.dex.shown, {
+          shown: formRows.length,
+          total: forms.filter((entry) => formListOf(entry.form) === formList).length,
+        }),
       }
     : dexHeadCopy(scope, game, grid.length, candidateIds.length, "dex", gen, region);
 
@@ -122,12 +128,12 @@ export function DexView({
       </div>
 
       {!formList && (indexLoading || (scope === "regional" && regionalLoading)) ? (
-        <div className="pk-status">{scope === "regional" ? "Loading regional Pokédex…" : "Loading index from PokéAPI…"}</div>
+        <div className="pk-status">{scope === "regional" ? m.dex.loadingRegional : m.dex.loadingIndex}</div>
       ) : null}
 
       {formList ? (
         formsLoading ? (
-          <div className="pk-status">Loading forms…</div>
+          <div className="pk-status">{m.dex.loadingForms}</div>
         ) : (
           <div className="pk-grid">
             {formRows.map((entry) => {
@@ -152,7 +158,7 @@ export function DexView({
                   games={marks.where}
                   obtainable={obtainable[entry.pokedexId]}
                   dimUncaught={dimUncaught}
-                  unavailableLabel={`Not In ${gameLabel(game)}`}
+                  unavailableLabel={notInGame(gameLabel(game))}
                   onOpen={() => onOpenForm?.(entry.pokedexId, entry.form)}
                   onToggleCaught={() => onToggleForm?.(entry.pokedexId, entry.form, "caught")}
                   onToggleShiny={() => onToggleForm?.(entry.pokedexId, entry.form, "shiny")}
@@ -184,7 +190,7 @@ export function DexView({
               games={marks.where}
               obtainable={obtainable[id]}
               dimUncaught={dimUncaught}
-              unavailableLabel={`Not In ${gameLabel(game)}`}
+              unavailableLabel={notInGame(gameLabel(game))}
               onOpen={() => onOpen(id)}
               onToggleCaught={() => onToggleCaught(id)}
               onToggleShiny={() => onToggleShiny(id)}
@@ -196,10 +202,10 @@ export function DexView({
       )}
 
       {!formList && !indexLoading && !(scope === "regional" && regionalLoading) && grid.length === 0 ? (
-        <div className="pk-status">No results for these filters</div>
+        <div className="pk-status">{m.dex.noResults}</div>
       ) : null}
       {formList && !formsLoading && formRows.length === 0 ? (
-        <div className="pk-status">No results for these filters</div>
+        <div className="pk-status">{m.dex.noResults}</div>
       ) : null}
     </div>
   );

@@ -1,7 +1,36 @@
 import { useLayoutEffect } from "react";
-import { CHANGELOG } from "../changelog";
+import { useI18n } from "../i18n/context";
+import { localizedChangelog } from "../i18n/narrative";
+
+const MONTHS_ES: Record<string, string> = {
+  Jan: "ene",
+  Feb: "feb",
+  Mar: "mar",
+  Apr: "abr",
+  May: "may",
+  Jun: "jun",
+  Jul: "jul",
+  Aug: "ago",
+  Sep: "sep",
+  Oct: "oct",
+  Nov: "nov",
+  Dec: "dic",
+};
+
+function releaseDate(date: string, locale: string) {
+  if (locale !== "es") {
+    return date;
+  }
+  const match = /^([A-Za-z]+)\s+(\d+),\s+(\d+)$/.exec(date);
+  if (!match) {
+    return date;
+  }
+  return `${match[2]} ${MONTHS_ES[match[1]] || match[1]} ${match[3]}`;
+}
 
 export function ChangelogView() {
+  const { locale, messages: m } = useI18n();
+  const releases = localizedChangelog(locale);
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
     const frame = requestAnimationFrame(() => window.scrollTo(0, 0));
@@ -11,14 +40,14 @@ export function ChangelogView() {
   return (
     <article className="pk-page pk-changelog">
       <header className="pk-changelog-head">
-        <p className="pk-changelog-kicker">Changelog</p>
-        <h1>What’s new</h1>
-        <p>Updates you can see in Retro Pokédex.</p>
+        <p className="pk-changelog-kicker">{m.pages.changelogKicker}</p>
+        <h1>{m.pages.changelogTitle}</h1>
+        <p>{m.pages.changelogLead}</p>
       </header>
-      {CHANGELOG.map((release) => (
+      {releases.map((release) => (
         <section key={release.version} className="pk-changelog-release" id={`v${release.version}`}>
           <p className="pk-changelog-meta">
-            {release.date}
+            {releaseDate(release.date, locale)}
             <span aria-hidden="true"> · </span>
             <span>v{release.version}</span>
           </p>

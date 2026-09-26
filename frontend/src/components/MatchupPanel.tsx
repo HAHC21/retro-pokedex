@@ -1,5 +1,6 @@
 import { Blueprint } from "./Blueprint";
 import { TypeTag } from "./TypeTag";
+import { getMessages } from "../i18n/runtime";
 import type { MatchupGroup } from "../matchups";
 
 type MatchupPanelProps = {
@@ -20,7 +21,7 @@ export function MatchupPanel({ title, groups }: MatchupPanelProps) {
                 <TypeTag key={type} type={type} />
               ))}
             </span>
-            <span className="pk-none">{group.types.length ? "" : "None"}</span>
+            <span className="pk-none">{group.types.length ? "" : getMessages().matchups.none}</span>
           </div>
         ))}
       </div>

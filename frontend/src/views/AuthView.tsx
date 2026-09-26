@@ -10,10 +10,11 @@ import {
   type AuthProviders,
 } from "../auth";
 import { useSearchParams } from "react-router-dom";
+import { useI18n } from "../i18n/context";
 
 type AuthViewProps = {
   mode: "signin" | "login";
-  error?: string | null;
+  error?: "confirm_failed" | "signin_failed" | null;
   onAlt: () => void;
   onContinue: () => void;
 };
@@ -21,47 +22,44 @@ type AuthViewProps = {
 /** Flip to show Google and Microsoft on sign-in and log-in. */
 const SHOW_OAUTH_PROVIDERS = false;
 
-const COPY: Record<
-  "signin" | "login",
-  { kicker: string; title: string; body: string; google: string; microsoft: string; submit: string; altText: string; altLabel: string }
-> = {
-  signin: {
-    kicker: "New trainer",
-    title: "Sign in",
-    body: "Create an account to sync your marks across devices.",
-    google: "Sign in with Google",
-    microsoft: "Sign in with Microsoft",
-    submit: "Create account",
-    altText: "Already registered?",
-    altLabel: "Log in",
-  },
-  login: {
-    kicker: "Welcome back",
-    title: "Log in",
-    body: "Pick up your collection on any device.",
-    google: "Log in with Google",
-    microsoft: "Log in with Microsoft",
-    submit: "Log in",
-    altText: "No account yet?",
-    altLabel: "Sign in",
-  },
-};
-
 export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
-  const copy = COPY[mode];
+  const { messages: m, fill } = useI18n();
+  const copy =
+    mode === "signin"
+      ? {
+          kicker: m.auth.newTrainer,
+          title: m.auth.signIn,
+          body: m.auth.signInBody,
+          google: m.auth.google,
+          microsoft: m.auth.microsoft,
+          submit: m.auth.createAccount,
+          altText: m.auth.already,
+          altLabel: m.auth.logIn,
+        }
+      : {
+          kicker: m.auth.welcomeBack,
+          title: m.auth.logIn,
+          body: m.auth.logInBody,
+          google: m.auth.googleLogIn,
+          microsoft: m.auth.microsoftLogIn,
+          submit: m.auth.logIn,
+          altText: m.auth.noAccount,
+          altLabel: m.auth.signIn,
+        };
+  const errorText = error === "confirm_failed" ? m.auth.confirmFailed : error === "signin_failed" ? m.auth.signInFailed : null;
   const [searchParams, setSearchParams] = useSearchParams();
   const resetToken = searchParams.get("reset_token");
   const [providers, setProviders] = useState<AuthProviders | null>(null);
-  const [notice, setNotice] = useState<string | null>(error || null);
+  const [notice, setNotice] = useState<string | null>(errorText);
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setNotice(error || null);
+    setNotice(errorText);
     setConfirmUrl(null);
-  }, [error, mode]);
+  }, [errorText, mode]);
 
   useEffect(() => {
     if (!SHOW_OAUTH_PROVIDERS) {
@@ -81,7 +79,7 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
   function startOAuth(provider: "google" | "microsoft") {
     const url = providers?.[provider]?.login_url;
     if (!url) {
-      setNotice(`${provider === "google" ? "Google" : "Microsoft"} sign-in is not configured yet.`);
+      setNotice(fill(m.auth.oauthMissing, { provider: provider === "google" ? "Google" : "Microsoft" }));
       return;
     }
     window.location.assign(url);
@@ -89,7 +87,7 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
 
   async function onForgotPassword() {
     if (!email.trim()) {
-      setNotice("Enter your email above, then click Forgot password.");
+      setNotice(m.auth.forgotNeedEmail);
       return;
     }
     setBusy(true);
@@ -100,7 +98,7 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
       setNotice(result.message);
       setConfirmUrl(result.confirm_url);
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : "Could not start password reset.");
+      setNotice(err instanceof Error ? err.message : m.auth.resetFailed);
     } finally {
       setBusy(false);
     }
@@ -125,14 +123,14 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
         onContinue();
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong.";
+      const message = err instanceof Error ? err.message : m.auth.genericError;
       setNotice(message);
       if (mode === "login" && !resetToken && /confirm your email/i.test(message)) {
         try {
           const resent = await resendConfirmation(email);
           if (resent.confirm_url) {
             setConfirmUrl(resent.confirm_url);
-            setNotice(`${message} A new link is ready below.`);
+            setNotice(fill(m.auth.resent, { message }));
           }
         } catch {
           /* keep original notice */
@@ -149,9 +147,9 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
     <div className="pk-page pk-auth">
       <Blueprint className="pk-auth-card">
         <div className="pk-auth-intro">
-          <span className="pk-kicker">{resetting ? "Password reset" : copy.kicker}</span>
-          <h1>{resetting ? "Choose a new password" : copy.title}</h1>
-          <p>{resetting ? "Enter a new password for your account." : copy.body}</p>
+          <span className="pk-kicker">{resetting ? m.auth.passwordReset : copy.kicker}</span>
+          <h1>{resetting ? m.auth.newPasswordTitle : copy.title}</h1>
+          <p>{resetting ? m.auth.newPasswordBody : copy.body}</p>
         </div>
 
         {SHOW_OAUTH_PROVIDERS && !resetting ? (
@@ -168,7 +166,7 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
             </div>
             <div className="pk-auth-rule">
               <span />
-              <span>or with email</span>
+              <span>{m.auth.orEmail}</span>
               <span />
             </div>
           </>
@@ -177,7 +175,7 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
         <form className="pk-auth-form" onSubmit={onEmail}>
           {!resetting ? (
             <label className="field pk-field">
-              <span>Email</span>
+              <span>{m.auth.email}</span>
               <input
                 className="input"
                 type="email"
@@ -190,7 +188,7 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
             </label>
           ) : null}
           <label className="field pk-field">
-            <span>{resetting ? "New password" : "Password"}</span>
+            <span>{resetting ? m.auth.newPassword : m.auth.password}</span>
             <input
               className="input"
               type="password"
@@ -203,22 +201,22 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
             />
           </label>
           <button type="submit" className="btn pk-nav pk-auth-submit" disabled={busy}>
-            {busy ? "Please wait…" : resetting ? "Save new password" : copy.submit}
+            {busy ? m.auth.pleaseWait : resetting ? m.auth.savePassword : copy.submit}
           </button>
         </form>
 
         {mode === "login" && !resetting ? (
           <button type="button" className="btn btn-ghost pk-nav" disabled={busy} onClick={() => void onForgotPassword()}>
-            Forgot password?
+            {m.auth.forgot}
           </button>
         ) : null}
 
         {notice ? <p className="pk-auth-notice">{notice}</p> : null}
         {confirmUrl ? (
           <p className="pk-auth-notice">
-            Link (dev / console mail):{" "}
+            {m.auth.devLink}{" "}
             <a href={confirmUrl} className="pk-auth-confirm-link">
-              Open link
+              {m.auth.openLink}
             </a>
           </p>
         ) : null}
@@ -231,7 +229,7 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
         </div>
 
         <button type="button" className="btn btn-ghost pk-nav pk-auth-skip" onClick={onContinue}>
-          Continue without an account
+          {m.auth.skip}
         </button>
       </Blueprint>
     </div>

@@ -1,5 +1,7 @@
 /** Compact physical / special / status markers for learnset rows. */
 
+import { getMessages } from "../i18n/runtime";
+
 type MoveCategoryIconProps = {
   damageClass: string | null;
 };
@@ -10,7 +12,8 @@ export function MoveCategoryIcon({ damageClass }: MoveCategoryIconProps) {
     return <span className="pk-move-category pk-move-category-empty" aria-hidden="true" />;
   }
 
-  const label = kind === "physical" ? "Physical" : kind === "special" ? "Special" : "Status";
+  const categories = getMessages().categories;
+  const label = kind === "physical" ? categories.physical : kind === "special" ? categories.special : categories.status;
 
   return (
     <span className={`pk-move-category pk-move-category-${kind}`} title={label} aria-label={label}>

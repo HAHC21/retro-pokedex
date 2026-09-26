@@ -1,4 +1,5 @@
 import { versionLabel, versionTagStyle, versionsForGame } from "../catalog";
+import { fill, getMessages } from "../i18n/runtime";
 import { gameLabel } from "../progress";
 
 type GameTagProps = {
@@ -36,7 +37,7 @@ export function GameKeyTag({
       type="button"
       className={`tag pk-game-tag${pressed ? " is-selected" : ""}${style ? "" : " tag-outline"}`}
       style={style}
-      aria-label={pressed === undefined ? `Change recorded game from ${label}` : label}
+      aria-label={pressed === undefined ? fill(getMessages().game.changeFrom, { game: label }) : label}
       aria-pressed={pressed}
       onClick={onClick}
     >

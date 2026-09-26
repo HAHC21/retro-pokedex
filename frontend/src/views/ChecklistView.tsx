@@ -6,8 +6,10 @@ import { MarkToggles } from "../components/MarkToggles";
 import { GenderSprites } from "../components/GenderSprites";
 import { acquisitionFallback, resolveAcquisitionForIds } from "../acquisition";
 import { versionLabel } from "../catalog";
-import { CHECKLIST_STATUSES, dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
+import { checklistStatuses, dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
 import { dexNum, navBtnStyle } from "../format";
+import { useI18n } from "../i18n/context";
+import { notInGame } from "../i18n/labels";
 import { resolveExclusiveVersionsForIds } from "../obtainability";
 import type { RegionalDex } from "../pokeapi";
 import { gameLabel, unionFor } from "../progress";
@@ -56,6 +58,7 @@ export function ChecklistView({
   onToggleCaught,
   onToggleShiny,
 }: ChecklistViewProps) {
+  const { messages: m, fill } = useI18n();
   const [methods, setMethods] = useState<Record<number, string>>({});
   const [exclusives, setExclusives] = useState<Record<number, string | null>>({});
   const candidateIds = dexCandidateIds(scope, game, regional, gen, region);
@@ -105,7 +108,7 @@ export function ChecklistView({
         q={q}
         status={status}
         scope={scope}
-        statuses={CHECKLIST_STATUSES}
+        statuses={checklistStatuses()}
         onQuery={onQuery}
         onStatus={onStatus}
         onScope={onScope}
@@ -117,7 +120,7 @@ export function ChecklistView({
       </div>
 
       {indexLoading || (scope === "regional" && regionalLoading) ? (
-        <div className="pk-status">{scope === "regional" ? "Loading regional Pokédex…" : "Loading index from PokéAPI…"}</div>
+        <div className="pk-status">{scope === "regional" ? m.dex.loadingRegional : m.dex.loadingIndex}</div>
       ) : null}
 
       <div className="pk-check-list">
@@ -128,7 +131,7 @@ export function ChecklistView({
           const numberLabel = scope === "regional" && regional?.numbers[id] ? dexNum(regional.numbers[id]) : dexNum(id);
           const raw = methods[id];
           const method =
-            raw === undefined ? "Checking…" : acquisitionFallback(id, game, available, raw);
+            raw === undefined ? m.acquire.checking : acquisitionFallback(id, game, available, raw);
           const exclusiveKey = exclusives[id];
           const exclusiveName = exclusiveKey ? versionLabel(exclusiveKey) : null;
           return (
@@ -151,19 +154,19 @@ export function ChecklistView({
                 {index.names[id]}
               </button>
               <span className="pk-check-method">
-                {exclusiveName ? <span className="pk-check-exclusive">Exclusive to {exclusiveName}</span> : null}
+                {exclusiveName ? <span className="pk-check-exclusive">{fill(m.dex.exclusive, { game: exclusiveName })}</span> : null}
                 <span className="pk-check-method-text">{method}</span>
               </span>
               <span className="pk-check-actions">
                 <button type="button" className="btn pk-nav pk-check-spawns" style={navBtnStyle(false)} onClick={() => onSpawns(id)}>
-                  SPAWNS
+                  {m.dex.spawns}
                 </button>
                 <span className="pk-check-action-rule" aria-hidden="true" />
                 <MarkToggles
                   caught={!!marks.caught}
                   shiny={!!marks.shiny}
                   available={available}
-                  unavailableLabel={`Not In ${gameLabel(game)}`}
+                  unavailableLabel={notInGame(gameLabel(game))}
                   onCaught={() => onToggleCaught(id)}
                   onShiny={() => onToggleShiny(id)}
                 />
@@ -174,11 +177,11 @@ export function ChecklistView({
       </div>
 
       {!indexLoading && !(scope === "regional" && regionalLoading) && exclusivesPending && rows.length === 0 ? (
-        <div className="pk-status">Finding version exclusives…</div>
+        <div className="pk-status">{m.dex.findingExclusives}</div>
       ) : null}
 
       {!indexLoading && !(scope === "regional" && regionalLoading) && !exclusivesPending && rows.length === 0 ? (
-        <div className="pk-status">No results for these filters</div>
+        <div className="pk-status">{m.dex.noResults}</div>
       ) : null}
     </div>
   );

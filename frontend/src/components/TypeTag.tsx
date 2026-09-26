@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
-import { TYPE_COLORS, TYPE_LABELS, type PokemonType } from "../catalog";
+import { TYPE_COLORS, type PokemonType } from "../catalog";
 import { title } from "../format";
+import { localizedType } from "../i18n/labels";
 
 type TypeTagProps = {
   type: string;
@@ -18,7 +19,7 @@ export function typeTagStyle(type: string): CSSProperties {
 }
 
 export function typeLabel(type: string) {
-  return TYPE_LABELS[type as PokemonType] || title(type);
+  return localizedType(type) || title(type);
 }
 
 export function TypeTag({ type }: TypeTagProps) {

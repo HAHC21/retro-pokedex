@@ -1,4 +1,6 @@
 import { navBtnStyle } from "../format";
+import { useI18n } from "../i18n/context";
+import { localizedRegion } from "../i18n/labels";
 import type { RegionGraph } from "../routeGraph";
 
 type RegionMapProps = {
@@ -8,15 +10,17 @@ type RegionMapProps = {
 };
 
 export function RegionMap({ graph, regions, onSelectRegion }: RegionMapProps) {
+  const { messages: m } = useI18n();
   if (!graph.has) {
     return null;
   }
   return (
     <div className="pk-map-wrap">
       <span className="pk-map-head">
-        <span className="pk-map-tabs" role="tablist" aria-label="Region maps">
+        <span className="pk-map-tabs" role="tablist" aria-label={m.detail.maps}>
           {regions.map((region) => {
             const active = region.regionId === graph.regionId;
+            const label = localizedRegion(region.regionId) || region.label;
             return (
               <button
                 key={region.regionId}
@@ -27,7 +31,7 @@ export function RegionMap({ graph, regions, onSelectRegion }: RegionMapProps) {
                 style={navBtnStyle(active)}
                 onClick={() => onSelectRegion(region.regionId)}
               >
-                {region.label}
+                {label}
               </button>
             );
           })}

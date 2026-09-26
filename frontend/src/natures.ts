@@ -1,3 +1,6 @@
+import { getMessages } from "./i18n/runtime";
+import { localizedIv, localizedNature } from "./i18n/labels";
+
 /** Canonical battle natures and their raised / lowered stats. */
 export type NatureStat = "attack" | "defense" | "special-attack" | "special-defense" | "speed";
 
@@ -43,9 +46,15 @@ export const NATURES: NatureInfo[] = [
   { name: "Quirky", plus: null, minus: null },
 ];
 
+export function natureName(name: string): string {
+  return localizedNature(name);
+}
+
 export function natureModifierLabel(nature: NatureInfo): string {
   if (!nature.plus || !nature.minus) {
-    return "Neutral";
+    return getMessages().natures.neutral;
   }
-  return `+${NATURE_STAT_LABELS[nature.plus]} / −${NATURE_STAT_LABELS[nature.minus]}`;
+  const plus = nature.plus === "special-attack" ? "special_attack" : nature.plus === "special-defense" ? "special_defense" : nature.plus;
+  const minus = nature.minus === "special-attack" ? "special_attack" : nature.minus === "special-defense" ? "special_defense" : nature.minus;
+  return `+${localizedIv(plus) || NATURE_STAT_LABELS[nature.plus]} / −${localizedIv(minus) || NATURE_STAT_LABELS[nature.minus]}`;
 }

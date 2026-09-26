@@ -1,4 +1,5 @@
 import { CHART, TYPES } from "./catalog";
+import { getMessages } from "./i18n/runtime";
 
 export type MatchupGroup = {
   label: string;
@@ -35,11 +36,12 @@ export function defensiveGroups(defenderTypes: string[]) {
     });
     eff[atk] = multiplier;
   });
+  const labels = getMessages().matchups;
   return groupByMultiplier(eff, {
-    quad: "Very weak ×4",
-    double: "Weak ×2",
-    resist: "Resists",
-    immune: "Immune",
+    quad: labels.veryWeak,
+    double: labels.weak,
+    resist: labels.resists,
+    immune: labels.immune,
   });
 }
 
@@ -55,10 +57,11 @@ export function offensiveGroups(attackerTypes: string[]) {
     });
     eff[def] = best;
   });
+  const labels = getMessages().matchups;
   return groupByMultiplier(eff, {
-    quad: "Super effective ×4",
-    double: "Super effective ×2",
-    resist: "Not very effective",
-    immune: "No effect",
+    quad: labels.super4,
+    double: labels.super2,
+    resist: labels.notVery,
+    immune: labels.noEffect,
   });
 }
