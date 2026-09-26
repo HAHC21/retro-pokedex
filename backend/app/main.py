@@ -1,7 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
@@ -9,6 +9,7 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.public_urls import is_loopback_origin
+from app.core.version import backend_version
 from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import shutdown_external_clients
 from app.integrations.email.sender import uses_outbound_email
@@ -61,6 +62,11 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get(f"{settings.api_prefix}/version")
+    def version(response: Response) -> dict[str, str]:
+        response.headers["Cache-Control"] = "no-store"
+        return {"version": backend_version()}
 
     return app
 

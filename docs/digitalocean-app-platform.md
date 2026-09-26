@@ -118,6 +118,7 @@ Set `FRONTEND_ORIGIN` and `AUTH_REDIRECT_BASE_URL` with **no trailing slash**. T
 | `GEMINI_MODEL` | No | Optional. Default in code is `gemini-3.5-flash-lite`. |
 | `ADMIN_EMAILS` | No | Optional comma-separated emails promoted to admin on login. |
 | `DEVELOPER_EMAILS` | No | Optional comma-separated emails promoted to developer on login. |
+| `APP_VERSION` | No | Optional. Set to `${_self.COMMIT_HASH}` so an API deploy reloads open tabs. When unset, the API uses `backend/app/VERSION`. |
 
 On the **web** (static site) component, set build-time variables only. Vite inlines `VITE_*` at build time; leave them unset locally so analytics never loads in dev.
 
@@ -235,6 +236,10 @@ services:
         type: GENERAL
       - key: EMAIL_FROM
         value: "Pokédex <noreply@your-verified-domain.example>"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_VERSION
+        value: "${_self.COMMIT_HASH}"
         scope: RUN_TIME
         type: GENERAL
 

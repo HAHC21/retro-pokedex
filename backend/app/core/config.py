@@ -11,6 +11,9 @@ PRODUCTION_SITE_ORIGINS = (
 class Settings(BaseSettings):
     app_name: str = "Pokedex API"
     api_prefix: str = "/api"
+    # Release id for open tabs. APP_VERSION wins; COMMIT_HASH is the App Platform fallback.
+    app_version: str = ""
+    commit_hash: str = ""
     cors_origins: list[str] = ["http://localhost:5173"]
     collection_data_path: str = "data/collection.json"
     pokeapi_base_url: str = "https://pokeapi.co/api/v2/"

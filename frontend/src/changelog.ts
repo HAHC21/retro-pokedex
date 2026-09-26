@@ -11,6 +11,7 @@ export type ChangelogRelease = {
   features: ChangelogFeature[];
 };
 
+/** Newest release first. That version is the shipped UI id, unless VITE_APP_VERSION is set at build time. */
 export const CHANGELOG: ChangelogRelease[] = [
   {
     version: "0.7.6",
