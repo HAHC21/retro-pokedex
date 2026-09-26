@@ -6,9 +6,116 @@ from datetime import datetime, timezone
 from typing import Any
 
 from bson import ObjectId
+from mongoengine.connection import get_db
 
-from app.catalog.pokemon_form import can_capture
+from app.catalog.pokemon_form import can_capture, form_key, variant_display_name
 from app.db.documents import PokemonDocument, PokemonStats
+
+
+def _trailing_id(url: str) -> int:
+    try:
+        return int(url.rstrip("/").split("/")[-1])
+    except (TypeError, ValueError):
+        return 0
+
+
+def _species_id(path: str) -> int:
+    tail = path.rsplit("/", 1)[-1]
+    return int(tail) if tail.isdigit() else 0
+
+
+def _projected_cache(query: dict[str, Any], projection: dict[str, int]) -> list[dict[str, Any]]:
+    return list(get_db()["pokeapi_cache"].find(query, projection))
+
+
+def _cached_variant_forms(present: set[tuple[int, str]]) -> list[dict[str, Any]]:
+    """Variants that are not stored as their own Pokémon rows."""
+    bases = {
+        int(doc.pokedex_id): doc
+        for doc in PokemonDocument.objects(form="base").only("pokedex_id", "name", "resource_id", "types")
+    }
+    species_slug: dict[int, str] = {}
+    own: list[dict[str, Any]] = []
+    seen = set(present)
+    species_rows = _projected_cache(
+        {"path": {"$regex": r"^pokemon-species/\d+$"}},
+        {"path": 1, "body.data.name": 1, "body.data.varieties": 1, "_id": 0},
+    )
+    for doc in species_rows:
+        pokedex_id = _species_id(str(doc.get("path") or ""))
+        base = bases.get(pokedex_id)
+        data = ((doc.get("body") or {}).get("data") or {}) if isinstance(doc.get("body"), dict) else {}
+        slug = str(data.get("name") or "")
+        if pokedex_id <= 0 or base is None or not slug:
+            continue
+        species_slug[pokedex_id] = slug
+        for variety in data.get("varieties") or []:
+            if not isinstance(variety, dict) or variety.get("is_default"):
+                continue
+            pokemon = variety.get("pokemon") or {}
+            key = form_key(str(pokemon.get("name") or ""), slug)
+            if not key or not key.startswith("variant-") or (pokedex_id, key) in seen:
+                continue
+            resource_id = _trailing_id(str(pokemon.get("url") or ""))
+            if resource_id <= 0:
+                continue
+            seen.add((pokedex_id, key))
+            own.append(
+                {
+                    "pokedex_id": pokedex_id,
+                    "form": key,
+                    "name": variant_display_name(str(base.name), key),
+                    "resource_id": resource_id,
+                    "types": list(base.types or []),
+                    "capture": True,
+                    "sprite_form": None,
+                }
+            )
+
+    pokemon_ids = {int(row["resource_id"]) for row in own}
+    pokemon_ids.update(int(base.resource_id) for base in bases.values() if int(base.pokedex_id) in species_slug)
+    cached: dict[int, dict[str, Any]] = {}
+    paths = [f"pokemon/{resource_id}" for resource_id in sorted(pokemon_ids)]
+    for index in range(0, len(paths), 500):
+        chunk = paths[index : index + 500]
+        for doc in _projected_cache(
+            {"path": {"$in": chunk}},
+            {"path": 1, "body.data.forms": 1, "body.data.types": 1, "_id": 0},
+        ):
+            resource_id = _species_id(str(doc.get("path") or ""))
+            data = ((doc.get("body") or {}).get("data") or {}) if isinstance(doc.get("body"), dict) else {}
+            if resource_id and isinstance(data, dict):
+                cached[resource_id] = data
+    for row in own:
+        types = types_from_payload(cached.get(int(row["resource_id"])))
+        if types:
+            row["types"] = types
+
+    cosmetic: list[dict[str, Any]] = []
+    for pokedex_id, slug in species_slug.items():
+        base = bases[pokedex_id]
+        payload = cached.get(int(base.resource_id))
+        if not payload:
+            continue
+        for entry in payload.get("forms") or []:
+            if not isinstance(entry, dict):
+                continue
+            key = form_key(str(entry.get("name") or ""), slug)
+            if not key or not key.startswith("variant-") or (pokedex_id, key) in seen:
+                continue
+            seen.add((pokedex_id, key))
+            cosmetic.append(
+                {
+                    "pokedex_id": pokedex_id,
+                    "form": key,
+                    "name": variant_display_name(str(base.name), key),
+                    "resource_id": int(base.resource_id),
+                    "types": list(base.types or []),
+                    "capture": True,
+                    "sprite_form": key.removeprefix("variant-"),
+                }
+            )
+    return own + cosmetic
 
 
 def types_from_payload(pokemon: dict[str, Any] | None) -> list[str]:
@@ -103,21 +210,30 @@ class PokemonRepository:
         }
 
     def list_alternate_forms(self) -> list[dict[str, Any]]:
-        """Mega, Gigantamax, and regional rows. Base species are omitted."""
+        """Mega, Gigantamax, regional, and variant rows. Base species are omitted.
+
+        Stored rows cover battle and regional forms. Own-id variants (Rotom appliances)
+        and shared looks (Floette's flower colors) are read from the PokéAPI cache so
+        search can list every form the species page shows.
+        """
         rows: list[dict[str, Any]] = []
+        present: set[tuple[int, str]] = set()
         query = PokemonDocument.objects(form__ne="base").only(
             "pokedex_id", "form", "name", "resource_id", "types", "capture"
         )
         for doc in query:
+            key = (int(doc.pokedex_id), str(doc.form))
+            present.add(key)
             rows.append(
                 {
-                    "pokedex_id": int(doc.pokedex_id),
-                    "form": doc.form,
+                    "pokedex_id": key[0],
+                    "form": key[1],
                     "name": doc.name,
                     "resource_id": int(doc.resource_id),
                     "types": list(doc.types or []),
                     "capture": bool(doc.capture),
                 }
             )
+        rows.extend(_cached_variant_forms(present))
         rows.sort(key=lambda row: (row["pokedex_id"], row["form"]))
         return rows

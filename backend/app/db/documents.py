@@ -107,7 +107,9 @@ class PokemonDocument(Document):
     """One form of a species.
 
     ``pokedex_id`` is the National Dex number and is shared by every form.
-    ``form`` is the specificity: base, regional-alola, mega, mega-x, mega-y, gigantamax.
+    ``form`` is the specificity: base, regional-alola, mega, mega-x, mega-y,
+    gigantamax, or variant-yellow. Cosmetic looks share the base row and are
+    not stored here; only forms with their own PokéAPI id get a variant row.
     The document id is what overviews and other per-form rows reference.
     """
 

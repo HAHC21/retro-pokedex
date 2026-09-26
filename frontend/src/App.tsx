@@ -21,7 +21,7 @@ import {
 import { idFromUrl } from "./format";
 import { formFromVarietySlug, formStorageKey, formsEqual, type FormList, type SpeciesForm } from "./forms";
 import { buildAppPath, parseAppPath, saveDexPrefs, loadDexPrefs, loadListView, saveListView, type DetailSection, type ListView } from "./paths";
-import { entryFor, loadProgress, mergeProgress, saveProgress, clearProgress, isProgressEmpty, toggleGenderMark, toggleMark, type GenderChoice } from "./progress";
+import { entryFor, loadProgress, mergeProgress, moveMark, saveProgress, clearProgress, isProgressEmpty, toggleGenderMark, toggleMark, type GenderChoice } from "./progress";
 import type { DexIndex, DexScope, MarkKey, MonPayload, Progress, StatusFilter } from "./types";
 import { AuthView } from "./views/AuthView";
 import { DashboardView } from "./views/DashboardView";
@@ -29,6 +29,7 @@ import { ChecklistView } from "./views/ChecklistView";
 import { DexView } from "./views/DexView";
 import { DetailView } from "./views/DetailView";
 import { ChangelogView } from "./views/ChangelogView";
+import { RoadmapView } from "./views/RoadmapView";
 
 async function monForForm(payload: MonPayload, form: SpeciesForm | null): Promise<MonPayload | null> {
   if (!form) {
@@ -39,11 +40,26 @@ async function monForForm(payload: MonPayload, form: SpeciesForm | null): Promis
     formsEqual(formFromVarietySlug(item.pokemon.name, speciesSlug), form),
   );
   const formId = match ? idFromUrl(match.pokemon.url || "") : 0;
-  if (!formId) {
+  if (formId) {
+    const formMon = await fetchMon(formId);
+    return {
+      ...payload,
+      data: { ...formMon.data, forms: payload.data.forms },
+      overview: formMon.overview,
+      capture: formMon.capture,
+      games: formMon.games,
+    };
+  }
+  if (form.kind !== "variant" || !form.name) {
     return null;
   }
-  const formMon = await fetchMon(formId);
-  return { ...payload, data: formMon.data, overview: formMon.overview, capture: formMon.capture };
+  const shared = (payload.data.forms || []).some((entry) => {
+    if (idFromUrl(entry.url || "") === payload.data.id) {
+      return false;
+    }
+    return formsEqual(formFromVarietySlug(entry.name, speciesSlug), form);
+  });
+  return shared ? payload : null;
 }
 
 type ListContext = {
@@ -429,6 +445,18 @@ export default function App() {
     [game, go],
   );
 
+  const ensureObtainable = useCallback((ids: number[]) => {
+    const activeGame = game;
+    void resolveObtainabilityForIds(ids, activeGame, (pokemonId, value) => {
+      if (obtainGameRef.current !== activeGame) {
+        return;
+      }
+      setObtainable((prev) => (prev[pokemonId] === value ? prev : { ...prev, [pokemonId]: value }));
+    }).catch(() => {
+      /* ignore */
+    });
+  }, [game]);
+
   async function toggle(pokemonId: number, key: MarkKey, nextForm: SpeciesForm | null = null) {
     const known = obtainable[pokemonId];
     const ok = known === true || (known === undefined && (await isObtainableInGame(pokemonId, game)));
@@ -448,6 +476,32 @@ export default function App() {
       return;
     }
     persist(toggleGenderMark(prog, game, pokemonId, key, gender, nextForm), { game, pokemonId, form: nextForm });
+  }
+
+  function moveCaughtGame(pokemonId: number, nextForm: SpeciesForm | null, fromGame: string, toGame: string) {
+    if (fromGame === toGame) {
+      return;
+    }
+    const next = moveMark(prog, fromGame, toGame, pokemonId, nextForm);
+    if (next === prog) {
+      return;
+    }
+    setProg(next);
+    if (!authUser) {
+      saveProgress(next);
+      return;
+    }
+    const formKey = formStorageKey(nextForm);
+    const moved = entryFor(next, toGame, pokemonId, nextForm);
+    void upsertCollectionMark(toGame, pokemonId, moved, formKey)
+      .then(() => upsertCollectionMark(fromGame, pokemonId, {}, formKey))
+      .catch(() => {
+        void fetchCollectionProgress().then((remote) => {
+          if (remote) {
+            setProg(remote);
+          }
+        });
+      });
   }
 
   function dexContextForGame(gameKey: string, fallbackGen = 1): { gen: number; scope: DexScope } {
@@ -553,6 +607,23 @@ export default function App() {
             go({ view: "dex", game, formList: kind });
           }}
           forms={forms}
+          formsLoading={formsLoading}
+          indexLoading={indexLoading}
+          obtainable={obtainable}
+          onEnsureObtainable={ensureObtainable}
+          onOpenForm={openForm}
+          onToggleCaught={(pokemonId) => {
+            void toggle(pokemonId, "caught");
+          }}
+          onToggleShiny={(pokemonId) => {
+            void toggle(pokemonId, "shiny");
+          }}
+          onToggleForm={(pokemonId, nextForm, key) => {
+            void toggle(pokemonId, key, nextForm);
+          }}
+          onMoveGame={(pokemonId, nextForm, fromGame, toGame) => {
+            moveCaughtGame(pokemonId, nextForm, fromGame, toGame);
+          }}
           onOpenDex={() => {
             const next = dexContextForGame(game, gen);
             setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope, q: "", status: "all" }));
@@ -602,6 +673,9 @@ export default function App() {
           }}
           onToggleForm={(pokemonId, nextForm, key) => {
             void toggle(pokemonId, key, nextForm);
+          }}
+          onMoveGame={(pokemonId, nextForm, fromGame, toGame) => {
+            moveCaughtGame(pokemonId, nextForm, fromGame, toGame);
           }}
         />
       ) : null}
@@ -673,6 +747,7 @@ export default function App() {
         />
       ) : null}
       {view === "changelog" ? <ChangelogView /> : null}
+      {view === "roadmap" ? <RoadmapView /> : null}
       {view === "signin" || view === "login" ? (
         <AuthView
           mode={view}

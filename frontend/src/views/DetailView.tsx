@@ -9,18 +9,27 @@ import { OwnedCollectionPanel } from "../components/OwnedCollectionPanel";
 import { PokeBallIcon } from "../components/PokeBallIcon";
 import { GenderSprites } from "../components/GenderSprites";
 import { MarkToggles } from "../components/MarkToggles";
+import { SpriteImage } from "../components/PokemonSprite";
 import { RegionMap } from "../components/RegionMap";
 import { TypeTag } from "../components/TypeTag";
 import { GameTag } from "../components/GameTag";
-import { STAT_LABELS, gamesForSpecies, versionLabel, versionsForGame } from "../catalog";
+import { STAT_LABELS, gamesFromAvailability, versionLabel, versionsForGame } from "../catalog";
 import {
   filterEncountersForGame,
   groupEncounters,
   regionGraphsFromEncounters,
   type WildEncounter,
 } from "../encounters";
-import { dexNum, idFromUrl, navBtnStyle, spriteUrl, title } from "../format";
-import { formDisplayName, formFromVarietySlug, formsEqual, type SpeciesForm } from "../forms";
+import { dexNum, navBtnStyle, spriteUrl, title } from "../format";
+import {
+  formDisplayName,
+  formIsCapturable,
+  formsEqual,
+  isCosmeticForm,
+  speciesFormEntries,
+  type SpeciesForm,
+  type SpeciesFormEntry,
+} from "../forms";
 import { defensiveGroups, offensiveGroups } from "../matchups";
 import { NATURES, natureModifierLabel } from "../natures";
 import { baseStatsFromPokeApi } from "../ownedStats";
@@ -155,6 +164,7 @@ export function DetailView({
           speciesId={id}
           rarity={rarity[id]}
           form={form}
+          prog={prog}
           canRefreshAi={isStaffRole(authUser?.role)}
           signedIn={!!authUser}
           onProgressRefresh={onProgressRefresh}
@@ -186,6 +196,7 @@ type MonBodyProps = {
   speciesId: number;
   rarity: DexIndex["rarity"][number];
   form: SpeciesForm | null;
+  prog: Progress;
   canRefreshAi: boolean;
   signedIn: boolean;
   onProgressRefresh?: () => void;
@@ -195,6 +206,72 @@ type MonBodyProps = {
   onToggleShiny: () => void;
   onToggleGender: (key: MarkKey, gender: GenderChoice) => void;
 };
+
+function FormPicker({
+  speciesId,
+  speciesName,
+  form,
+  alternateForms,
+  variantForms,
+  showBaseIn,
+  markedCaught,
+  onOpenForm,
+}: {
+  speciesId: number;
+  speciesName: string;
+  form: SpeciesForm | null;
+  alternateForms: SpeciesFormEntry[];
+  variantForms: SpeciesFormEntry[];
+  showBaseIn: "alternate" | "variant" | null;
+  markedCaught: (speciesForm: SpeciesForm | null) => boolean;
+  onOpenForm: (id: number, form: SpeciesForm | null) => void;
+}) {
+  const groups = [
+    { id: "alternate" as const, label: "Alternate forms", entries: alternateForms },
+    { id: "variant" as const, label: "Variants", entries: variantForms },
+  ].filter((group) => group.entries.length || showBaseIn === group.id);
+  const both = groups.length > 1;
+
+  return (
+    <Blueprint className="pk-forms">
+      {both ? <h3>Forms</h3> : <h3>{groups[0]?.label ?? "Forms"}</h3>}
+      <div className="pk-form-groups">
+        {groups.map((group) => (
+          <div key={group.id} className="pk-form-group">
+            {both ? <span className="pk-form-group-label">{group.label}</span> : null}
+            <div className="pk-evo-row">
+              {showBaseIn === group.id ? (
+                <button type="button" className="pk-nav pk-evo-cell" onClick={() => onOpenForm(speciesId, null)}>
+                  <img src={spriteUrl(speciesId)} alt={speciesName} />
+                  <span>{speciesName}</span>
+                  {markedCaught(null) ? <PokeBallIcon caught /> : null}
+                </button>
+              ) : null}
+              {group.entries.map((entry) => (
+                <button
+                  key={entry.key}
+                  type="button"
+                  className="pk-nav pk-evo-cell"
+                  aria-current={formsEqual(form, entry.route) ? "page" : undefined}
+                  onClick={() => onOpenForm(speciesId, entry.route)}
+                >
+                  <SpriteImage
+                    pokemonId={entry.spriteId}
+                    formName={entry.spriteForm}
+                    fallbackId={speciesId}
+                    alt={formDisplayName(speciesName, entry.route)}
+                  />
+                  <span>{formDisplayName(speciesName, entry.route)}</span>
+                  {markedCaught(entry.route) ? <PokeBallIcon caught /> : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Blueprint>
+  );
+}
 
 function MonBody({
   mon,
@@ -213,6 +290,7 @@ function MonBody({
   speciesId,
   rarity,
   form,
+  prog,
   canRefreshAi,
   signedIn,
   onProgressRefresh,
@@ -230,18 +308,19 @@ function MonBody({
   const defense = defensiveGroups(myTypes);
   const offense = offensiveGroups(myTypes);
   const speciesSlug = species.name || data.name;
-  const forms = (species.varieties || [])
-    .filter((item) => !item.is_default)
-    .map((item) => {
-      const route = formFromVarietySlug(item.pokemon.name, speciesSlug);
-      return {
-        id: idFromUrl(item.pokemon.url || ""),
-        route,
-        name: route ? formDisplayName(speciesName, route) : formVarietyLabel(item.pokemon.name, speciesSlug),
-      };
-    })
-    .filter((entry) => entry.route && entry.id > 0);
-  const gameLines = gamesForSpecies(data.game_indices || [], species.flavor_text_entries);
+  const forms = speciesFormEntries(speciesSlug, speciesId, species.varieties, data.forms);
+  const alternateForms = forms.filter((entry) => !isCosmeticForm(entry));
+  const variantForms = forms.filter((entry) => isCosmeticForm(entry));
+  const viewingCosmetic = variantForms.some((entry) => formsEqual(form, entry.route));
+  function markedCaught(pokemonId: number, speciesForm: SpeciesForm | null): boolean {
+    if (!formIsCapturable(speciesForm)) {
+      return false;
+    }
+    return !!unionFor(prog, pokemonId, speciesForm).caught;
+  }
+  const spriteForm = form?.kind === "variant" && data.id === speciesId ? form.name : null;
+  const spriteId = spriteForm ? speciesId : data.id;
+  const gameLines = gamesFromAvailability(mon.games);
   const dexEntries = flavorTextsForGame(species.flavor_text_entries, game);
   const overview = mon.overview?.trim() || null;
   const stats = data.stats.map((stat) => ({
@@ -395,7 +474,9 @@ function MonBody({
                 <div className="pk-sprite-pair">
                   <figure>
                     <GenderSprites
-                      pokemonId={data.id}
+                      pokemonId={spriteId}
+                      formName={spriteForm}
+                      fallbackId={speciesId}
                       male={!!marks.caughtMale}
                       female={!!marks.caughtFemale}
                       alt={displayName}
@@ -405,7 +486,9 @@ function MonBody({
                   </figure>
                   <figure>
                     <GenderSprites
-                      pokemonId={data.id}
+                      pokemonId={spriteId}
+                      formName={spriteForm}
+                      fallbackId={speciesId}
                       shiny
                       male={!!marks.shinyMale}
                       female={!!marks.shinyFemale}
@@ -487,6 +570,7 @@ function MonBody({
                         <img src={spriteUrl(step.id)} alt={step.name} />
                         <span>{step.name}</span>
                         <span>{step.cond}</span>
+                        {markedCaught(step.id, null) ? <PokeBallIcon caught /> : null}
                       </button>
                     ))}
                   </div>
@@ -501,13 +585,18 @@ function MonBody({
                       <span className="pk-game-column-gen">{row.gen}</span>
                       <div className="pk-game-column-tags">
                         {row.games.map((entry) => (
-                          <GameTag key={entry.key} versionKey={entry.key} label={entry.label} />
+                          <div key={entry.key} className="pk-game-entry">
+                            <GameTag versionKey={entry.key} label={entry.label} />
+                            {entry.ways.length ? <span className="pk-game-ways">{entry.ways.join(" · ")}</span> : null}
+                          </div>
                         ))}
                       </div>
                     </div>
                   ))}
                 </div>
-                <span className="pk-none">{gameLines.length ? "" : "PokéAPI lists no games for this Pokémon"}</span>
+                <span className="pk-none">
+                  {gameLines.length ? "" : "PokéAPI lists no wild encounters, events, or Pokédex entries for this form."}
+                </span>
               </Blueprint>
             </div>
 
@@ -581,33 +670,16 @@ function MonBody({
               <MatchupPanel title="Offensive matchups" groups={offense} />
 
               {forms.length ? (
-                <Blueprint className="pk-forms">
-                  <h3>Alternate forms</h3>
-                  <div className="pk-evo-row">
-                    {form ? (
-                      <button
-                        type="button"
-                        className="pk-nav pk-evo-cell"
-                        onClick={() => onOpenForm(speciesId, null)}
-                      >
-                        <img src={spriteUrl(speciesId)} alt={speciesName} />
-                        <span>{speciesName}</span>
-                      </button>
-                    ) : null}
-                    {forms.map((entry) => (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        className="pk-nav pk-evo-cell"
-                        aria-current={entry.route && formsEqual(form, entry.route) ? "page" : undefined}
-                        onClick={() => entry.route && onOpenForm(speciesId, entry.route)}
-                      >
-                        <img src={spriteUrl(entry.id)} alt={entry.name} />
-                        <span>{entry.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </Blueprint>
+                <FormPicker
+                  speciesId={speciesId}
+                  speciesName={speciesName}
+                  form={form}
+                  alternateForms={alternateForms}
+                  variantForms={variantForms}
+                  showBaseIn={form ? (viewingCosmetic ? "variant" : "alternate") : null}
+                  markedCaught={(speciesForm) => markedCaught(speciesId, speciesForm)}
+                  onOpenForm={onOpenForm}
+                />
               ) : null}
             </div>
           </div>
@@ -849,15 +921,6 @@ function speciesDisplayName(names: DexIndex["names"], id: number, mon: MonPayloa
     return title(mon.species.name);
   }
   return title(mon.data.name);
-}
-
-function formVarietyLabel(pokemonSlug: string, speciesSlug: string): string {
-  const slug = pokemonSlug.toLowerCase();
-  const species = speciesSlug.toLowerCase();
-  if (species && slug.startsWith(`${species}-`)) {
-    return title(slug.slice(species.length + 1));
-  }
-  return title(pokemonSlug);
 }
 
 function normalizeMoveKey(value: string): string {

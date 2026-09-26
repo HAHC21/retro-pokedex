@@ -4,7 +4,7 @@ services:
     env_file:
       - ./backend/.env
     ports:
-      - "8000:8000"
+      - "5110:8000"
     healthcheck:
       test:
         [
@@ -23,7 +23,7 @@ services:
     environment:
       API_PROXY_TARGET: http://backend:8000
     ports:
-      - "5173:5173"
+      - "5120:5173"
     depends_on:
       backend:
         condition: service_healthy
@@ -33,7 +33,7 @@ services:
     environment:
       API_PROXY_TARGET: http://backend:8000
     ports:
-      - "5174:5174"
+      - "5130:5174"
     depends_on:
       backend:
         condition: service_healthy

@@ -7,6 +7,7 @@ Usage (from backend/ with venv active and GEMINI_API_KEY + MONGODB_URI set):
     python -m scripts.generate_overviews --start 1 --end 10
     python -m scripts.generate_overviews --id 1
     python -m scripts.generate_overviews --forms
+    python -m scripts.generate_overviews --variants
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from app.core.config import settings
 from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import get_gemini_client, get_pokeapi_client, shutdown_external_clients
 from app.integrations.gemini.client import GeminiUsage
-from app.catalog.pokemon_form import form_key
+from app.catalog.pokemon_form import form_key, variant_display_name
 from app.repositories.pokemon_form_repository import PokemonRepository, _stats_from_payload, types_from_payload
 from app.repositories.pokemon_overview_repository import PokemonOverviewRepository
 
@@ -46,7 +47,6 @@ EXAMPLE_OVERVIEW = (
 
 DEFAULT_END = 1025
 DEFAULT_USAGE_CSV = Path("data") / "overview_token_usage.csv"
-REGIONAL_NAMES = {"alola", "galar", "hisui", "paldea"}
 REGIONAL_ADJECTIVE = {
     "alola": "Alolan",
     "galar": "Galarian",
@@ -131,31 +131,23 @@ def _id_from_url(url: str) -> int:
         return 0
 
 
-def _form_suffix(pokemon_slug: str, species_slug: str) -> str | None:
-    prefix = f"{species_slug.lower()}-"
-    slug = pokemon_slug.lower()
-    if not species_slug or not slug.startswith(prefix):
-        return None
-    suffix = slug[len(prefix) :]
-    if suffix == "mega" or suffix.startswith("mega-") or suffix in REGIONAL_NAMES:
-        return suffix
+def _form_presentation(species_name: str, form: str) -> tuple[str, str] | None:
+    """Display name and prompt kind for a non-base form. None keeps the species overview."""
+    if form == "gigantamax":
+        return f"Gigantamax {species_name}", "Gigantamax form"
+    if form == "mega" or form.startswith("mega-"):
+        if form == "mega":
+            return f"Mega {species_name}", "Mega Evolution"
+        letter = form.removeprefix("mega-").upper()
+        name = f"Mega {species_name} {letter}" if letter else f"Mega {species_name}"
+        return name, "Mega Evolution"
+    if form.startswith("regional-"):
+        region = form.removeprefix("regional-")
+        adjective = REGIONAL_ADJECTIVE.get(region, region.title())
+        return f"{adjective} {species_name}", "regional form"
+    if form.startswith("variant-"):
+        return variant_display_name(species_name, form), "variant"
     return None
-
-
-def _form_display_name(species_name: str, suffix: str) -> str:
-    if suffix == "mega":
-        return f"Mega {species_name}"
-    if suffix.startswith("mega-"):
-        letter = suffix.removeprefix("mega-").upper()
-        return f"Mega {species_name} {letter}" if letter else f"Mega {species_name}"
-    adjective = REGIONAL_ADJECTIVE.get(suffix, suffix.title())
-    return f"{adjective} {species_name}"
-
-
-def _form_kind_label(suffix: str) -> str:
-    if suffix == "mega" or suffix.startswith("mega-"):
-        return "Mega Evolution"
-    return "regional form"
 
 
 def _build_prompt(
@@ -261,15 +253,16 @@ async def generate_one(
     species_name = _english_name(species, str(species.get("name") or f"#{species_id}"))
     species_slug = str(species.get("name") or "")
     pokemon_slug = str(pokemon.get("name") or "")
-    suffix = _form_suffix(pokemon_slug, species_slug)
-    name = _form_display_name(species_name, suffix) if suffix else species_name
+    stored_form = form_key(pokemon_slug, species_slug, is_default=bool(pokemon.get("is_default"))) or "base"
+    presented = _form_presentation(species_name, stored_form)
+    name = presented[0] if presented else species_name
     prompt = _build_prompt(
-        pokemon_id=species_id if suffix else pokemon_id,
+        pokemon_id=species_id if presented else pokemon_id,
         name=name,
         types=_types_label(pokemon),
         generation=_generation_label(species),
-        form_of=species_name if suffix else None,
-        form_kind=_form_kind_label(suffix) if suffix else None,
+        form_of=species_name if presented else None,
+        form_kind=presented[1] if presented else None,
     )
     result = await gemini.generate_text(prompt)
     overview = _clean_overview(result.text)
@@ -286,7 +279,7 @@ async def generate_one(
         return "dry-run", result.usage, name, result.model, words
     row = pokemon_repo.upsert(
         pokedex_id=species_id,
-        form=form_key(pokemon_slug, species_slug) or "base",
+        form=stored_form,
         name=name,
         resource_id=pokemon_id,
         stats=_stats_from_payload(pokemon),
@@ -309,8 +302,16 @@ async def generate_one(
     return "saved", result.usage, name, result.model, words
 
 
-async def form_pokemon_ids() -> list[int]:
-    """PokéAPI ids for mega evolutions and regional forms of species 1–1025."""
+def _is_selected_form(form: str | None, *, variants: bool) -> bool:
+    if not form or form == "base":
+        return False
+    if variants:
+        return form.startswith("variant-")
+    return form == "mega" or form.startswith("mega-") or form.startswith("regional-")
+
+
+async def form_pokemon_ids(*, variants: bool) -> list[int]:
+    """PokéAPI ids for mega/regional forms, or for own-id variants such as Eternal Floette."""
     pokeapi = get_pokeapi_client()
     ids: list[int] = []
     for species_id in range(1, DEFAULT_END + 1):
@@ -323,7 +324,8 @@ async def form_pokemon_ids() -> list[int]:
                 continue
             pokemon = variety.get("pokemon") or {}
             slug = str(pokemon.get("name") or "")
-            if _form_suffix(slug, species_slug) is None:
+            form = form_key(slug, species_slug, is_default=bool(variety.get("is_default")))
+            if not _is_selected_form(form, variants=variants):
                 continue
             pokemon_id = _id_from_url(str(pokemon.get("url") or ""))
             if pokemon_id > 0:
@@ -340,15 +342,17 @@ async def run(
     delay_seconds: float,
     usage_csv: Path,
     forms: bool,
+    variants: bool,
 ) -> None:
     if not settings.gemini_api_key.strip():
         raise RuntimeError("GEMINI_API_KEY is not set in backend/.env")
 
     repo = PokemonOverviewRepository()
     pokemon_repo = PokemonRepository()
-    if forms:
-        ids = await form_pokemon_ids()
-        print(f"Generating overviews for {len(ids)} mega evolutions and regional forms…")
+    if forms or variants:
+        ids = await form_pokemon_ids(variants=variants)
+        label = "variants" if variants else "mega evolutions and regional forms"
+        print(f"Generating overviews for {len(ids)} {label}…")
     else:
         ids = list(range(start, end + 1))
         print(f"Generating overviews for #{start}–#{end} ({len(ids)} species)…")
@@ -459,6 +463,11 @@ def main() -> None:
         action="store_true",
         help="Generate mega evolutions and regional forms instead of National Dex species",
     )
+    parser.add_argument(
+        "--variants",
+        action="store_true",
+        help="Generate own-id variants such as Eternal Floette and Heat Rotom",
+    )
     parser.add_argument("--start", type=int, default=1, help="First National Dex id (inclusive)")
     parser.add_argument(
         "--end",
@@ -489,6 +498,8 @@ def main() -> None:
         help=f"CSV path for per-request token counts (default {DEFAULT_USAGE_CSV})",
     )
     args = parser.parse_args()
+    if args.forms and args.variants:
+        parser.error("use either --forms or --variants, not both")
 
     if args.id is not None:
         start = end = args.id
@@ -507,6 +518,7 @@ def main() -> None:
                 delay_seconds=max(0.0, args.delay),
                 usage_csv=args.usage_csv,
                 forms=args.forms,
+                variants=args.variants,
             )
         )
     finally:

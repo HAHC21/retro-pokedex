@@ -13,6 +13,49 @@ export type ChangelogRelease = {
 
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: "0.7.6",
+    date: "Sep 25, 2026",
+    title: "Variants and recorded games",
+    intro: "Looks that share a species can be tracked on their own, and a mark can move to another game without leaving the card.",
+    features: [
+      {
+        title: "Variants beside alternate forms",
+        body: "Flower colors such as Blue Floette are Variants. Forms that play differently, such as Eternal Floette, Mega Floette, and Rotom’s appliances, stay under Alternate forms. Each one you can catch is marked on its own.",
+      },
+      {
+        title: "A Poké Ball when that form is caught",
+        body: "The evolution line and each catchable form show a colored Poké Ball once you have marked it caught.",
+      },
+      {
+        title: "Games for the form you are viewing",
+        body: "The Games box lists where that form can be found. Each game shows how you get it, such as Wild, Gift, Event, or Pokédex. Expansions such as the Teal Mask, the Indigo Disk, the Isle of Armor, the Crown Tundra, Legends: Z-A, and Mega Dimension are listed on their own. Mega Evolution and Gigantamax list only the games where that mechanic exists for the species.",
+      },
+      {
+        title: "Move a mark to another game",
+        body: "On a Pokédex card, click the game tag and choose a different save. Apply moves that mark, including shiny and gender, without changing the game selector.",
+      },
+      {
+        title: "Last caught keeps the form",
+        body: "A variant such as Blue Floette shows its name and sprite in Last caught, and opens that form’s page.",
+      },
+      {
+        title: "Search from the dashboard",
+        body: "Type at least two characters of a name or a National Dex number. Matching species, alternate forms, and variants show up as cards you can open or mark.",
+      },
+    ],
+  },
+  {
+    version: "0.7.5",
+    date: "Sep 25, 2026",
+    title: "Roadmap",
+    features: [
+      {
+        title: "A page for what’s next",
+        body: "The roadmap lists Switch box screenshots, the region maps still to draw, and Terastallization. Open it from the footer.",
+      },
+    ],
+  },
+  {
     version: "0.7.4",
     date: "Sep 24, 2026",
     title: "Rarity labels",

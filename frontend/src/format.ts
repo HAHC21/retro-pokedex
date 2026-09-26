@@ -36,9 +36,10 @@ export function dexNum(id: number) {
   return `#${String(id).padStart(4, "0")}`;
 }
 
-export function spriteUrl(id: number, shiny = false, female = false) {
+export function spriteUrl(id: number, shiny = false, female = false, formName?: string | null) {
   const folder = `${shiny ? "/shiny" : ""}/${female ? "female/" : ""}`;
-  return `${SPRITE_BASE}${folder}${id}.png`;
+  const file = formName ? `${id}-${formName}` : String(id);
+  return `${SPRITE_BASE}${folder}${file}.png`;
 }
 
 export function whenText(stamp?: number | null) {

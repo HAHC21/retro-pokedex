@@ -57,7 +57,11 @@ async def link() -> None:
         pokedex_id = _id_from_url(species_url) or resource_id
         species = await pokeapi.get_species(pokedex_id)
         species_slug = str((species or {}).get("name") or payload.get("name") or "")
-        form = form_key(str(payload.get("name") or ""), species_slug) or "base"
+        form = form_key(
+            str(payload.get("name") or ""),
+            species_slug,
+            is_default=bool(payload.get("is_default")),
+        ) or "base"
         name = str(doc.get("name") or species_slug or f"#{pokedex_id}")
         row = pokemon_repo.upsert(
             pokedex_id=pokedex_id,

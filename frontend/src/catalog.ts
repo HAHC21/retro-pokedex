@@ -237,6 +237,16 @@ export const VERSIONS: Record<string, [number, string]> = {
   "shining-pearl": [8, "Shining Pearl"],
   scarlet: [9, "Scarlet"],
   violet: [9, "Violet"],
+  "the-teal-mask-scarlet": [9, "Teal Mask (Scarlet)"],
+  "the-teal-mask-violet": [9, "Teal Mask (Violet)"],
+  "the-indigo-disk-scarlet": [9, "Indigo Disk (Scarlet)"],
+  "the-indigo-disk-violet": [9, "Indigo Disk (Violet)"],
+  "the-isle-of-armor-sword": [8, "Isle of Armor (Sword)"],
+  "the-isle-of-armor-shield": [8, "Isle of Armor (Shield)"],
+  "the-crown-tundra-sword": [8, "Crown Tundra (Sword)"],
+  "the-crown-tundra-shield": [8, "Crown Tundra (Shield)"],
+  "legends-za": [9, "Legends: Z-A"],
+  "mega-dimension": [9, "Mega Dimension"],
 };
 
 /** Soft background + ink for version tags (box-art inspired). */
@@ -280,6 +290,16 @@ export const VERSION_COLORS: Record<string, [string, string]> = {
   "legends-arceus": ["#efe6d8", "#6a5330"],
   scarlet: ["#f8e0de", "#9a2828"],
   violet: ["#eee4f6", "#6a2a8e"],
+  "the-teal-mask-scarlet": ["#d8f0e4", "#1f6b45"],
+  "the-teal-mask-violet": ["#e4d8f4", "#5a2a86"],
+  "the-indigo-disk-scarlet": ["#f8d8d4", "#8f2420"],
+  "the-indigo-disk-violet": ["#d8d4f4", "#3a2a86"],
+  "the-isle-of-armor-sword": ["#d8e8f4", "#2a5a86"],
+  "the-isle-of-armor-shield": ["#f4d8d4", "#8a3028"],
+  "the-crown-tundra-sword": ["#d4e4f4", "#244878"],
+  "the-crown-tundra-shield": ["#f0d8d8", "#7a2828"],
+  "legends-za": ["#f4e4f0", "#8a3068"],
+  "mega-dimension": ["#e8d8f4", "#5a2888"],
 };
 
 export type VersionGame = { key: string; label: string };
@@ -469,6 +489,43 @@ export function gamesForSpecies(
   ];
   const names = fromFlavor.length ? fromFlavor : indices.map((item) => item.version.name);
   return groupVersionNames(names);
+}
+
+export const GAME_WAY_LABELS: Record<string, string> = {
+  wild: "Wild",
+  starter: "Starter",
+  gift: "Gift",
+  static: "Static",
+  trade: "Trade",
+  snag: "Snag",
+  event: "Event",
+  pokedex: "Pokédex",
+  mega: "Mega Evolution",
+  gigantamax: "Gigantamax",
+};
+
+export function gameWayLabel(way: string) {
+  return GAME_WAY_LABELS[way] || way;
+}
+
+export type GameAvailability = { version: string; ways: string[] };
+
+/** Group a form's obtainability rows into generation columns the Games box can render. */
+export function gamesFromAvailability(rows: GameAvailability[] | undefined) {
+  const byVersion = new Map<string, string[]>();
+  for (const row of rows || []) {
+    if (!row?.version || !versionLabel(row.version)) {
+      continue;
+    }
+    byVersion.set(row.version, row.ways || []);
+  }
+  return groupVersionNames([...byVersion.keys()]).map((column) => ({
+    ...column,
+    games: column.games.map((game) => ({
+      ...game,
+      ways: (byVersion.get(game.key) || []).map(gameWayLabel),
+    })),
+  }));
 }
 
 function groupVersionNames(names: string[]) {

@@ -621,6 +621,36 @@
   flex: 1 1 240px;
 }
 
+.pk-search-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid var(--color-accent);
+}
+
+.pk-search-box .pk-search {
+  flex: none;
+  width: 100%;
+}
+
+.pk-search-box .input,
+.pk-search-box .input:hover,
+.pk-search-box .input:focus-visible {
+  border-color: var(--color-accent);
+}
+
+.pk-dash-find-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-neutral-700);
+}
+
+.pk-search-box > .pk-status {
+  padding: var(--space-4) 0;
+}
+
 .pk-scope-seg {
   align-self: flex-end;
 }
@@ -1259,6 +1289,31 @@
   margin-top: var(--space-3);
 }
 
+.pk-assign-game {
+  appearance: none;
+  margin: 0;
+  padding: 2px;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.pk-assign-game.is-selected {
+  border-color: var(--color-neutral-800);
+}
+
+.pk-assign-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-neutral-700);
+}
+
+.pk-assign-columns {
+  margin-top: var(--space-2);
+}
+
 .pk-mon-games + .pk-toggles,
 .pk-mon-games + .pk-unavailable {
   margin-top: var(--space-2);
@@ -1615,6 +1670,7 @@
 }
 
 .pk-evo-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1626,6 +1682,32 @@
   cursor: pointer;
   font: inherit;
   color: inherit;
+}
+
+.pk-evo-cell .pk-pokeball {
+  width: 16px;
+  height: 16px;
+  top: 6px;
+  right: 6px;
+}
+
+.pk-form-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pk-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pk-form-group-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-neutral-700);
 }
 
 .pk-evo-cell img {
@@ -1656,6 +1738,13 @@
   align-items: center;
   padding: 4px 8px;
   width: fit-content;
+}
+
+button.pk-game-tag {
+  appearance: none;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
 }
 
 .pk-dex-entry-text {
@@ -2898,8 +2987,23 @@
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-2);
   align-items: flex-start;
+}
+
+.pk-game-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.pk-game-ways {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+  line-height: 1.3;
 }
 
 .pk-auth {
@@ -3080,7 +3184,8 @@
   }
 }
 
-.pk-changelog {
+.pk-changelog,
+.pk-roadmap {
   max-width: 42rem;
   padding: var(--space-8) var(--space-6) var(--space-6);
   gap: 0;
@@ -3088,7 +3193,10 @@
 
 .pk-changelog-head h1,
 .pk-changelog-release h2,
-.pk-changelog-feature h3 {
+.pk-changelog-feature h3,
+.pk-roadmap-head h1,
+.pk-roadmap-section h2,
+.pk-roadmap-feature h3 {
   margin: 0;
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);
@@ -3096,14 +3204,17 @@
   color: var(--color-text);
 }
 
-.pk-changelog-head h1 {
+.pk-changelog-head h1,
+.pk-roadmap-head h1 {
   font-size: 38px;
   line-height: 1;
   letter-spacing: 0.04em;
 }
 
 .pk-changelog-kicker,
-.pk-changelog-meta {
+.pk-changelog-meta,
+.pk-roadmap-kicker,
+.pk-roadmap-meta {
   margin: 0;
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);
@@ -3115,7 +3226,11 @@
 
 .pk-changelog-head p:last-child,
 .pk-changelog-intro,
-.pk-changelog-feature p {
+.pk-changelog-feature p,
+.pk-roadmap-head p:last-child,
+.pk-roadmap-intro,
+.pk-roadmap-feature p,
+.pk-roadmap-points {
   margin: 0;
   max-width: 62ch;
   font-family: var(--font-body);
@@ -3124,14 +3239,16 @@
   color: var(--color-neutral-800);
 }
 
-.pk-changelog-head {
+.pk-changelog-head,
+.pk-roadmap-head {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   margin-bottom: var(--space-8);
 }
 
-.pk-changelog-release {
+.pk-changelog-release,
+.pk-roadmap-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -3139,30 +3256,47 @@
   border-top: 1px solid var(--color-divider);
 }
 
-.pk-changelog-release h2 {
+.pk-changelog-release h2,
+.pk-roadmap-section h2 {
   font-size: 28px;
   line-height: 1;
   letter-spacing: 0.04em;
 }
 
-.pk-changelog-feature {
+.pk-changelog-feature,
+.pk-roadmap-feature {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-4);
 }
 
-.pk-changelog-feature h3 {
+.pk-changelog-feature h3,
+.pk-roadmap-feature h3 {
   font-size: 16px;
   letter-spacing: 0.04em;
 }
 
+.pk-roadmap-points {
+  padding-left: 1.15rem;
+}
+
+.pk-roadmap-points li + li {
+  margin-top: var(--space-2);
+}
+
+.pk-roadmap-points strong {
+  font-weight: 600;
+}
+
 @media (max-width: 560px) {
-  .pk-changelog-head h1 {
+  .pk-changelog-head h1,
+  .pk-roadmap-head h1 {
     font-size: 32px;
   }
 
-  .pk-changelog-release h2 {
+  .pk-changelog-release h2,
+  .pk-roadmap-section h2 {
     font-size: 24px;
   }
 }

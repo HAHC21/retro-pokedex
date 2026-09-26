@@ -113,6 +113,35 @@ const GENDER_FIELD: Record<MarkKey, Record<GenderChoice, keyof MarkEntry>> = {
   shiny: { male: "shinyMale", female: "shinyFemale" },
 };
 
+/** Move one form's mark from one game to another. Flags already stored on the destination stay. */
+export function moveMark(
+  prog: Progress,
+  fromGame: string,
+  toGame: string,
+  id: number,
+  form: SpeciesForm | null = null,
+): Progress {
+  if (!fromGame || !toGame || fromGame === toGame) {
+    return prog;
+  }
+  const key = markKey(id, form);
+  const source = prog[fromGame]?.[key];
+  if (!source || (!source.caught && !source.shiny)) {
+    return prog;
+  }
+  const merged = mergeMarkEntry(source, prog[toGame]?.[key] || {});
+  const next: Progress = { ...prog };
+  const fromBucket = { ...(prog[fromGame] || {}) };
+  delete fromBucket[key];
+  if (Object.keys(fromBucket).length) {
+    next[fromGame] = fromBucket;
+  } else {
+    delete next[fromGame];
+  }
+  next[toGame] = { ...(prog[toGame] || {}), [key]: merged };
+  return next;
+}
+
 export function toggleGenderMark(
   prog: Progress,
   game: string,

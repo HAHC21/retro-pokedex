@@ -83,16 +83,18 @@ export type CatalogForm = {
   resourceId: number;
   types: string[];
   capture: boolean;
+  spriteForm: string | null;
 };
 
 export async function fetchForms(): Promise<CatalogForm[]> {
   const payload = await (await fetch(`${API}/forms`)).json();
   const rows = Array.isArray(payload.forms) ? payload.forms : [];
   const forms: CatalogForm[] = [];
-  rows.forEach((row: { pokedex_id?: number; form?: string; resource_id?: number; types?: string[]; capture?: boolean }) => {
+  rows.forEach((row: { pokedex_id?: number; form?: string; resource_id?: number; types?: string[]; capture?: boolean; sprite_form?: string | null }) => {
     const form = formFromStorageKey(String(row.form || ""));
     const pokedexId = Number(row.pokedex_id);
     const resourceId = Number(row.resource_id);
+    const spriteForm = typeof row.sprite_form === "string" && row.sprite_form ? row.sprite_form : null;
     if (!form || !Number.isFinite(pokedexId) || !Number.isFinite(resourceId)) {
       return;
     }
@@ -102,6 +104,7 @@ export async function fetchForms(): Promise<CatalogForm[]> {
       resourceId,
       types: Array.isArray(row.types) ? row.types.map(String) : [],
       capture: row.capture === true,
+      spriteForm,
     });
   });
   return forms;
@@ -118,6 +121,7 @@ export async function fetchMon(id: number): Promise<MonPayload> {
     enc: [],
     overview: typeof payload.overview === "string" ? payload.overview : null,
     capture: payload.capture !== false,
+    games: Array.isArray(payload.games) ? payload.games : [],
   };
 }
 

@@ -23,7 +23,7 @@ export type DexIndex = {
   rarity: Record<number, SpeciesRarity>;
 };
 
-export type View = "dash" | "dex" | "checklist" | "mon" | "signin" | "login" | "changelog";
+export type View = "dash" | "dex" | "checklist" | "mon" | "signin" | "login" | "changelog" | "roadmap";
 
 export type StatusFilter =
   | "all"
@@ -58,6 +58,7 @@ export type MonPayload = {
     stats: Array<{ base_stat: number; stat: { name: string } }>;
     game_indices: Array<{ version: { name: string } }>;
     species: { url: string };
+    forms?: Array<{ name: string; url?: string }>;
     moves?: Array<{
       move: { name: string; url: string };
       version_group_details: Array<{
@@ -81,6 +82,7 @@ export type MonPayload = {
   };
   evo: EvolutionStep[];
   enc: WildEncounter[];
+  games?: Array<{ version: string; ways: string[] }>;
   overview?: string | null;
   capture?: boolean;
 };

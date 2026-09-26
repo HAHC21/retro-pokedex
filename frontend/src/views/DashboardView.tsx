@@ -1,12 +1,37 @@
+import { useEffect, useMemo, useState } from "react";
 import { Blueprint } from "../components/Blueprint";
 import { PkBulkImport } from "../components/PkBulkImport";
+import { PokemonCard } from "../components/PokemonCard";
 import { ProgressBar } from "../components/ProgressBar";
 import { REGIONS, genById } from "../catalog";
+import { filterDexIds } from "../dexList";
 import { dexNum, kindStyle, spriteUrl, whenText } from "../format";
-import { FORM_LISTS, formListOf, type FormList } from "../forms";
+import { FORM_LISTS, formDisplayName, formListOf, formStorageKey, formsEqual, parseMarkKey, type FormList, type SpeciesForm } from "../forms";
 import type { CatalogForm } from "../pokeapi";
 import { gameLabel, unionFor, unionSets } from "../progress";
-import type { DexIndex, Progress } from "../types";
+import type { DexIndex, MarkKey, Progress } from "../types";
+
+const MIN_SEARCH_LENGTH = 2;
+
+function recentSprite(
+  id: number,
+  form: SpeciesForm | null,
+  catalog: CatalogForm | undefined,
+): { pokemonId: number; formName: string | null } {
+  if (form?.kind === "variant" && form.name) {
+    if (catalog && !catalog.spriteForm && catalog.resourceId !== id) {
+      return { pokemonId: catalog.resourceId, formName: null };
+    }
+    return { pokemonId: id, formName: catalog?.spriteForm || form.name };
+  }
+  if (catalog) {
+    return {
+      pokemonId: catalog.spriteForm ? id : catalog.resourceId,
+      formName: catalog.spriteForm,
+    };
+  }
+  return { pokemonId: id, formName: null };
+}
 
 type OriginBox = {
   key: string;
@@ -58,6 +83,15 @@ type DashboardViewProps = {
   onOpenRegion: (slug: string) => void;
   onOpenFormList: (list: FormList) => void;
   forms: CatalogForm[];
+  formsLoading: boolean;
+  indexLoading: boolean;
+  obtainable: Record<number, boolean>;
+  onEnsureObtainable: (ids: number[]) => void;
+  onOpenForm: (id: number, form: SpeciesForm) => void;
+  onToggleCaught: (id: number) => void;
+  onToggleShiny: (id: number) => void;
+  onToggleForm: (id: number, form: SpeciesForm, key: MarkKey) => void;
+  onMoveGame: (id: number, form: SpeciesForm | null, fromGame: string, toGame: string) => void;
   onOpenDex: () => void;
   onOpenMissing: () => void;
   onOpenShinies: () => void;
@@ -74,10 +108,20 @@ export function DashboardView({
   onOpenRegion,
   onOpenFormList,
   forms,
+  formsLoading,
+  indexLoading,
+  obtainable,
+  onEnsureObtainable,
+  onOpenForm,
+  onToggleCaught,
+  onToggleShiny,
+  onToggleForm,
+  onMoveGame,
   onOpenDex,
   onOpenMissing,
   onOpenShinies,
 }: DashboardViewProps) {
+  const [query, setQuery] = useState("");
   const ids = Object.keys(index.names).map(Number);
   const total = ids.length || 1025;
   const { caught: uCaught, shiny: uShiny, any: uAny } = unionSets(prog);
@@ -95,19 +139,63 @@ export function DashboardView({
     { label: "Active game", value: String(activeCaught), sub: `Caught in ${gameLabel(game)}` },
   ];
 
-  const events: Array<{ id: number; kind: "Normal" | "Shiny"; at: number; game: string }> = [];
+  const events: Array<{ id: number; form: SpeciesForm | null; kind: "Normal" | "Shiny"; at: number; game: string }> = [];
   Object.entries(prog).forEach(([gk, gm]) => {
-    Object.entries(gm).forEach(([id, entry]) => {
+    Object.entries(gm).forEach(([raw, entry]) => {
+      const parsed = parseMarkKey(raw);
+      if (!parsed) {
+        return;
+      }
       if (entry.caught) {
-        events.push({ id: Number(id), kind: "Normal", at: entry.caughtAt || 0, game: gk });
+        events.push({ id: parsed.id, form: parsed.form, kind: "Normal", at: entry.caughtAt || 0, game: gk });
       }
       if (entry.shiny) {
-        events.push({ id: Number(id), kind: "Shiny", at: entry.shinyAt || 0, game: gk });
+        events.push({ id: parsed.id, form: parsed.form, kind: "Shiny", at: entry.shinyAt || 0, game: gk });
       }
     });
   });
   events.sort((a, b) => b.at - a.at);
   const recent = events.slice(0, 6);
+  const needle = query.trim();
+  const searching = needle.length >= MIN_SEARCH_LENGTH;
+  const matches = useMemo(() => {
+    if (!searching) {
+      return [];
+    }
+    const catalogIds = Object.keys(index.names)
+      .map(Number)
+      .sort((left, right) => left - right);
+    const speciesIds = filterDexIds(catalogIds, index, prog, "all", needle);
+    const speciesSet = new Set(speciesIds);
+    const lowered = needle.toLowerCase();
+    const formHits = forms.filter((entry) => {
+      const speciesName = index.names[entry.pokedexId];
+      if (!speciesName) {
+        return false;
+      }
+      const name = formDisplayName(speciesName, entry.form);
+      return name.toLowerCase().indexOf(lowered) !== -1 || String(entry.pokedexId).indexOf(lowered) !== -1;
+    });
+    const order = [...new Set([...speciesIds, ...formHits.map((entry) => entry.pokedexId)])].sort((left, right) => left - right);
+    return order.flatMap((id) => {
+      const hits: Array<{ key: string; id: number; form: CatalogForm | null }> = [];
+      if (speciesSet.has(id)) {
+        hits.push({ key: String(id), id, form: null });
+      }
+      formHits
+        .filter((entry) => entry.pokedexId === id)
+        .forEach((entry) => {
+          hits.push({ key: `${id}:${formStorageKey(entry.form)}`, id, form: entry });
+        });
+      return hits;
+    });
+  }, [forms, index, needle, prog, searching]);
+
+  useEffect(() => {
+    if (matches.length) {
+      onEnsureObtainable(matches.map((hit) => hit.id));
+    }
+  }, [matches, onEnsureObtainable]);
 
   return (
     <div className="pk-page pk-dash">
@@ -149,6 +237,70 @@ export function DashboardView({
 
       <PkBulkImport isStaff={isStaff} game={game} onImported={onImported} />
 
+      <section className="pk-section" aria-labelledby="dash-search-title">
+        <div className="pk-section-head">
+          <h2 id="dash-search-title">Search</h2>
+        </div>
+        <Blueprint className="pk-search-box">
+          <p className="pk-dash-find-note">
+            Type at least two characters of a name or a National Dex number. Matching species, alternate forms, and variants show up here as cards.
+          </p>
+          <label className="field pk-field pk-search" htmlFor="dash-pokemon-search">
+            <input
+              id="dash-pokemon-search"
+              className="input"
+              type="search"
+              placeholder="Name or number"
+              aria-label="Search by name or National Dex number"
+              value={query}
+              autoComplete="off"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          {searching ? (
+            indexLoading || (formsLoading && matches.length === 0) ? (
+              <div className="pk-status">{formsLoading && !indexLoading ? "Loading forms…" : "Loading index from PokéAPI…"}</div>
+            ) : matches.length === 0 ? (
+              <div className="pk-status">No results for these filters</div>
+            ) : (
+              <div className="pk-grid">
+                {matches.map((hit) => {
+                  const form = hit.form;
+                  const marks = unionFor(prog, hit.id, form?.form);
+                  const name = form ? formDisplayName(index.names[hit.id] || "", form.form) : index.names[hit.id];
+                  return (
+                    <PokemonCard
+                      key={hit.key}
+                      id={hit.id}
+                      spriteId={form ? form.resourceId : undefined}
+                      formName={form?.spriteForm}
+                      capturable={form ? form.capture : true}
+                      name={name}
+                      types={form ? form.types : index.types[hit.id] || []}
+                      rarity={index.rarity[hit.id]}
+                      numberLabel={dexNum(hit.id)}
+                      caught={!!marks.caught}
+                      shiny={!!marks.shiny}
+                      caughtMale={!!marks.caughtMale}
+                      caughtFemale={!!marks.caughtFemale}
+                      shinyMale={!!marks.shinyMale}
+                      shinyFemale={!!marks.shinyFemale}
+                      games={marks.where}
+                      obtainable={obtainable[hit.id]}
+                      unavailableLabel={`Not In ${gameLabel(game)}`}
+                      onOpen={() => (form ? onOpenForm(hit.id, form.form) : onOpen(hit.id))}
+                      onToggleCaught={() => (form ? onToggleForm(hit.id, form.form, "caught") : onToggleCaught(hit.id))}
+                      onToggleShiny={() => (form ? onToggleForm(hit.id, form.form, "shiny") : onToggleShiny(hit.id))}
+                      onMoveGame={(fromGame, toGame) => onMoveGame(hit.id, form?.form ?? null, fromGame, toGame)}
+                    />
+                  );
+                })}
+              </div>
+            )
+          ) : null}
+        </Blueprint>
+      </section>
+
       <section className="pk-section">
         <div className="pk-section-head">
           <h2>Last caught</h2>
@@ -158,8 +310,20 @@ export function DashboardView({
           <Blueprint className="pk-empty">Nothing marked yet — open the Pokédex to start</Blueprint>
         ) : (
           <div className="pk-recent-grid">
-            {recent.map((item) => (
-              <button key={`${item.game}-${item.id}-${item.kind}`} type="button" className="blueprint pk-cell pk-nav pk-recent" onClick={() => onOpen(item.id)}>
+            {recent.map((item) => {
+              const catalog = item.form
+                ? forms.find((entry) => entry.pokedexId === item.id && formsEqual(entry.form, item.form))
+                : undefined;
+              const species = index.names[item.id] || `No. ${item.id}`;
+              const name = item.form ? formDisplayName(species, item.form) : species;
+              const sprite = recentSprite(item.id, item.form, catalog);
+              return (
+              <button
+                key={`${item.game}-${item.id}-${formStorageKey(item.form)}-${item.kind}`}
+                type="button"
+                className="blueprint pk-cell pk-nav pk-recent"
+                onClick={() => (item.form ? onOpenForm(item.id, item.form) : onOpen(item.id))}
+              >
                 <i className="corner tl" aria-hidden="true" />
                 <i className="corner tr" aria-hidden="true" />
                 <i className="corner bl" aria-hidden="true" />
@@ -170,12 +334,13 @@ export function DashboardView({
                     {item.kind}
                   </span>
                 </span>
-                <img src={spriteUrl(item.id, item.kind === "Shiny")} alt={index.names[item.id] || `No. ${item.id}`} loading="lazy" />
-                <span className="pk-name">{index.names[item.id] || `No. ${item.id}`}</span>
+                <img src={spriteUrl(sprite.pokemonId, item.kind === "Shiny", false, sprite.formName)} alt={name} loading="lazy" />
+                <span className="pk-name">{name}</span>
                 <span className="pk-recent-game">{gameLabel(item.game)}</span>
                 <span className="pk-when">{whenText(item.at)}</span>
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

@@ -5,6 +5,8 @@ export function LegalFooter() {
     <footer className="pk-footer">
       <p className="pk-footer-links">
         <Link to="/changelog">Changelog</Link>
+        <span aria-hidden="true"> · </span>
+        <Link to="/roadmap">Roadmap</Link>
       </p>
       <p className="pk-footer-legal">
         Retro Pokédex is an unofficial, fan-made dashboard and is not affiliated with, endorsed, or

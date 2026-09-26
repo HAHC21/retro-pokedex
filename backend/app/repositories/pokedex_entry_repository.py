@@ -52,6 +52,10 @@ class PokedexEntryRepository:
             PokedexSyncMeta(pokedex=pokedex, synced_at=now, entry_count=len(docs)).save()
         return len(docs)
 
+    def pokedexes_for_species(self, species_id: int) -> list[str]:
+        rows = PokedexEntryDocument.objects(species_id=species_id).only("pokedex")
+        return [row.pokedex for row in rows]
+
     def aggregate_regional(self, pokedex_names: list[str]) -> list[dict[str, int]]:
         if not pokedex_names:
             return []

@@ -126,7 +126,7 @@ function parseFormTail(tail: string[]): { form: SpeciesForm | null; section: Det
     return { form: null, section: parseSection(kind) };
   }
   if (!second || DETAIL_SECTION_IDS.has(second)) {
-    if (kind === "regional") {
+    if (kind === "regional" || kind === "variant") {
       return { form: null, section: "home" };
     }
     return { form: { kind, name: null }, section: parseSection(second) };
@@ -153,6 +153,9 @@ export function parseAppPath(pathname: string, _search = ""): AppPath {
   }
   if (path === "/changelog") {
     return { ...DEFAULT_PATH, view: "changelog" };
+  }
+  if (path === "/roadmap") {
+    return { ...DEFAULT_PATH, view: "roadmap" };
   }
 
   const parts = path.split("/").filter(Boolean);
@@ -246,6 +249,9 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
   }
   if (path.view === "changelog") {
     return "/changelog";
+  }
+  if (path.view === "roadmap") {
+    return "/roadmap";
   }
   if (path.view === "dash") {
     return `/${game}`;

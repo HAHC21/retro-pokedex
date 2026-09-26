@@ -2,6 +2,19 @@ import asyncio
 import re
 from typing import Any
 
+from app.catalog.game_availability import (
+    GMAX_VERSIONS,
+    MEGA_DEX_VERSIONS,
+    POKEDEX_VERSIONS,
+    availability_rows,
+    event_versions_for_species,
+    is_mechanic_form,
+    is_mechanic_variety,
+    mechanic_versions_from_moves,
+    versions_in_pokedexes,
+    ways_by_version,
+)
+from app.catalog.pokemon_form import form_key
 from app.catalog.type_matchups import ATTACKING_TYPES
 from app.integrations.pokeapi.client import PokeApiClient
 from app.repositories.ability_effect_repository import AbilityEffectRepository
@@ -64,6 +77,23 @@ def _pretty(value: str) -> str:
 
 def _id_from_url(url: str) -> int:
     return int(url.rstrip("/").split("/")[-1] or "0")
+
+
+def _form_and_species(
+    record: PokemonDocument | None,
+    resource_id: int,
+    payload: dict[str, Any],
+) -> tuple[str, int]:
+    data = payload.get("data") or {}
+    species = payload.get("species") or {}
+    species_url = (data.get("species") or {}).get("url") or ""
+    species_id = _id_from_url(species_url) or resource_id
+    if record is not None:
+        return record.form, int(record.pokedex_id)
+    if resource_id == species_id:
+        return "base", species_id
+    key = form_key(str(data.get("name") or ""), str(species.get("name") or ""))
+    return key or "base", species_id
 
 
 def _cond_text(detail: dict[str, Any] | None) -> str:
@@ -333,6 +363,18 @@ def _annotate_encounters(
     return annotated
 
 
+def _form_refs(data: dict[str, Any]) -> list[dict[str, str]]:
+    refs: list[dict[str, str]] = []
+    for entry in data.get("forms") or []:
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            continue
+        refs.append({"name": name, "url": str(entry.get("url") or "")})
+    return refs
+
+
 def _project_pokemon_data(data: dict[str, Any], abilities: list[dict[str, Any]]) -> dict[str, Any]:
     """SPA-facing pokemon slice — omit moves and other unused PokéAPI fields."""
     return {
@@ -345,6 +387,7 @@ def _project_pokemon_data(data: dict[str, Any], abilities: list[dict[str, Any]])
         "stats": data.get("stats") or [],
         "game_indices": data.get("game_indices") or [],
         "species": data.get("species") or {},
+        "forms": _form_refs(data),
     }
 
 
@@ -413,6 +456,7 @@ class PokeProxyService:
         self._loc_region: dict[str, str | None] = {}
         self._area_loc: dict[str, str] = {}
         self._obtain_index: dict[str, Any] | None = None
+        self._availability_pokedexes_ready = False
         self._location_map: dict[str, dict[str, str | None]] | None = None
         self._ability_effect_map: dict[str, str | None] | None = None
 
@@ -823,11 +867,94 @@ class PokeProxyService:
         form = record.form if record is not None else "base"
         stored = await asyncio.to_thread(self._detail_views.get, pokedex_id, form)
         if stored is not None:
-            return await self._with_form_record(resource_id, stored)
-        live = await self._pokemon_detail_live(resource_id, pokedex_id=pokedex_id, form=form)
-        if live is None:
-            return None
-        return await self._with_form_record(resource_id, live)
+            payload = await self._with_form_record(resource_id, stored)
+        else:
+            live = await self._pokemon_detail_live(resource_id, pokedex_id=pokedex_id, form=form)
+            if live is None:
+                return None
+            payload = await self._with_form_record(resource_id, live)
+        payload = await self._ensure_forms(resource_id, payload)
+        return await self._attach_games(resource_id, record, payload)
+
+    async def _ensure_forms(self, resource_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+        """Stored detail views predate form refs. Attach them from the cached Pokémon."""
+        data = dict(payload.get("data") or {})
+        if data.get("forms"):
+            return payload
+        raw = await self._client.get_pokemon(resource_id)
+        if not isinstance(raw, dict):
+            return payload
+        data["forms"] = _form_refs(raw)
+        return {**payload, "data": data}
+
+    async def _attach_games(
+        self,
+        resource_id: int,
+        record: PokemonDocument | None,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        form, species_id = _form_and_species(record, resource_id, payload)
+        await self._ensure_availability_pokedexes()
+        pokedex_names = await asyncio.to_thread(self._pokedex_entries.pokedexes_for_species, species_id)
+        pokedex_versions = versions_in_pokedexes(pokedex_names)
+        if is_mechanic_form(form):
+            raw = await self._client.get_pokemon(resource_id)
+            moves = raw.get("moves") if isinstance(raw, dict) else None
+            learned = mechanic_versions_from_moves(moves, kind="mega" if form != "gigantamax" else "gigantamax")
+            if form == "gigantamax":
+                mechanic = pokedex_versions & GMAX_VERSIONS
+            else:
+                mechanic = learned | (pokedex_versions & MEGA_DEX_VERSIONS)
+            rows = availability_rows(
+                form=form,
+                encounter_ways={},
+                pokedex_versions=set(),
+                claimed_versions=set(),
+                event_versions=set(),
+                mechanic_versions=mechanic,
+            )
+            return {**payload, "games": rows}
+
+        encounter_ways = ways_by_version(await self._client.get_encounters(resource_id))
+        claimed = await self._versions_claimed_by_other_forms(payload, resource_id)
+        events = event_versions_for_species(species_id) if form == "base" else set()
+        rows = availability_rows(
+            form=form,
+            encounter_ways=encounter_ways,
+            pokedex_versions=pokedex_versions,
+            claimed_versions=claimed,
+            event_versions=events,
+        )
+        return {**payload, "games": rows}
+
+    async def _ensure_availability_pokedexes(self) -> None:
+        if self._availability_pokedexes_ready:
+            return
+        for name in POKEDEX_VERSIONS:
+            has_rows = await asyncio.to_thread(self._pokedex_entries.has_entries, name)
+            if has_rows:
+                continue
+            pokedex = await self._client.get_pokedex(name)
+            if isinstance(pokedex, dict):
+                await asyncio.to_thread(self._pokedex_entries.sync_from_payload, name, pokedex)
+        self._availability_pokedexes_ready = True
+
+    async def _versions_claimed_by_other_forms(self, payload: dict[str, Any], resource_id: int) -> set[str]:
+        claimed: set[str] = set()
+        varieties = (payload.get("species") or {}).get("varieties") or []
+        for item in varieties:
+            pokemon = item.get("pokemon") or {}
+            if item.get("is_default"):
+                continue
+            slug = str(pokemon.get("name") or "")
+            if is_mechanic_variety(slug):
+                continue
+            variety_id = _id_from_url(str(pokemon.get("url") or ""))
+            if variety_id <= 0 or variety_id == resource_id:
+                continue
+            ways = ways_by_version(await self._client.get_encounters(variety_id))
+            claimed.update(ways)
+        return claimed
 
     async def _with_form_record(self, resource_id: int, payload: dict[str, Any]) -> dict[str, Any]:
         record = await asyncio.to_thread(self._pokemon.get_by_resource_id, resource_id)
