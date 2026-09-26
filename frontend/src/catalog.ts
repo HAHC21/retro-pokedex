@@ -329,6 +329,29 @@ export const GAME_VERSIONS: Record<string, string[]> = {
   home: [],
 };
 
+const VERSION_GAME: Record<string, string> = {};
+for (const [gameKey, versions] of Object.entries(GAME_VERSIONS)) {
+  for (const version of versions) {
+    VERSION_GAME[version] = gameKey;
+  }
+}
+
+const DLC_GAME: Record<string, string> = {
+  "the-teal-mask-scarlet": "sv",
+  "the-teal-mask-violet": "sv",
+  "the-indigo-disk-scarlet": "sv",
+  "the-indigo-disk-violet": "sv",
+  "the-isle-of-armor-sword": "swsh",
+  "the-isle-of-armor-shield": "swsh",
+  "the-crown-tundra-sword": "swsh",
+  "the-crown-tundra-shield": "swsh",
+};
+
+/** Save-slot key for a PokéAPI version, including expansion versions. */
+export function gameKeyForVersion(version: string): string | null {
+  return VERSION_GAME[version] ?? DLC_GAME[version] ?? null;
+}
+
 /**
  * Official event distributions that PokéAPI does not model as encounters
  * (e.g. Diancie / Hoopa / Volcanion serial codes for X·Y).
@@ -509,6 +532,45 @@ export function gameWayLabel(way: string) {
 }
 
 export type GameAvailability = { version: string; ways: string[] };
+
+const DIRECT_WAYS = new Set(["wild", "starter", "gift", "static", "snag", "event"]);
+
+/**
+ * Save slots where this Pokémon can be caught, received, or evolved without a trade.
+ * Global Collection is always included. A regional-dex row still counts when encounter
+ * data is missing, unless the only way in is a trade or a trade evolution.
+ */
+export function catchableGameKeys(
+  rows: GameAvailability[] | undefined,
+  options: { tradeEvolution: boolean },
+): Set<string> {
+  const byGame = new Map<string, Set<string>>();
+  for (const row of rows || []) {
+    const gameKey = gameKeyForVersion(row.version);
+    if (!gameKey) {
+      continue;
+    }
+    const ways = byGame.get(gameKey) ?? new Set<string>();
+    for (const way of row.ways || []) {
+      ways.add(way);
+    }
+    byGame.set(gameKey, ways);
+  }
+  const keys = new Set<string>(["home"]);
+  for (const [gameKey, ways] of byGame) {
+    if ([...ways].some((way) => DIRECT_WAYS.has(way))) {
+      keys.add(gameKey);
+      continue;
+    }
+    if (ways.has("trade") || options.tradeEvolution) {
+      continue;
+    }
+    if (ways.has("pokedex")) {
+      keys.add(gameKey);
+    }
+  }
+  return keys;
+}
 
 /** Group a form's obtainability rows into generation columns the Games box can render. */
 export function gamesFromAvailability(rows: GameAvailability[] | undefined) {

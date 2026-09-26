@@ -96,35 +96,75 @@ def _form_and_species(
     return key or "base", species_id
 
 
+def _pick_evolution_detail(details: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Prefer the method that states every requirement, such as friendship plus a move type."""
+    if not details:
+        return None
+    for detail in details:
+        move_type = (detail.get("known_move_type") or {}).get("name")
+        if move_type and detail.get("min_happiness"):
+            return detail
+    for detail in details:
+        if (detail.get("known_move_type") or {}).get("name"):
+            return detail
+    return details[0]
+
+
+def _join_level_phrase(lead: str, qualifiers: list[str]) -> str:
+    if not qualifiers:
+        return lead
+    if len(qualifiers) == 1:
+        return f"{lead} {qualifiers[0]}"
+    return f"{lead} {', '.join(qualifiers[:-1])} and {qualifiers[-1]}"
+
+
 def _cond_text(detail: dict[str, Any] | None) -> str:
     if not detail:
         return "—"
-    parts: list[str] = []
-    if detail.get("min_level"):
-        parts.append(f"Level {detail['min_level']}")
+    trigger_name = (detail.get("trigger") or {}).get("name") or ""
     item = detail.get("item")
-    if item:
-        parts.append(_pretty(item.get("name", "")))
     held = detail.get("held_item")
-    if held:
-        parts.append(f"Holding {_pretty(held.get('name', ''))}")
+    if item and trigger_name == "use-item":
+        return _pretty(item.get("name", ""))
+    if trigger_name == "trade":
+        if held:
+            return f"Trade while holding {_pretty(held.get('name', ''))}"
+        return "Trade"
+
+    qualifiers: list[str] = []
     if detail.get("min_happiness"):
-        parts.append(f"Friendship {detail['min_happiness']}")
+        qualifiers.append("with high friendship")
+    if detail.get("min_affection"):
+        qualifiers.append("with high affection")
     time_of_day = detail.get("time_of_day")
-    if time_of_day:
-        parts.append("Daytime" if time_of_day == "day" else "Night")
+    if time_of_day == "day":
+        qualifiers.append("during the day")
+    elif time_of_day:
+        qualifiers.append("at night")
     location = detail.get("location")
     if location:
-        parts.append(_title(location.get("name", "")))
+        qualifiers.append(f"at {_pretty(location.get('name', ''))}")
+    held_name = held.get("name") if isinstance(held, dict) else ""
+    if held_name:
+        qualifiers.append(f"while holding {_pretty(held_name)}")
     known_move = detail.get("known_move")
     if known_move:
-        parts.append(f"Knows {_title(known_move.get('name', ''))}")
-    trigger = detail.get("trigger") or {}
-    if trigger.get("name") == "trade":
-        parts.append("Trade")
-    if not parts and trigger.get("name"):
-        parts.append(_title(trigger["name"]))
-    return " · ".join(parts) if parts else "—"
+        qualifiers.append(f"while knowing {_title(known_move.get('name', ''))}")
+    known_move_type = detail.get("known_move_type")
+    if known_move_type:
+        qualifiers.append(f"while knowing a {_pretty(known_move_type.get('name', ''))}-type move")
+
+    if detail.get("min_level"):
+        return _join_level_phrase(f"Level {detail['min_level']}", qualifiers)
+    if trigger_name == "level-up":
+        return _join_level_phrase("Level up", qualifiers)
+    if item:
+        return _pretty(item.get("name", ""))
+    if qualifiers:
+        return _join_level_phrase("Level up", qualifiers)
+    if trigger_name:
+        return _title(trigger_name)
+    return "—"
 
 
 def _place_label(area_name: str) -> str:
@@ -167,6 +207,92 @@ def _kind_label(kind: str, place: str) -> str:
     return place
 
 
+# Walking, rustling grass, and flower spots stay "Wild Encounter".
+# Anything else in the wild bucket is a tool or rod the player has to use.
+ORDINARY_WILD = {
+    "walk",
+    "dark-grass",
+    "grass-spots",
+    "yellow-flowers",
+    "purple-flowers",
+    "red-flowers",
+    "rough-terrain",
+}
+
+ROD_LABELS = {
+    "old-rod": "Old Rod",
+    "good-rod": "Good Rod",
+    "super-rod": "Super Rod",
+}
+
+FIELD_LABELS = {
+    "rock-smash": "Rock Smash",
+    "headbutt": "Headbutt",
+    "waterfall": "Waterfall",
+    "whirlpool": "Whirlpool",
+    "honey": "Honey",
+    "seaweed": "Seaweed",
+    "squirt-bottle": "Squirt Bottle",
+    "wailmer-pail": "Wailmer Pail",
+    "pokeflute": "Poké Flute",
+}
+
+SPECIAL_ORDER = (
+    "old-rod",
+    "good-rod",
+    "super-rod",
+    "rock-smash",
+    "headbutt",
+    "surf",
+    "dive",
+    "waterfall",
+    "whirlpool",
+    "honey",
+    "seaweed",
+    "squirt-bottle",
+    "wailmer-pail",
+    "pokeflute",
+)
+
+
+def _special_phrase(method: str) -> str:
+    if method in ROD_LABELS:
+        return f"Fishing with {ROD_LABELS[method]}"
+    if method == "surf":
+        return "Surfing"
+    if method == "dive":
+        return "Diving"
+    if method in FIELD_LABELS:
+        return f"Using {FIELD_LABELS[method]}"
+    return f"Using {_pretty(method)}"
+
+
+def _wild_label(samples: list[tuple[str, int, str]]) -> str:
+    """Name the tool only when every encounter in this game needs one."""
+    ordinary = [item for item in samples if not item[0] or item[0] in ORDINARY_WILD]
+    if ordinary:
+        place = max(ordinary, key=lambda item: item[1])[2]
+        return _kind_label("wild", place)
+    best_by_method: dict[str, tuple[int, str]] = {}
+    for method, chance, place in samples:
+        previous = best_by_method.get(method)
+        if not previous or chance > previous[0]:
+            best_by_method[method] = (chance, place)
+    ordered = sorted(
+        best_by_method,
+        key=lambda method: (
+            SPECIAL_ORDER.index(method) if method in SPECIAL_ORDER else len(SPECIAL_ORDER),
+            method,
+        ),
+    )
+    parts: list[str] = []
+    for method in ordered:
+        _, place = best_by_method[method]
+        where = "" if not place or place == "Unknown" else f" at {place}"
+        parts.append(f"{_special_phrase(method)}{where}")
+    return " / ".join(parts)
+
+
 def _evolve_label(parent: str, detail: dict[str, Any] | None) -> str:
     if not detail:
         return f"Evolve {parent}"
@@ -179,9 +305,12 @@ def _evolve_label(parent: str, detail: dict[str, Any] | None) -> str:
         return f"Trade {parent}"
     if trigger == "use-item" and item:
         return f"Evolve {parent} using {_pretty(item)}"
-    if detail.get("min_level"):
-        return f"Evolve {parent} at Level {detail['min_level']}"
     cond = _cond_text(detail)
+    if cond.startswith("Level up"):
+        rest = cond.removeprefix("Level up").strip()
+        return f"Level up {parent} {rest}".strip() if rest else f"Level up {parent}"
+    if cond.startswith("Level "):
+        return f"Evolve {parent} at {cond}"
     if cond and cond != "—":
         return f"Evolve {parent} ({cond})"
     return f"Evolve {parent}"
@@ -313,8 +442,7 @@ def _evolution_detail_for(chain: dict[str, Any], pokemon_id: int) -> dict[str, A
         for nxt in node.get("evolves_to") or []:
             species_node = nxt.get("species") or {}
             if _id_from_url(species_node.get("url") or "") == pokemon_id:
-                details = nxt.get("evolution_details") or []
-                return details[0] if details else None
+                return _pick_evolution_detail(nxt.get("evolution_details") or [])
             found = walk(nxt)
             if found is not None:
                 return found
@@ -338,8 +466,7 @@ def _evolution_steps_from_chain(chain: dict[str, Any] | None) -> list[dict[str, 
             }
         )
         for nxt in node.get("evolves_to") or []:
-            details = nxt.get("evolution_details") or []
-            walk(nxt, _cond_text(details[0] if details else None))
+            walk(nxt, _cond_text(_pick_evolution_detail(nxt.get("evolution_details") or [])))
 
     walk(chain.get("chain") or {}, "Base")
     return steps
@@ -812,11 +939,26 @@ class PokeProxyService:
     async def acquisition(self, pokemon_id: int, game_key: str) -> dict[str, Any]:
         if game_key == "home":
             return {"text": "Pokémon HOME", "methods": ["home"]}
+        cached = await self._client.get_cached(f"pokemon/{pokemon_id}/encounters")
+        if isinstance(cached, list):
+            labels = self._labels_from_encounters(cached, game_key)
+            evo = await asyncio.to_thread(self._evolution.get, pokemon_id)
+            if evo and evo.get("evolve_label"):
+                labels.append(str(evo["evolve_label"]))
+            return {"text": " / ".join(labels), "methods": labels}
         stored = await asyncio.to_thread(self._acquisition.get, pokemon_id, game_key)
         if stored is not None:
             return stored
         raw = await self._client.get_encounters(pokemon_id)
-        labels = self._labels_from_encounters(raw or [], game_key)
+        return await self._acquisition_from_encounters(pokemon_id, game_key, raw or [])
+
+    async def _acquisition_from_encounters(
+        self,
+        pokemon_id: int,
+        game_key: str,
+        raw: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        labels = self._labels_from_encounters(raw, game_key)
         evo = await asyncio.to_thread(self._evolution.get, pokemon_id)
         if evo and evo.get("evolve_label"):
             labels.append(str(evo["evolve_label"]))
@@ -831,6 +973,7 @@ class PokeProxyService:
         allowed = GAME_VERSIONS.get(game_key, [])
         allowed_set = None if allowed is None else set(allowed)
         best: dict[str, tuple[int, str]] = {}
+        wild_samples: list[tuple[str, int, str]] = []
         for entry in raw:
             area = (entry.get("location_area") or {}).get("name") or ""
             if POKECENTER.search(area):
@@ -841,13 +984,22 @@ class PokeProxyService:
                 if allowed_set is not None and version not in allowed_set:
                     continue
                 for item in detail.get("encounter_details") or []:
-                    kind = _encounter_kind((item.get("method") or {}).get("name") or "")
+                    method = (item.get("method") or {}).get("name") or ""
+                    kind = _encounter_kind(method)
                     chance = int(item.get("chance") or 0)
+                    if kind == "wild":
+                        wild_samples.append((method, chance, place))
+                        continue
                     prev = best.get(kind)
                     if not prev or chance > prev[0]:
                         best[kind] = (chance, _kind_label(kind, place))
-        order = ("wild", "starter", "gift", "static", "trade")
-        return [best[kind][1] for kind in order if kind in best]
+        labels: list[str] = []
+        if wild_samples:
+            labels.append(_wild_label(wild_samples))
+        for kind in ("starter", "gift", "static", "trade"):
+            if kind in best:
+                labels.append(best[kind][1])
+        return labels
 
     async def _evolution_label(self, species: dict[str, Any], pokemon_id: int) -> str | None:
         parent_ref = species.get("evolves_from_species") or {}
@@ -874,7 +1026,18 @@ class PokeProxyService:
                 return None
             payload = await self._with_form_record(resource_id, live)
         payload = await self._ensure_forms(resource_id, payload)
+        payload = await self._attach_evolution(pokedex_id, form, payload)
         return await self._attach_games(resource_id, record, payload)
+
+    async def _attach_evolution(self, pokedex_id: int, form: str, payload: dict[str, Any]) -> dict[str, Any]:
+        evo_doc = await asyncio.to_thread(self._evolution.get, pokedex_id, form)
+        if evo_doc is None and form != "base":
+            evo_doc = await asyncio.to_thread(self._evolution.get, pokedex_id, "base")
+        if not evo_doc or not evo_doc.get("steps"):
+            return payload
+        updated = dict(payload)
+        updated["evo"] = evo_doc["steps"]
+        return updated
 
     async def _ensure_forms(self, resource_id: int, payload: dict[str, Any]) -> dict[str, Any]:
         """Stored detail views predate form refs. Attach them from the cached Pokémon."""

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { GAMES, GENS } from "../catalog";
+import { catchableGameKeys, GAMES, GENS } from "../catalog";
 import { navBtnStyle } from "../format";
+import { fetchMon } from "../pokeapi";
 import { gameLabel } from "../progress";
 import { GameKeyTag } from "./GameTag";
 import { Modal } from "./Modal";
@@ -8,6 +9,8 @@ import { Modal } from "./Modal";
 type AssignGameDialogProps = {
   open: boolean;
   name: string;
+  pokemonId: number;
+  resourceId: number;
   fromGame: string | null;
   recordedGames: string[];
   onClose: () => void;
@@ -22,44 +25,100 @@ const columns = [
   })),
 ].filter((column) => column.games.length > 0);
 
-export function AssignGameDialog({ open, name, fromGame, recordedGames, onClose, onApply }: AssignGameDialogProps) {
+export function AssignGameDialog({
+  open,
+  name,
+  pokemonId,
+  resourceId,
+  fromGame,
+  recordedGames,
+  onClose,
+  onApply,
+}: AssignGameDialogProps) {
   const [selected, setSelected] = useState(fromGame ?? "");
+  const [allowed, setAllowed] = useState<Set<string> | null>(null);
+  const [checkFailed, setCheckFailed] = useState(false);
 
   useEffect(() => {
     setSelected(fromGame ?? "");
   }, [fromGame, open]);
 
+  useEffect(() => {
+    if (!open) {
+      setAllowed(null);
+      setCheckFailed(false);
+      return;
+    }
+    let cancelled = false;
+    setCheckFailed(false);
+    setAllowed(null);
+    fetchMon(resourceId)
+      .then((mon) => {
+        if (cancelled) {
+          return;
+        }
+        const ids = new Set([pokemonId, resourceId]);
+        const tradeEvolution = (mon.evo || []).some(
+          (step) => ids.has(step.id) && /\btrade\b/i.test(step.cond || ""),
+        );
+        const keys = catchableGameKeys(mon.games, { tradeEvolution });
+        if (fromGame) {
+          keys.add(fromGame);
+        }
+        setAllowed(keys);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAllowed(null);
+          setCheckFailed(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, pokemonId, resourceId, fromGame]);
+
   const unchanged = !fromGame || selected === fromGame;
   const combines = !!selected && selected !== fromGame && recordedGames.includes(selected);
+  const waiting = allowed == null && !checkFailed;
+  const visibleColumns = waiting
+    ? []
+    : columns
+        .map((column) => ({
+          ...column,
+          games: allowed == null ? column.games : column.games.filter((game) => allowed.has(game.k)),
+        }))
+        .filter((column) => column.games.length > 0);
 
   return (
     <Modal open={open && !!fromGame} title={`Move ${name}`} onClose={onClose} size="wide">
       <p className="pk-assign-note">
-        Currently recorded in {fromGame ? gameLabel(fromGame) : "this game"}. Choose the game this mark should use.
+        Currently recorded in {fromGame ? gameLabel(fromGame) : "this game"}. Games listed here are ones where{" "}
+        {name} can be caught, received, or evolved without a trade.
       </p>
-      <div className="pk-game-columns pk-assign-columns">
-        {columns.map((column) => (
-          <div key={column.label} className="pk-game-column">
-            <span className="pk-game-column-gen">{column.label}</span>
-            <div className="pk-game-column-tags">
-              {column.games.map((game) => {
-                const active = game.k === selected;
-                return (
-                  <button
+      {waiting ? <p className="pk-assign-note">Checking where {name} can be obtained…</p> : null}
+      {checkFailed ? (
+        <p className="pk-assign-note">Could not check obtainability, so every game is listed.</p>
+      ) : null}
+      {waiting ? null : (
+        <div className="pk-game-columns pk-assign-columns">
+          {visibleColumns.map((column) => (
+            <div key={column.label} className="pk-game-column">
+              <span className="pk-game-column-gen">{column.label}</span>
+              <div className="pk-game-column-tags">
+                {column.games.map((game) => (
+                  <GameKeyTag
                     key={game.k}
-                    type="button"
-                    className={active ? "pk-assign-game is-selected" : "pk-assign-game"}
-                    aria-pressed={active}
+                    gameKey={game.k}
+                    pressed={game.k === selected}
                     onClick={() => setSelected(game.k)}
-                  >
-                    <GameKeyTag gameKey={game.k} />
-                  </button>
-                );
-              })}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
       {combines ? (
         <p className="pk-assign-note">This Pokémon is already recorded in {gameLabel(selected)}. Both marks stay together.</p>
       ) : null}

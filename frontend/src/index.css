@@ -1289,20 +1289,6 @@
   margin-top: var(--space-3);
 }
 
-.pk-assign-game {
-  appearance: none;
-  margin: 0;
-  padding: 2px;
-  border: 2px solid transparent;
-  background: transparent;
-  cursor: pointer;
-  line-height: 0;
-}
-
-.pk-assign-game.is-selected {
-  border-color: var(--color-neutral-800);
-}
-
 .pk-assign-note {
   margin: 0;
   font-size: 13px;
@@ -1311,7 +1297,25 @@
 }
 
 .pk-assign-columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-5) var(--space-6);
   margin-top: var(--space-2);
+}
+
+.pk-assign-columns .pk-game-column {
+  flex: 0 1 auto;
+  min-width: max-content;
+}
+
+.pk-assign-columns .pk-game-tag {
+  white-space: nowrap;
+}
+
+.pk-assign-columns button.pk-game-tag.is-selected {
+  outline: 2px solid var(--color-neutral-800);
+  outline-offset: 2px;
 }
 
 .pk-mon-games + .pk-toggles,
@@ -1738,12 +1742,14 @@
   align-items: center;
   padding: 4px 8px;
   width: fit-content;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 button.pk-game-tag {
   appearance: none;
   font-family: inherit;
-  line-height: inherit;
+  line-height: 1.2;
   cursor: pointer;
 }
 

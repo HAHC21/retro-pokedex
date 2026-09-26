@@ -103,6 +103,8 @@ export function PokemonCard({
       <AssignGameDialog
         open={assignFrom != null}
         name={name}
+        pokemonId={id}
+        resourceId={spriteId ?? id}
         fromGame={assignFrom}
         recordedGames={games}
         onClose={() => setAssignFrom(null)}

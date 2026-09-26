@@ -2,6 +2,47 @@
 
 All notable changes to Retro Pokédex, taken from the versioned commits on `main`. v0.5 is the first release. Dates are the commit dates.
 
+## [0.7.7] - 2026-09-26
+
+### Added
+
+- The move-game dialog lists only saves where that Pokémon can be caught, received, or evolved without a trade. `catchableGameKeys` keeps wild, starter, gift, static, snag, and event. A trade encounter or a trade evolution is left out. A regional-dex row still counts when encounter data is missing. Expansion versions map back onto Sword / Shield and Scarlet / Violet. Global Collection and the game the mark is already in stay listed.
+- Checklist method text names a rod or field move when every wild encounter in that game needs one. `_wild_label` covers Old Rod, Good Rod, Super Rod, Rock Smash, Headbutt, Surf, Dive, and the other tool methods. Walking, rustling grass, and flower spots stay “Wild Encounter.”
+- Evolution lines state every requirement. `_cond_text` includes high friendship, affection, time of day, location, a known move, and a known move type. Sylveon uses the friendship method that also requires a Fairy-type move.
+- `.cursor/commands/changelog.md`, a repo command that updates the changelogs from version diffs.
+
+### Changed
+
+- Move-dialog choices are the same game tags as on a card. Long names stay on one line, and the selected tag uses an outline. The `.pk-assign-game` wrapper is gone.
+- `acquisition()` builds method text from cached encounters, so a stored `pokemon_acquisition` row does not hide the new labels. The frontend cache key is `v4`.
+- A species page reads evolution steps from the evolution collection via `_attach_evolution`.
+
+## [0.7.6.1] - 2026-09-25
+
+### Added
+
+- Open tabs reload when a newer UI or API is deployed. The page checks on load, when the tab is focused, and about once a minute.
+- The UI publishes its build id at `/version.json`. Dev uses the newest public changelog version. A production build appends its own id. `VITE_APP_VERSION` overrides that id.
+- `GET /api/version` returns the API release id with `Cache-Control: no-store`. `APP_VERSION` wins, then `COMMIT_HASH`, then `backend/app/VERSION`.
+- On App Platform, set `APP_VERSION` to `${_self.COMMIT_HASH}` on the API component so an API deploy refreshes open tabs.
+
+## [0.7.6] - 2026-09-25
+
+### Added
+
+- Variants are tracked apart from alternate forms. A flower color such as Blue Floette is a variant. A form that plays differently, such as Eternal Floette, stays an alternate form. Each catchable one is marked on its own.
+- `app.catalog.game_availability` lists the games a species or form can be met in, and how (wild, gift, event, Pokédex). A DLC dex stays on its own versions. Mega Evolution and Gigantamax list only the games where that mechanic exists for the species.
+- On a Pokédex card, the game tag can move a mark, including shiny and gender, to another save without changing the game selector.
+- Dashboard search. Two or more characters of a name, or a National Dex number, returns species, alternate forms, and variants.
+- A roadmap page for Switch box screenshots, region maps still to draw, and Terastallization, linked from the footer.
+- `docs/competitor_gaps.md`, an internal list of living-dex features this site does not have yet.
+
+### Changed
+
+- Caught forms show a colored Poké Ball on the evolution line and on each catchable form. Last caught keeps that form’s name and sprite.
+- `scripts.set_capture` also inserts own-id variant rows (Eternal Floette, Rotom appliances, and the like). Shared forms such as Floette’s flower colors are not rows.
+- Local Docker ports are 5110 for the API, 5120 for the UI, and 5130 for the dashboard.
+
 ## [0.7.5] - 2026-09-24
 
 ### Changed

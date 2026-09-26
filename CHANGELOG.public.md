@@ -2,6 +2,26 @@
 
 Updates you can see in Retro Pokédex. Releases that only changed hosting, search listings, or internal data are left out.
 
+## 0.7.7 — September 26, 2026
+
+- The move dialog lists games where that Pokémon can be caught, received, or evolved without a trade. Clawitzer offers X / Y, Ultra Sun / Ultra Moon, Sword / Shield, and Scarlet / Violet. A trade evolution such as Alakazam stays off games where trading is the only way.
+- Those choices use the same game tags as the card. A long name such as Omega Ruby / Alpha Sapphire stays on one line.
+- When the only way to find a Pokémon in the wild is a rod or a field move, the checklist says so. Magikarp in Red and Blue is fishing with an Old Rod and a Super Rod. Shuckle in Gold and Silver is using Rock Smash. A Pokémon you can also walk into still says Wild Encounter.
+- An evolution line states every requirement. Sylveon is level up with high friendship and while knowing a Fairy-type move. Espeon adds during the day, and Umbreon adds at night.
+
+## 0.7.6 — September 25, 2026
+
+- Flower colors such as Blue Floette are Variants. Forms that play differently, such as Eternal Floette, stay under Alternate forms. Each one you can catch is marked on its own.
+- The evolution line and each catchable form show a colored Poké Ball once you have marked it caught.
+- The Games box lists where the form you are viewing can be found, and how you get it, such as Wild, Gift, Event, or Pokédex. Expansions such as the Teal Mask, the Indigo Disk, the Isle of Armor, and the Crown Tundra are listed on their own.
+- On a Pokédex card, click the game tag to move that mark to another save.
+- Last caught keeps a variant’s name and sprite. Blue Floette opens that form’s page.
+- Search from the dashboard with at least two characters of a name or a National Dex number.
+
+## 0.7.5 — September 25, 2026
+
+- The roadmap lists Switch box screenshots, the region maps still to draw, and Terastallization. Open it from the footer.
+
 ## 0.7.4 — September 24, 2026
 
 - Fossil Pokémon have a bronze border, and starters have a gray one. The name and Pokédex number use that same color.

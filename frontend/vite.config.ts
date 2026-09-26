@@ -13,6 +13,14 @@ declare module "node:fs" {
 
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8000";
 
+function readFileVersion(): string {
+  try {
+    return readFileSync(`${process.cwd()}/VERSION`, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
 function readChangelogVersion(): string {
   const source = readFileSync(`${process.cwd()}/src/changelog.ts`, "utf8");
   const match = source.match(/export const CHANGELOG[\s\S]*?\bversion:\s*"([^"]+)"/);
@@ -29,7 +37,7 @@ function shippedFrontendVersion(command: "build" | "serve"): string {
     return shippedVersion;
   }
   const override = process.env.VITE_APP_VERSION?.trim();
-  const release = override || readChangelogVersion();
+  const release = override || readFileVersion() || readChangelogVersion();
   shippedVersion = command === "build" && !override ? `${release}.${Date.now().toString(36)}` : release;
   return shippedVersion;
 }

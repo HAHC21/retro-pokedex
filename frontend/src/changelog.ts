@@ -11,8 +11,32 @@ export type ChangelogRelease = {
   features: ChangelogFeature[];
 };
 
-/** Newest release first. That version is the shipped UI id, unless VITE_APP_VERSION is set at build time. */
+/** Newest player-visible release first. The shipped UI id is frontend/VERSION. */
 export const CHANGELOG: ChangelogRelease[] = [
+  {
+    version: "0.7.7",
+    date: "Sep 26, 2026",
+    title: "Checklist Improvements",
+    intro: "The move dialog, the checklist, and evolution lines say how a Pokémon is actually obtained.",
+    features: [
+      {
+        title: "Games you can get it in",
+        body: "The move dialog lists only games where that Pokémon can be caught, received, or evolved without a trade. Global Collection stays. Clawitzer offers X / Y, Ultra Sun / Ultra Moon, Sword / Shield, and Scarlet / Violet. A trade evolution such as Alakazam stays off games where trading is the only way.",
+      },
+      {
+        title: "Tags that fit the name",
+        body: "The games in that dialog use the same tags as the card. A long name such as Omega Ruby / Alpha Sapphire stays on one line.",
+      },
+      {
+        title: "Rods and field moves on the checklist",
+        body: "When the only way to find a Pokémon in the wild is a rod or a field move, the checklist names it. Magikarp in Red and Blue is fishing with an Old Rod and a Super Rod. Shuckle in Gold and Silver is using Rock Smash. A Pokémon you can also walk into still says Wild Encounter.",
+      },
+      {
+        title: "Every evolution requirement",
+        body: "An evolution line states every requirement. Sylveon is level up with high friendship and while knowing a Fairy-type move. Espeon adds during the day, and Umbreon adds at night.",
+      },
+    ],
+  },
   {
     version: "0.7.6",
     date: "Sep 25, 2026",

@@ -15,7 +15,15 @@ export function GameTag({ versionKey, label }: GameTagProps) {
   );
 }
 
-export function GameKeyTag({ gameKey, onClick }: { gameKey: string; onClick?: () => void }) {
+export function GameKeyTag({
+  gameKey,
+  onClick,
+  pressed,
+}: {
+  gameKey: string;
+  onClick?: () => void;
+  pressed?: boolean;
+}) {
   const versions = versionsForGame(gameKey);
   const versionKey = versions?.[0] || gameKey;
   const label = gameLabel(gameKey);
@@ -26,9 +34,10 @@ export function GameKeyTag({ gameKey, onClick }: { gameKey: string; onClick?: ()
   return (
     <button
       type="button"
-      className={`tag pk-game-tag${style ? "" : " tag-outline"}`}
+      className={`tag pk-game-tag${pressed ? " is-selected" : ""}${style ? "" : " tag-outline"}`}
       style={style}
-      aria-label={`Change recorded game from ${label}`}
+      aria-label={pressed === undefined ? `Change recorded game from ${label}` : label}
+      aria-pressed={pressed}
       onClick={onClick}
     >
       {label}
