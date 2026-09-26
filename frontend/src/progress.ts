@@ -1,6 +1,6 @@
 import { GAMES, PROG_KEY } from "./catalog";
 import { localizedGame } from "./i18n/labels";
-import { markKey, type SpeciesForm } from "./forms";
+import { formIsCapturable, markKey, parseMarkKey, type SpeciesForm } from "./forms";
 import type { MarkEntry, MarkKey, Progress } from "./types";
 
 export type GenderChoice = "male" | "female";
@@ -157,6 +157,32 @@ export function toggleGenderMark(
   }
   const field = GENDER_FIELD[key][gender];
   return patchMark(prog, game, id, { [field]: !entry[field] }, form);
+}
+
+/** Every capturable form the trainer has marked, across all saves. */
+export function ownedMarks(prog: Progress) {
+  const keys = new Set<string>();
+  Object.values(prog).forEach((game) => {
+    Object.entries(game).forEach(([raw, entry]) => {
+      if (!entry.caught && !entry.shiny) {
+        return;
+      }
+      const parsed = parseMarkKey(raw);
+      if (!parsed || !formIsCapturable(parsed.form)) {
+        return;
+      }
+      keys.add(markKey(parsed.id, parsed.form));
+    });
+  });
+  return [...keys]
+    .map((key) => {
+      const parsed = parseMarkKey(key);
+      if (!parsed) {
+        return null;
+      }
+      return { id: parsed.id, form: parsed.form, ...unionFor(prog, parsed.id, parsed.form) };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null);
 }
 
 export function unionSets(prog: Progress) {

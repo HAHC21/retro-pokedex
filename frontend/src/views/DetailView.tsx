@@ -117,7 +117,7 @@ export function DetailView({
     <div className="pk-page pk-detail">
       <div className="pk-detail-actions">
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onBack}>
-          ← {fill(m.detail.back, { view: listView === "checklist" ? m.nav.checklist : m.nav.pokedex })}
+          ← {fill(m.detail.back, { view: listView === "checklist" ? m.nav.checklist : listView === "collection" ? m.nav.collection : m.nav.pokedex })}
         </button>
         <button type="button" className="btn pk-nav" style={navStyle} onClick={onPrev}>
           ← {dexNum(prevId)} {names[prevId] || ""}

@@ -1,6 +1,10 @@
+type BallKind = "poke" | "ultra";
+
 type PokeBallIconProps = {
   caught: boolean;
   size?: number;
+  kind?: BallKind;
+  label?: string;
 };
 
 type Pixel = [number, number];
@@ -73,15 +77,29 @@ const PALETTES = {
     button: "#ffffff",
     buttonRing: "#1a1a1a",
   },
+  ultra: {
+    outline: "#1a1a1a",
+    top: "#2b2b2b",
+    bottom: "#ffffff",
+    band: "#e6c31a",
+    button: "#ffffff",
+    buttonRing: "#1a1a1a",
+  },
 } as const;
+
+const ULTRA_MARK: Pixel[] = [
+  [4, 3], [5, 3], [6, 3], [9, 3], [10, 3], [11, 3],
+  [4, 4], [7, 4], [8, 4], [11, 4],
+  [4, 5], [5, 5], [6, 5], [9, 5], [10, 5], [11, 5],
+];
 
 function pixels(list: Pixel[], fill: string, key: string) {
   return list.map(([x, y]) => <rect key={`${key}-${x}-${y}`} x={x} y={y} width={1} height={1} fill={fill} />);
 }
 
-/** Pixel-art Poké Ball — gray when uncaught, classic colors when caught. */
-export function PokeBallIcon({ caught, size = 20 }: PokeBallIconProps) {
-  const colors = PALETTES[caught ? "poke" : "uncaught"];
+/** Pixel-art Poké Ball — gray when uncaught, classic colors when caught. Ultra Ball marks an uploaded specimen. */
+export function PokeBallIcon({ caught, size = 20, kind = "poke", label }: PokeBallIconProps) {
+  const colors = kind === "ultra" ? PALETTES.ultra : PALETTES[caught ? "poke" : "uncaught"];
 
   return (
     <svg
@@ -91,10 +109,13 @@ export function PokeBallIcon({ caught, size = 20 }: PokeBallIconProps) {
       viewBox="0 0 16 16"
       shapeRendering="crispEdges"
       preserveAspectRatio="xMidYMid meet"
-      aria-hidden="true"
+      aria-hidden={label ? undefined : true}
+      aria-label={label}
+      role={label ? "img" : undefined}
       focusable="false"
     >
       {pixels(TOP_FILL, colors.top, "t")}
+      {kind === "ultra" ? pixels(ULTRA_MARK, colors.band, "mark") : null}
       {pixels(BOTTOM_FILL, colors.bottom, "b")}
       {pixels(BAND, colors.band, "band")}
       {pixels(BUTTON_RING, colors.buttonRing, "ring")}

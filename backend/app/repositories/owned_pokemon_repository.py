@@ -182,6 +182,24 @@ class OwnedPokemonRepository:
         )
         return [self._to_owned(doc) for doc in docs]
 
+    def list_owned_index(self, user_id: str, *, limit: int = 5000) -> list[dict[str, Any]]:
+        docs = (
+            OwnedPokemonDocument.objects(user_id=user_id)
+            .only("pokemon_id", "species_slug", "form_slug", "source_type")
+            .limit(max(1, min(limit, 8000)))
+        )
+        rows: list[dict[str, Any]] = []
+        for doc in docs:
+            rows.append(
+                {
+                    "pokemon_id": int(doc.pokemon_id),
+                    "species_slug": doc.species_slug,
+                    "form_slug": doc.form_slug,
+                    "source_type": doc.source_type or "manual",
+                }
+            )
+        return rows
+
     def get_owned(self, owned_id: str) -> OwnedPokemon | None:
         doc = OwnedPokemonDocument.objects(owned_id=owned_id).first()
         return self._to_owned(doc) if doc else None

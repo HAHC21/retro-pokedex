@@ -209,6 +209,17 @@ class OwnedPokemonListRead(BaseModel):
     collected_natures: list[str] = Field(default_factory=list)
 
 
+class OwnedIndexItem(BaseModel):
+    pokemon_id: int
+    species_slug: str | None = None
+    form_slug: str | None = None
+    source_type: str = "manual"
+
+
+class OwnedIndexRead(BaseModel):
+    items: list[OwnedIndexItem] = Field(default_factory=list)
+
+
 class OwnedPokemonBatchWrite(BaseModel):
     items: list[dict[str, Any]] = Field(min_length=1, max_length=2000)
     filename: str | None = None

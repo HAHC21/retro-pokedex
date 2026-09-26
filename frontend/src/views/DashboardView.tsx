@@ -8,7 +8,7 @@ import { LanguagePrompt } from "../components/LanguagePrompt";
 import { REGIONS, genById } from "../catalog";
 import { filterDexIds } from "../dexList";
 import { dexNum } from "../format";
-import { formDisplayName, formListOf, formStorageKey, formsEqual, parseMarkKey, type FormList, type SpeciesForm } from "../forms";
+import { formDisplayName, formListOf, formSpriteRef, formStorageKey, formsEqual, parseMarkKey, type FormList, type SpeciesForm } from "../forms";
 import { useI18n } from "../i18n/context";
 import { formListCopy, localizedRegion, localizedRegionGames, notInGame } from "../i18n/labels";
 import type { CatalogForm } from "../pokeapi";
@@ -16,26 +16,6 @@ import { gameLabel, unionFor, unionSets } from "../progress";
 import type { DexIndex, MarkKey, Progress } from "../types";
 
 const MIN_SEARCH_LENGTH = 2;
-
-function recentSprite(
-  id: number,
-  form: SpeciesForm | null,
-  catalog: CatalogForm | undefined,
-): { pokemonId: number; formName: string | null } {
-  if (form?.kind === "variant" && form.name) {
-    if (catalog && !catalog.spriteForm && catalog.resourceId !== id) {
-      return { pokemonId: catalog.resourceId, formName: null };
-    }
-    return { pokemonId: id, formName: catalog?.spriteForm || form.name };
-  }
-  if (catalog) {
-    return {
-      pokemonId: catalog.spriteForm ? id : catalog.resourceId,
-      formName: catalog.spriteForm,
-    };
-  }
-  return { pokemonId: id, formName: null };
-}
 
 type OriginBox = {
   key: string;
@@ -147,7 +127,7 @@ export function DashboardView({
       : undefined;
     const species = index.names[item.id] || fill(m.dash.numberFallback, { id: item.id });
     const name = item.form ? formDisplayName(species, item.form) : species;
-    return { item, name, sprite: recentSprite(item.id, item.form, catalog), catalog };
+    return { item, name, sprite: formSpriteRef(item.id, item.form, catalog), catalog };
   });
   const needle = query.trim();
   const searching = needle.length >= MIN_SEARCH_LENGTH;

@@ -244,6 +244,27 @@ export function formsEqual(a: SpeciesForm | null | undefined, b: SpeciesForm | n
   return a.kind === b.kind && a.name === b.name;
 }
 
+/** Sprite for a catalog form: own-id varieties use resourceId; cosmetic variants keep the species sprite. */
+export function formSpriteRef(
+  pokedexId: number,
+  form: SpeciesForm | null,
+  catalog: { resourceId: number; spriteForm: string | null } | undefined,
+): { pokemonId: number; formName: string | null } {
+  if (form?.kind === "variant" && form.name) {
+    if (catalog && !catalog.spriteForm && catalog.resourceId !== pokedexId) {
+      return { pokemonId: catalog.resourceId, formName: null };
+    }
+    return { pokemonId: pokedexId, formName: catalog?.spriteForm || form.name };
+  }
+  if (catalog) {
+    return {
+      pokemonId: catalog.spriteForm ? pokedexId : catalog.resourceId,
+      formName: catalog.spriteForm,
+    };
+  }
+  return { pokemonId: pokedexId, formName: form?.kind === "variant" ? form.name : null };
+}
+
 export function formDisplayName(speciesName: string, form: SpeciesForm): string {
   const copy = getMessages().forms;
   if (form.kind === "gmax") {

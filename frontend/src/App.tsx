@@ -22,8 +22,9 @@ import { idFromUrl } from "./format";
 import { formFromVarietySlug, formStorageKey, formsEqual, type FormList, type SpeciesForm } from "./forms";
 import { buildAppPath, parseAppPath, saveDexPrefs, loadDexPrefs, loadListView, saveListView, type DetailSection, type ListView } from "./paths";
 import { entryFor, loadProgress, mergeProgress, moveMark, saveProgress, clearProgress, isProgressEmpty, toggleGenderMark, toggleMark, type GenderChoice } from "./progress";
-import type { DexIndex, DexScope, MarkKey, MonPayload, Progress, StatusFilter } from "./types";
+import type { CollectionFilter, DexIndex, DexScope, MarkKey, MonPayload, Progress, StatusFilter } from "./types";
 import { AuthView } from "./views/AuthView";
+import { CollectionView } from "./views/CollectionView";
 import { DashboardView } from "./views/DashboardView";
 import { ChecklistView } from "./views/ChecklistView";
 import { DexView } from "./views/DexView";
@@ -69,19 +70,23 @@ type ListContext = {
   formList: FormList | null;
   q: string;
   status: StatusFilter;
+  collectionFilter: CollectionFilter;
+  originRegion: string | null;
 };
 
 function initialList(pathname: string): ListContext {
   const parsed = parseAppPath(pathname);
   const prefs = loadDexPrefs(parsed.game);
-  const onList = parsed.view === "dex" || parsed.view === "checklist";
+  const onList = parsed.view === "dex" || parsed.view === "checklist" || parsed.view === "collection";
   return {
     gen: onList ? parsed.gen : (prefs?.gen ?? 1),
-    region: onList ? parsed.region : null,
+    region: onList && parsed.view !== "collection" ? parsed.region : null,
     scope: parsed.region ? "generation" : (prefs?.scope ?? "national"),
     formList: onList ? parsed.formList : null,
     q: "",
     status: "all",
+    collectionFilter: "all",
+    originRegion: null,
   };
 }
 
@@ -116,7 +121,7 @@ export default function App() {
 
   const { view, game, id, form, section } = route;
   const [list, setList] = useState<ListContext>(() => initialList(location.pathname));
-  const { gen, region, q, status, scope, formList } = list;
+  const { gen, region, q, status, scope, formList, collectionFilter, originRegion } = list;
 
   useEffect(() => {
     if (view !== "dex" && view !== "checklist") {
@@ -138,7 +143,7 @@ export default function App() {
     if (view === "dex" || view === "checklist" || view === "mon") {
       saveDexPrefs(game, gen, scope);
     }
-    if (view === "dex" || view === "checklist") {
+    if (view === "dex" || view === "checklist" || view === "collection") {
       saveListView(view);
       setListView(view);
     }
@@ -527,6 +532,10 @@ export default function App() {
       go({ view: "checklist", game: gameKey, gen: next.gen });
       return;
     }
+    if (view === "collection") {
+      go({ view: "collection", game: gameKey });
+      return;
+    }
     go({ view: "dash", game: gameKey, gen: next.gen });
   }
 
@@ -562,7 +571,7 @@ export default function App() {
       onGame={selectGame}
       onDash={goDash}
       onDex={() => {
-        if (view === "checklist" || view === "mon") {
+        if (view === "checklist" || view === "collection" || view === "mon") {
           setList((prev) => ({ ...prev, status: prev.status === "exclusives" ? "all" : prev.status }));
           go({ view: "dex", game, gen, region });
           return;
@@ -571,8 +580,12 @@ export default function App() {
         setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope, q: "", status: "all" }));
         go({ view: "dex", game, gen: next.gen });
       }}
+      onCollection={() => {
+        setList((prev) => ({ ...prev, q: "", collectionFilter: "all", originRegion: null }));
+        go({ view: "collection", game });
+      }}
       onChecklist={() => {
-        if (view === "dex" || view === "mon") {
+        if (view === "dex" || view === "collection" || view === "mon") {
           go({ view: "checklist", game, gen, region });
           return;
         }
@@ -663,6 +676,36 @@ export default function App() {
             setList((prev) => ({ ...prev, gen: next.gen, region: null, formList: null, scope: next.scope }));
             go({ view: "dex", game, gen: next.gen });
           }}
+          onOpen={open}
+          onOpenForm={openForm}
+          onToggleCaught={(pokemonId) => {
+            void toggle(pokemonId, "caught");
+          }}
+          onToggleShiny={(pokemonId) => {
+            void toggle(pokemonId, "shiny");
+          }}
+          onToggleForm={(pokemonId, nextForm, key) => {
+            void toggle(pokemonId, key, nextForm);
+          }}
+          onMoveGame={(pokemonId, nextForm, fromGame, toGame) => {
+            moveCaughtGame(pokemonId, nextForm, fromGame, toGame);
+          }}
+        />
+      ) : null}
+      {view === "collection" ? (
+        <CollectionView
+          index={index}
+          indexLoading={indexLoading}
+          prog={prog}
+          game={game}
+          q={q}
+          filter={collectionFilter}
+          originRegion={originRegion}
+          signedIn={!!authUser}
+          forms={forms}
+          onQuery={(nextQ) => setList((prev) => ({ ...prev, q: nextQ }))}
+          onFilter={(nextFilter) => setList((prev) => ({ ...prev, collectionFilter: nextFilter }))}
+          onOriginRegion={(slug) => setList((prev) => ({ ...prev, originRegion: slug }))}
           onOpen={open}
           onOpenForm={openForm}
           onToggleCaught={(pokemonId) => {

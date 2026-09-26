@@ -14,6 +14,38 @@ export type ChangelogRelease = {
 /** Newest player-visible release first. The shipped UI id is frontend/VERSION. */
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: "0.7.9",
+    date: "Sep 26, 2026",
+    title: "My Collection",
+    intro: "A grid of every Pokémon you have marked, from every save, with region and form filters.",
+    features: [
+      {
+        title: "My Collection in the header",
+        body: "My Collection is in the header, between Pokédex and Checklist. It lists every Pokémon you have marked caught or shiny, from every save. Mega Evolutions and Gigantamax stay off the list. The game selector is hidden here.",
+      },
+      {
+        title: "Filter by origin",
+        body: "The region list filters by origin. Alolan Vulpix counts for Alola, not Kanto. Search by name or National Dex number.",
+      },
+      {
+        title: "Normal, Shiny, forms, and variants",
+        body: "Filter All, Normal, Shiny, Alternate Forms, or Variants. Alolan Vulpix is an alternate form. Blue Floette is a variant.",
+      },
+      {
+        title: "An Ultra Ball for a specimen",
+        body: "An Ultra Ball on a card means a specimen has been uploaded for that Pokémon. An uploaded specimen can show up even if you have not marked it caught.",
+      },
+      {
+        title: "No corner mark labels",
+        body: "Pokédex cards no longer show NORMAL or SHINY in the corner. The catch and shiny buttons are still there.",
+      },
+      {
+        title: "Collection off the roadmap",
+        body: "The roadmap no longer lists Your collection.",
+      },
+    ],
+  },
+  {
     version: "0.7.8",
     date: "Sep 26, 2026",
     title: "English and Spanish",

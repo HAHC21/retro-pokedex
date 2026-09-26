@@ -1,6 +1,6 @@
 import { GAMES, clampGen, gameByKey, regionBySlug } from "./catalog";
 import { formPath, isFormKind, isFormList, type FormList, type SpeciesForm } from "./forms";
-import type { DexScope, StatusFilter, View } from "./types";
+import type { CollectionFilter, DexScope, StatusFilter, View } from "./types";
 
 export type DetailSection = "home" | "spawns" | "specimens" | "moves";
 
@@ -26,6 +26,8 @@ export type AppPath = {
   q: string;
   status: StatusFilter;
   scope: DexScope;
+  collectionFilter: CollectionFilter;
+  originRegion: string | null;
 };
 
 const DEFAULT_PATH: AppPath = {
@@ -40,16 +42,22 @@ const DEFAULT_PATH: AppPath = {
   q: "",
   status: "all",
   scope: "national",
+  collectionFilter: "all",
+  originRegion: null,
 };
 
 const DEX_PREFS_KEY = "pk-dex-prefs";
 const LIST_VIEW_KEY = "pk-list-view";
 
-export type ListView = "dex" | "checklist";
+export type ListView = "dex" | "checklist" | "collection";
 
 export function loadListView(): ListView {
   try {
-    return localStorage.getItem(LIST_VIEW_KEY) === "checklist" ? "checklist" : "dex";
+    const stored = localStorage.getItem(LIST_VIEW_KEY);
+    if (stored === "checklist" || stored === "collection") {
+      return stored;
+    }
+    return "dex";
   } catch {
     return "dex";
   }
@@ -179,6 +187,14 @@ export function parseAppPath(pathname: string, _search = ""): AppPath {
     };
   }
 
+  if (parts[1] === "collection") {
+    return {
+      ...DEFAULT_PATH,
+      view: "collection",
+      game,
+    };
+  }
+
   if (parts[1] === "dex" || parts[1] === "checklist") {
     const listView = parts[1] === "checklist" ? "checklist" : "dex";
     if (listView === "dex" && parts[2] === "forms" && isFormList(parts[3])) {
@@ -257,6 +273,10 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
     return `/${game}`;
   }
   const region = regionBySlug(path.region)?.slug ?? null;
+
+  if (path.view === "collection") {
+    return `/${game}/collection`;
+  }
 
   if (path.view === "dex" || path.view === "checklist") {
     if (path.view === "dex" && path.formList && isFormList(path.formList)) {

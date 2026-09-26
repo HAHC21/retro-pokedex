@@ -566,11 +566,8 @@
   background: transparent;
 }
 
-.pk-mon-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+.pk-region-field {
+  min-width: 160px;
 }
 
 .pk-dex-num,
@@ -821,7 +818,9 @@
   z-index: 45;
   top: calc(100% + 8px);
   left: 0;
+  box-sizing: border-box;
   width: min(18rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
   padding: var(--space-3);
   display: grid;
   gap: var(--space-2);
@@ -834,6 +833,7 @@
   text-transform: none;
   color: var(--color-neutral-800);
   text-align: left;
+  overflow-wrap: break-word;
 }
 
 .pk-info-tip-panel p,
@@ -867,6 +867,43 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-neutral-700);
+}
+
+.pk-collection-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.pk-collection-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  flex: 1 1 28rem;
+  min-width: 0;
+  max-width: 28rem;
+}
+
+.pk-collection-legend .pk-pokeball {
+  position: static;
+  top: auto;
+  right: auto;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.pk-dex-head .pk-collection-legend span {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .pk-grid {
@@ -3350,7 +3387,8 @@ button.pk-game-tag {
   .pk-dex .pk-field,
   .pk-dex .pk-search,
   .pk-dex .pk-scope-block,
-  .pk-dex .pk-scope-seg {
+  .pk-dex .pk-scope-seg,
+  .pk-dex .pk-region-field {
     width: 100%;
     min-width: 0;
     flex: none;

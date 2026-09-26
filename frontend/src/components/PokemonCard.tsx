@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { getMessages } from "../i18n/runtime";
 import { boxClass } from "../rarity";
 import type { SpeciesRarity } from "../types";
 import { AssignGameDialog } from "./AssignGameDialog";
@@ -7,6 +6,7 @@ import { Blueprint } from "./Blueprint";
 import { GameKeyTag } from "./GameTag";
 import { GenderSprites } from "./GenderSprites";
 import { MarkToggles } from "./MarkToggles";
+import { PokeBallIcon } from "./PokeBallIcon";
 import { PokemonSprite } from "./PokemonSprite";
 import { TypeTag } from "./TypeTag";
 
@@ -28,6 +28,9 @@ type PokemonCardProps = {
   formName?: string | null;
   capturable?: boolean;
   dimUncaught?: boolean;
+  markedStyle?: boolean;
+  hasSpecimen?: boolean;
+  specimenLabel?: string;
   unavailableLabel: string;
   onOpen: () => void;
   onToggleCaught: () => void;
@@ -53,6 +56,9 @@ export function PokemonCard({
   formName = null,
   capturable = true,
   dimUncaught = true,
+  markedStyle = true,
+  hasSpecimen = false,
+  specimenLabel,
   unavailableLabel,
   onOpen,
   onToggleCaught,
@@ -60,20 +66,15 @@ export function PokemonCard({
   onMoveGame,
 }: PokemonCardProps) {
   const [assignFrom, setAssignFrom] = useState<string | null>(null);
-  const marks = getMessages().marks;
   const marked = capturable && (caught || shiny);
   const bothGenders = caughtMale && caughtFemale;
   const spriteClass = !capturable || marked || !dimUncaught ? "pk-mon-sprite" : "pk-mon-sprite is-dim";
   return (
-    <Blueprint className={boxClass("pk-mon", marked, rarity)}>
+    <Blueprint className={boxClass("pk-mon", markedStyle && marked, rarity)}>
       <button type="button" className="pk-nav pk-mon-open" onClick={onOpen}>
         <span className="pk-mon-top">
           <span>{numberLabel}</span>
-          {capturable ? (
-            <span className="pk-mon-mark">
-              {caught && shiny ? marks.both : shiny ? marks.shinyOnly : caught ? marks.normalOnly : ""}
-            </span>
-          ) : null}
+          {hasSpecimen ? <PokeBallIcon caught kind="ultra" size={16} label={specimenLabel} /> : null}
         </span>
         {spriteId != null ? (
           <PokemonSprite pokemonId={spriteId} formName={formName} alt={name} loading="lazy" className={spriteClass} />

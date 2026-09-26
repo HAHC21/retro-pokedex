@@ -122,20 +122,6 @@ export const ROADMAP: RoadmapSection[] = [
     ],
   },
   {
-    id: "collection",
-    kicker: "Planned",
-    title: "Your collection",
-    intro:
-      "A grid of the catchable Pokémon you have marked caught, in the same card layout as the Pokédex. Mega Evolutions and Gigantamax stay off this grid.",
-    features: [
-      {
-        title: "Search, and nothing else yet",
-        status: "planned",
-        body: "The only control is the search bar. The rest of the Pokédex filters stay off this view for now.",
-      },
-    ],
-  },
-  {
     id: "retro",
     kicker: "Planned",
     title: "The retro calendar",

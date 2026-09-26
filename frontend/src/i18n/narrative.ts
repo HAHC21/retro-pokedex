@@ -17,6 +17,36 @@ type ReleaseCopy = {
 };
 
 const CHANGELOG_ES: Record<string, ReleaseCopy> = {
+  "0.7.9": {
+    title: "Mi colección",
+    intro: "Una cuadrícula de cada Pokémon que has marcado, de todas las partidas, con filtros de región y de forma.",
+    features: [
+      {
+        title: "Mi colección en la cabecera",
+        body: "Mi colección está en la cabecera, entre Pokédex y Lista de chequeo. Lista cada Pokémon que hayas marcado capturado o variocolor, de todas las partidas. Las megaevoluciones y Gigamax no salen. El selector de juego se oculta aquí.",
+      },
+      {
+        title: "Filtrar por origen",
+        body: "La lista de regiones filtra por origen. Vulpix de Alola cuenta para Alola, no para Kanto. Busca por nombre o número de la Pokédex Nacional.",
+      },
+      {
+        title: "Normal, Variocolor, formas y variantes",
+        body: "Filtra Todos, Normal, Variocolor, Formas alternativas o Variantes. Vulpix de Alola es una forma alternativa. Floette azul es una variante.",
+      },
+      {
+        title: "Una Ultraball por un espécimen",
+        body: "Una Ultraball en una carta significa que se ha subido un espécimen de ese Pokémon. Un espécimen subido puede aparecer aunque no lo hayas marcado capturado.",
+      },
+      {
+        title: "Sin etiquetas en la esquina",
+        body: "Las cartas de la Pokédex ya no muestran NORMAL o VARIOCOLOR en la esquina. Los botones de capturado y variocolor siguen ahí.",
+      },
+      {
+        title: "La colección sale de la hoja de ruta",
+        body: "La hoja de ruta ya no lista Tu colección.",
+      },
+    ],
+  },
   "0.7.8": {
     title: "Inglés y español",
     intro: "El sitio puede mostrarse en español. Las etiquetas, los juegos y la página de un Pokémon siguen el idioma que elijas.",
@@ -473,16 +503,6 @@ const ROADMAP_ES: Record<string, ReleaseCopy & { kicker?: string }> = {
       {
         title: "Incursiones y Pokémon teracristalizados salvajes",
         body: "Las guaridas de incursión Tera y los encuentros salvajes teracristalizados listan la especie, las estrellas y el teratipo, igual que las apariciones salvajes ya listan una ruta.",
-      },
-    ],
-  },
-  collection: {
-    title: "Tu colección",
-    intro: "Una cuadrícula de los Pokémon capturables que has marcado como capturados, con el mismo diseño de fichas que la Pokédex. Las megaevoluciones y Gigamax se quedan fuera.",
-    features: [
-      {
-        title: "Búsqueda, y nada más por ahora",
-        body: "El único control es la barra de búsqueda. El resto de filtros de la Pokédex se queda fuera de esta vista por ahora.",
       },
     ],
   },

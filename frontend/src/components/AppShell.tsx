@@ -18,6 +18,7 @@ type AppShellProps = {
   onGame: (game: string) => void;
   onDash: () => void;
   onDex: () => void;
+  onCollection: () => void;
   onChecklist: () => void;
   listView?: ListView;
   onSignIn: () => void;
@@ -33,6 +34,7 @@ export function AppShell({
   onGame,
   onDash,
   onDex,
+  onCollection,
   onChecklist,
   listView = "dex",
   onSignIn,
@@ -41,9 +43,10 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const { locale, setLocale, messages: m } = useI18n();
-  const dexActive = view === "dex" || (view === "mon" && listView !== "checklist");
+  const dexActive = view === "dex" || (view === "mon" && listView === "dex");
+  const collectionActive = view === "collection" || (view === "mon" && listView === "collection");
   const checklistActive = view === "checklist" || (view === "mon" && listView === "checklist");
-  const showGamePicker = view !== "signin" && view !== "login" && view !== "changelog" && view !== "roadmap";
+  const showGamePicker = view !== "signin" && view !== "login" && view !== "changelog" && view !== "roadmap" && view !== "collection";
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -90,6 +93,9 @@ export function AppShell({
             </button>
             <button type="button" className="btn pk-nav" style={navBtnStyle(dexActive)} onClick={onDex}>
               {m.nav.pokedex}
+            </button>
+            <button type="button" className="btn pk-nav" style={navBtnStyle(collectionActive)} onClick={onCollection}>
+              {m.nav.collection}
             </button>
             <button type="button" className="btn pk-nav" style={navBtnStyle(checklistActive)} onClick={onChecklist}>
               {m.nav.checklist}
@@ -146,6 +152,15 @@ export function AppShell({
                   onClick={() => go(onDex)}
                 >
                   {m.nav.pokedex}
+                </button>
+                <button
+                  type="button"
+                  className="btn pk-nav"
+                  role="menuitem"
+                  style={navBtnStyle(collectionActive)}
+                  onClick={() => go(onCollection)}
+                >
+                  {m.nav.collection}
                 </button>
                 <button
                   type="button"

@@ -9,6 +9,7 @@ export const es: Messages = {
   nav: {
     dashboard: "Inicio",
     pokedex: "Pokédex",
+    collection: "Mi colección",
     checklist: "Lista de chequeo",
     signIn: "Crear cuenta",
     logIn: "Entrar",
@@ -180,6 +181,27 @@ export const es: Messages = {
     exclusive: "Exclusivo de {game}",
     findingExclusives: "Buscando exclusivos de versión…",
     spawns: "Apariciones",
+  },
+  collection: {
+    title: "Mi colección",
+    meta: "{shown} de {total}",
+    region: "Región",
+    allRegions: "Todas las regiones",
+    about: "Sobre los filtros de colección",
+    aboutRegion:
+      "La lista de regiones filtra por origen. Una forma de Alola cuenta para Alola, no para la región de la especie base.",
+    which:
+      "Normal y Variocolor siguen tus marcas. Las formas alternativas son regionales y otras formas capturables con aspecto propio. Las variantes son aspectos extra, como el color de la flor de Florélia.",
+    all: "Todos",
+    normal: "Normal",
+    shiny: "Variocolor",
+    alternate: "Formas alternativas",
+    variants: "Variantes",
+    empty: "Aún no hay nada en tu colección. Marca un Pokémon como capturado o sube un espécimen.",
+    noResults: "No hay resultados con estos filtros",
+    loading: "Cargando la colección…",
+    specimen: "Espécimen subido",
+    specimenHint: "Una Ultraball significa que se ha subido un espécimen de ese Pokémon.",
   },
   detail: {
     loading: "Cargando ficha…",

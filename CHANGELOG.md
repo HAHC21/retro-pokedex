@@ -2,6 +2,28 @@
 
 All notable changes to Retro Pokédex, taken from the versioned commits on `main`. v0.5 is the first release. Dates are the commit dates.
 
+## [0.7.9] - 2026-09-26
+
+### Added
+
+- My Collection at `/{game}/collection`. `CollectionView` and `CollectionToolbar` list every capturable form marked caught or shiny on any save. Mega Evolution and Gigantamax stay off the grid. `ownedMarks` unions those marks. A signed-in trainer also sees rows from `GET /api/collection/owned/index`.
+- Header and phone menu: My Collection between Pokédex and Checklist. `ListView` includes `"collection"`. `pk-list-view` remembers it so Back on a species page returns to My Collection.
+- Region, search, and All / Normal / Shiny / Alternate Forms / Variants. `originRegionSlug` treats a regional form as that region (Alolan Vulpix is Alola). Alternate Forms are capturable non-cosmetic forms. Variants are cosmetic looks such as Floette’s flower colors.
+- An Ultra Ball on a collection card when an owned row has `source_type === "pk"`. `PokeBallIcon` accepts `kind: "ultra"`. The heading explains the icon.
+- `GET /api/collection/owned/index` (`owned_index`). `OwnedIndexItem` / `OwnedIndexRead` (`pokemon_id`, `species_slug`, `form_slug`, `source_type`). `OwnedPokemonService.list_index` and `OwnedPokemonRepository.list_owned_index` project those fields, default limit 5000, cap 8000. `fetchOwnedIndex` in `collectionApi.ts`.
+- `buildCollectionEntries`, `filterCollectionEntries`, `collectionHeadCopy`, and `collectionStatuses` in `collectionList.ts`. English and Spanish copy under `collection` and `nav.collection`.
+
+### Changed
+
+- The header game picker is hidden on Collection (`showGamePicker` excludes `view === "collection"`). Collection filter state stays in memory; the URL is only `/{game}/collection`.
+- `PokemonCard` no longer draws NORMAL / SHINY / NORMAL + SHINY in the corner. `hasSpecimen` can show the Ultra Ball instead. Collection cards use `dimUncaught={false}` and `markedStyle={false}`.
+- Last caught sprites go through `formSpriteRef` in `forms.ts`. A variant without catalog sprite data uses `form.name`.
+- The planned “Your collection” section is removed from `ROADMAP` and `ROADMAP_ES`.
+
+### Fixed
+
+- `InfoTip` `keepPanelInView` shifts the panel horizontally and flips it above the button when it would leave the viewport.
+
 ## [0.7.8] - 2026-09-26
 
 ### Added

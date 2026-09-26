@@ -23,7 +23,7 @@ export type DexIndex = {
   rarity: Record<number, SpeciesRarity>;
 };
 
-export type View = "dash" | "dex" | "checklist" | "mon" | "signin" | "login" | "changelog" | "roadmap";
+export type View = "dash" | "dex" | "checklist" | "collection" | "mon" | "signin" | "login" | "changelog" | "roadmap";
 
 export type StatusFilter =
   | "all"
@@ -33,6 +33,8 @@ export type StatusFilter =
   | "missing-shiny"
   | "normal"
   | "shiny";
+
+export type CollectionFilter = "all" | "normal" | "shiny" | "alternate" | "variants";
 
 export type DexScope = "regional" | "national" | "generation";
 

@@ -153,6 +153,29 @@ export type OwnedPokemonInput = {
   stats?: StatBlock | null;
 };
 
+export type OwnedIndexRow = {
+  pokemon_id: number;
+  species_slug?: string | null;
+  form_slug?: string | null;
+  source_type: string;
+};
+
+export async function fetchOwnedIndex(): Promise<OwnedIndexRow[] | null> {
+  try {
+    const response = await fetch(`${API}/owned/index`, { credentials: "include" });
+    if (response.status === 401) {
+      return null;
+    }
+    if (!response.ok) {
+      throw new Error("Could not load collection.");
+    }
+    const payload = (await response.json()) as { items?: OwnedIndexRow[] };
+    return payload.items || [];
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchOwnedPokemon(
   pokemonId: number,
   gameKey?: string,

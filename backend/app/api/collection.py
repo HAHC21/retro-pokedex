@@ -10,6 +10,7 @@ from app.domain.user import User
 from app.schemas.collection import (
     MarkEntryRead,
     MarkEntryWrite,
+    OwnedIndexRead,
     OwnedPokemonBatchRead,
     OwnedPokemonBatchWrite,
     OwnedPokemonListRead,
@@ -70,6 +71,15 @@ def upsert_mark(
         mark=body.model_dump(),
     )
     return MarkEntryRead(game=game, pokemon_id=pokemon_id, mark=mark)
+
+
+@router.get("/owned/index", response_model=OwnedIndexRead)
+def owned_index(
+    user: User = Depends(get_current_user),
+    service: OwnedPokemonService = Depends(get_owned_pokemon_service),
+) -> OwnedIndexRead:
+    rows = service.list_index(user.id)
+    return OwnedIndexRead(items=rows)
 
 
 @router.get("/owned", response_model=OwnedPokemonListRead)

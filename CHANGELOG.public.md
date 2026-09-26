@@ -2,6 +2,15 @@
 
 Updates you can see in Retro Pokédex. Releases that only changed hosting, search listings, or internal data are left out.
 
+## 0.7.9 — September 26, 2026
+
+- My Collection is in the header, between Pokédex and Checklist. It lists every Pokémon you have marked caught or shiny, from every save. Mega Evolutions and Gigantamax stay off the list. The game selector is hidden here.
+- Filter by origin region. Alolan Vulpix counts for Alola, not Kanto. Search by name or National Dex number.
+- Filter All, Normal, Shiny, Alternate Forms, or Variants. Alolan Vulpix is an alternate form. Blue Floette is a variant.
+- An Ultra Ball on a card means a specimen has been uploaded for that Pokémon. An uploaded specimen can show up even if you have not marked it caught.
+- Pokédex cards no longer show NORMAL or SHINY in the corner. The catch and shiny buttons are still there.
+- The roadmap no longer lists Your collection.
+
 ## 0.7.8 — September 26, 2026
 
 - Switch between English and Spanish with EN and ES in the header. The choice is still there the next time you open the site. On a phone, both languages are in the menu.

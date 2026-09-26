@@ -7,6 +7,7 @@ export const en = {
   nav: {
     dashboard: "Dashboard",
     pokedex: "Pokédex",
+    collection: "My Collection",
     checklist: "Checklist",
     signIn: "Sign In",
     logIn: "Log In",
@@ -178,6 +179,27 @@ export const en = {
     exclusive: "Exclusive to {game}",
     findingExclusives: "Finding version exclusives…",
     spawns: "Spawns",
+  },
+  collection: {
+    title: "My Collection",
+    meta: "{shown} of {total} shown",
+    region: "Region",
+    allRegions: "All regions",
+    about: "About collection filters",
+    aboutRegion:
+      "The region list filters by origin. An Alolan form counts for Alola, not the base species’ home region.",
+    which:
+      "Normal and Shiny follow your marks. Alternate Forms are regional forms and other catchable forms with their own look. Variants are extra appearances such as Floette’s flower colors.",
+    all: "All",
+    normal: "Normal",
+    shiny: "Shiny",
+    alternate: "Alternate Forms",
+    variants: "Variants",
+    empty: "Nothing in your collection yet. Mark a Pokémon caught or upload a specimen.",
+    noResults: "No results for these filters",
+    loading: "Loading collection…",
+    specimen: "Uploaded specimen",
+    specimenHint: "An Ultra Ball means a specimen has been uploaded for that Pokémon.",
   },
   detail: {
     loading: "Loading entry…",

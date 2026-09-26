@@ -119,6 +119,9 @@ class OwnedPokemonService:
     def list_for_species(self, user_id: str, pokemon_id: int, *, game_key: str | None = None) -> list[OwnedPokemon]:
         return self._owned.list_owned(user_id, pokemon_id=pokemon_id, game_key=game_key)
 
+    def list_index(self, user_id: str) -> list[dict[str, Any]]:
+        return self._owned.list_owned_index(user_id)
+
     def create(self, user_id: str, payload: dict[str, Any]) -> OwnedPokemon:
         now = datetime.now(timezone.utc)
         source_type = str(payload.get("source_type") or "manual").strip() or "manual"
