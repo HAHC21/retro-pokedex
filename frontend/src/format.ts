@@ -122,6 +122,10 @@ export function displayEvolutionCond(cond: string): string {
   if (holding) {
     return fill(evo.tradeHolding, { item: holding[1] });
   }
+  const tradeFor = /^Trade for (.+)$/.exec(cond);
+  if (tradeFor) {
+    return fill(evo.tradeFor, { species: tradeFor[1] });
+  }
   if (cond === "Trade") {
     return evo.trade;
   }
@@ -130,11 +134,21 @@ export function displayEvolutionCond(cond: string): string {
     .replace(/^Level up/, evo.levelUp)
     .split("with high friendship").join(evo.highFriendship)
     .split("with high affection").join(evo.highAffection)
+    .split("with high beauty").join(evo.highBeauty)
     .split("during the day").join(evo.duringDay)
     .split("at night").join(evo.atNight)
+    .split("in the rain").join(evo.inRain)
+    .split("if female").join(evo.ifFemale)
+    .split("if male").join(evo.ifMale)
+    .split("while the console is upside down").join(evo.consoleUpsideDown)
+    .split("when Attack is higher than Defense").join(evo.attackHigher)
+    .split("when Defense is higher than Attack").join(evo.defenseHigher)
+    .split("when Attack equals Defense").join(evo.attackEqualsDefense)
     .replace(/while holding ([^,]+)/g, (_match: string, item: string) => fill(evo.holding, { item: item.trim() }))
     .replace(/while knowing a ([^,]+)-type move/g, (_match: string, type: string) => fill(evo.knowsType, { type: type.trim() }))
     .replace(/while knowing ([^,]+)/g, (_match: string, move: string) => fill(evo.knows, { move: move.trim() }))
+    .replace(/with a ([^,]+)-type Pokémon in the party/g, (_match: string, type: string) => fill(evo.partyType, { type: type.trim() }))
+    .replace(/with ([^,]+) in the party/g, (_match: string, species: string) => fill(evo.partySpecies, { species: species.trim() }))
     .split(" and ").join(evo.and);
 }
 

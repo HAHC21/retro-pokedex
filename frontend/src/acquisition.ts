@@ -6,7 +6,7 @@ const cache = new Map<string, string>();
 const inflight = new Map<string, Promise<string>>();
 
 function cacheKey(pokemonId: number, gameKey: string) {
-  return `${gameKey}:${pokemonId}:v4`;
+  return `${gameKey}:${pokemonId}:v5`;
 }
 
 async function fetchAcquisitionText(pokemonId: number, gameKey: string): Promise<string> {

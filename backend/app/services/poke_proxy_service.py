@@ -96,18 +96,43 @@ def _form_and_species(
     return key or "base", species_id
 
 
+def _named(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    return str(value.get("name") or "")
+
+
+_NAMED_REQUIREMENT_KEYS = (
+    "item",
+    "held_item",
+    "known_move",
+    "known_move_type",
+    "location",
+    "party_species",
+    "party_type",
+    "trade_species",
+)
+
+
+def _detail_requirement_count(detail: dict[str, Any]) -> int:
+    count = sum(1 for key in _NAMED_REQUIREMENT_KEYS if _named(detail.get(key)))
+    for key in ("min_level", "min_happiness", "min_beauty", "min_affection", "needs_overworld_rain", "turn_upside_down"):
+        if detail.get(key):
+            count += 1
+    if detail.get("gender"):
+        count += 1
+    if detail.get("relative_physical_stats") is not None:
+        count += 1
+    if detail.get("time_of_day"):
+        count += 1
+    return count
+
+
 def _pick_evolution_detail(details: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Prefer the method that states every requirement, such as friendship plus a move type."""
     if not details:
         return None
-    for detail in details:
-        move_type = (detail.get("known_move_type") or {}).get("name")
-        if move_type and detail.get("min_happiness"):
-            return detail
-    for detail in details:
-        if (detail.get("known_move_type") or {}).get("name"):
-            return detail
-    return details[0]
+    return max(details, key=_detail_requirement_count)
 
 
 def _join_level_phrase(lead: str, qualifiers: list[str]) -> str:
@@ -118,48 +143,80 @@ def _join_level_phrase(lead: str, qualifiers: list[str]) -> str:
     return f"{lead} {', '.join(qualifiers[:-1])} and {qualifiers[-1]}"
 
 
-def _cond_text(detail: dict[str, Any] | None) -> str:
-    if not detail:
-        return "—"
-    trigger_name = (detail.get("trigger") or {}).get("name") or ""
-    item = detail.get("item")
-    held = detail.get("held_item")
-    if item and trigger_name == "use-item":
-        return _pretty(item.get("name", ""))
-    if trigger_name == "trade":
-        if held:
-            return f"Trade while holding {_pretty(held.get('name', ''))}"
-        return "Trade"
-
+def _evolution_qualifiers(detail: dict[str, Any]) -> list[str]:
     qualifiers: list[str] = []
+    gender = detail.get("gender")
+    if gender == 1:
+        qualifiers.append("if female")
+    elif gender == 2:
+        qualifiers.append("if male")
     if detail.get("min_happiness"):
         qualifiers.append("with high friendship")
     if detail.get("min_affection"):
         qualifiers.append("with high affection")
+    if detail.get("min_beauty"):
+        qualifiers.append("with high beauty")
     time_of_day = detail.get("time_of_day")
     if time_of_day == "day":
         qualifiers.append("during the day")
     elif time_of_day:
         qualifiers.append("at night")
-    location = detail.get("location")
+    if detail.get("needs_overworld_rain"):
+        qualifiers.append("in the rain")
+    if detail.get("turn_upside_down"):
+        qualifiers.append("while the console is upside down")
+    location = _named(detail.get("location"))
     if location:
-        qualifiers.append(f"at {_pretty(location.get('name', ''))}")
-    held_name = held.get("name") if isinstance(held, dict) else ""
-    if held_name:
-        qualifiers.append(f"while holding {_pretty(held_name)}")
-    known_move = detail.get("known_move")
+        qualifiers.append(f"at {_pretty(location)}")
+    held = _named(detail.get("held_item"))
+    if held:
+        qualifiers.append(f"while holding {_pretty(held)}")
+    known_move = _named(detail.get("known_move"))
     if known_move:
-        qualifiers.append(f"while knowing {_title(known_move.get('name', ''))}")
-    known_move_type = detail.get("known_move_type")
+        qualifiers.append(f"while knowing {_title(known_move)}")
+    known_move_type = _named(detail.get("known_move_type"))
     if known_move_type:
-        qualifiers.append(f"while knowing a {_pretty(known_move_type.get('name', ''))}-type move")
+        qualifiers.append(f"while knowing a {_pretty(known_move_type)}-type move")
+    party_species = _named(detail.get("party_species"))
+    if party_species:
+        qualifiers.append(f"with {_pretty(party_species)} in the party")
+    party_type = _named(detail.get("party_type"))
+    if party_type:
+        qualifiers.append(f"with a {_pretty(party_type)}-type Pokémon in the party")
+    stats = detail.get("relative_physical_stats")
+    if stats is not None:
+        if stats > 0:
+            qualifiers.append("when Attack is higher than Defense")
+        elif stats < 0:
+            qualifiers.append("when Defense is higher than Attack")
+        else:
+            qualifiers.append("when Attack equals Defense")
+    return qualifiers
 
+
+def _cond_text(detail: dict[str, Any] | None) -> str:
+    if not detail:
+        return "—"
+    trigger_name = _named(detail.get("trigger"))
+    item_name = _named(detail.get("item"))
+    held_name = _named(detail.get("held_item"))
+    if item_name and trigger_name == "use-item":
+        return _join_level_phrase(_pretty(item_name), _evolution_qualifiers(detail))
+    if trigger_name == "trade":
+        if held_name:
+            return f"Trade while holding {_pretty(held_name)}"
+        partner = _named(detail.get("trade_species"))
+        if partner:
+            return f"Trade for {_pretty(partner)}"
+        return "Trade"
+
+    qualifiers = _evolution_qualifiers(detail)
     if detail.get("min_level"):
         return _join_level_phrase(f"Level {detail['min_level']}", qualifiers)
     if trigger_name == "level-up":
         return _join_level_phrase("Level up", qualifiers)
-    if item:
-        return _pretty(item.get("name", ""))
+    if item_name:
+        return _join_level_phrase(_pretty(item_name), qualifiers)
     if qualifiers:
         return _join_level_phrase("Level up", qualifiers)
     if trigger_name:
@@ -296,15 +353,14 @@ def _wild_label(samples: list[tuple[str, int, str]]) -> str:
 def _evolve_label(parent: str, detail: dict[str, Any] | None) -> str:
     if not detail:
         return f"Evolve {parent}"
-    trigger = (detail.get("trigger") or {}).get("name") or ""
-    item = (detail.get("item") or {}).get("name")
-    held = (detail.get("held_item") or {}).get("name")
+    trigger = _named(detail.get("trigger"))
+    item = _named(detail.get("item"))
     if trigger == "trade":
-        if held:
-            return f"Trade {parent} while holding {_pretty(held)}"
-        return f"Trade {parent}"
+        cond = _cond_text(detail)
+        rest = cond.removeprefix("Trade").strip()
+        return f"Trade {parent} {rest}".strip() if rest else f"Trade {parent}"
     if trigger == "use-item" and item:
-        return f"Evolve {parent} using {_pretty(item)}"
+        return f"Evolve {parent} using {_cond_text(detail)}"
     cond = _cond_text(detail)
     if cond.startswith("Level up"):
         rest = cond.removeprefix("Level up").strip()
@@ -942,9 +998,9 @@ class PokeProxyService:
         cached = await self._client.get_cached(f"pokemon/{pokemon_id}/encounters")
         if isinstance(cached, list):
             labels = self._labels_from_encounters(cached, game_key)
-            evo = await asyncio.to_thread(self._evolution.get, pokemon_id)
-            if evo and evo.get("evolve_label"):
-                labels.append(str(evo["evolve_label"]))
+            evo_label = await self._live_evolve_label(pokemon_id)
+            if evo_label:
+                labels.append(evo_label)
             return {"text": " / ".join(labels), "methods": labels}
         stored = await asyncio.to_thread(self._acquisition.get, pokemon_id, game_key)
         if stored is not None:
@@ -959,14 +1015,9 @@ class PokeProxyService:
         raw: list[dict[str, Any]],
     ) -> dict[str, Any]:
         labels = self._labels_from_encounters(raw, game_key)
-        evo = await asyncio.to_thread(self._evolution.get, pokemon_id)
-        if evo and evo.get("evolve_label"):
-            labels.append(str(evo["evolve_label"]))
-        elif not evo:
-            species = await self._client.get_species(pokemon_id)
-            evo_label = await self._evolution_label(species or {}, pokemon_id)
-            if evo_label:
-                labels.append(evo_label)
+        evo_label = await self._live_evolve_label(pokemon_id)
+        if evo_label:
+            labels.append(evo_label)
         return {"text": " / ".join(labels), "methods": labels}
 
     def _labels_from_encounters(self, raw: list[dict[str, Any]], game_key: str) -> list[str]:
@@ -1001,6 +1052,20 @@ class PokeProxyService:
                 labels.append(best[kind][1])
         return labels
 
+    async def _live_evolve_label(self, pokemon_id: int) -> str | None:
+        """Build the evolve sentence from the cached chain so compiled labels cannot go stale."""
+        evo = await asyncio.to_thread(self._evolution.get, pokemon_id)
+        if evo is not None and not evo.get("parent_name") and not evo.get("evolve_label"):
+            return None
+        species = await self._client.get_species(pokemon_id)
+        if isinstance(species, dict):
+            label = await self._evolution_label(species, pokemon_id)
+            if label:
+                return label
+        if evo and evo.get("evolve_label"):
+            return str(evo["evolve_label"])
+        return None
+
     async def _evolution_label(self, species: dict[str, Any], pokemon_id: int) -> str | None:
         parent_ref = species.get("evolves_from_species") or {}
         parent_name = _title(parent_ref.get("name") or "")
@@ -1030,14 +1095,16 @@ class PokeProxyService:
         return await self._attach_games(resource_id, record, payload)
 
     async def _attach_evolution(self, pokedex_id: int, form: str, payload: dict[str, Any]) -> dict[str, Any]:
+        species = payload.get("species") if isinstance(payload.get("species"), dict) else {}
+        steps = await self._evolution_steps(species)
+        if steps:
+            return {**payload, "evo": steps}
         evo_doc = await asyncio.to_thread(self._evolution.get, pokedex_id, form)
         if evo_doc is None and form != "base":
             evo_doc = await asyncio.to_thread(self._evolution.get, pokedex_id, "base")
         if not evo_doc or not evo_doc.get("steps"):
             return payload
-        updated = dict(payload)
-        updated["evo"] = evo_doc["steps"]
-        return updated
+        return {**payload, "evo": evo_doc["steps"]}
 
     async def _ensure_forms(self, resource_id: int, payload: dict[str, Any]) -> dict[str, Any]:
         """Stored detail views predate form refs. Attach them from the cached Pokémon."""

@@ -179,3 +179,28 @@ export function groupEncounters(encounters: WildEncounter[]): EncounterRegion[] 
 export function regionGraphsFromEncounters(encounters: WildEncounter[]): RegionGraph[] {
   return graphsFromEncounters(encounters);
 }
+
+export type SpawnMapTab = {
+  regionId: string;
+  label: string;
+  graph: RegionGraph | null;
+};
+
+/** One tab per spawn region, including regions that have no interactive map yet. */
+export function spawnMapTabs(encRegions: EncounterRegion[], graphs: RegionGraph[]): SpawnMapTab[] {
+  const byId = new Map(graphs.map((graph) => [graph.regionId, graph]));
+  const byLabel = new Map(graphs.map((graph) => [graph.label.toLowerCase(), graph]));
+  return encRegions.map((region) => {
+    const regionId = regionTabId(region.region);
+    const graph = byId.get(regionId) ?? byLabel.get(region.region.toLowerCase()) ?? null;
+    return { regionId, label: region.region, graph };
+  });
+}
+
+function regionTabId(regionName: string): string {
+  const known = REGIONS.find((region) => region.name.toLowerCase() === regionName.toLowerCase());
+  if (known) {
+    return known.slug;
+  }
+  return regionName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "other";
+}

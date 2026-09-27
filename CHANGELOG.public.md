@@ -2,6 +2,13 @@
 
 Updates you can see in Retro Pokédex. Releases that only changed hosting, search listings, or internal data are left out.
 
+## 0.8.0 — September 27, 2026
+
+- On a Pokémon’s page, every region it appears in has a map tab. Alola says the map is not drawn yet and points to the spawn table.
+- The spawn table lists every region at once, not only the map you have selected.
+- An evolution line names more of the real requirements. Malamar is while the console is upside down. Escavalier is a trade for Karrablast. Hitmonlee is when Attack is higher than Defense.
+- The header uses a new Retro Pokédex logo, and a few screens get small layout tweaks.
+
 ## 0.7.9 — September 26, 2026
 
 - My Collection is in the header, between Pokédex and Checklist. It lists every Pokémon you have marked caught or shiny, from every save. Mega Evolutions and Gigantamax stay off the list. The game selector is hidden here.

@@ -2,6 +2,23 @@
 
 All notable changes to Retro Pokédex, taken from the versioned commits on `main`. v0.5 is the first release. Dates are the commit dates.
 
+## [0.8.0] - 2026-09-27
+
+### Added
+
+- Header wordmark: `Wordmark` sets Retro in `--color-logo-ink` and Pokédex in `--color-logo-red`, with `LogoPokeBall` as the O. Hover or focus opens the lid. `--font-logo` is Orbitron. The PNG mark is unused.
+- Welcome GIF on the dashboard. `DashboardView` picks `/pikachu-pokemon.gif` or `/jinx.gif` (Shinx) once per visit.
+- Region boxes show a signature legendary via `DexRegion.mascots` and `randomRegionMascot`. Kanto is Articuno, Zapdos, Moltres, or Mewtwo.
+- `spawnMapTabs` in `encounters.ts` builds a tab per spawn region. `RegionMap` takes `graph: RegionGraph | null`, `regions: RegionTab[]`, and `activeRegionId`. A region without a drawn map shows `detail.mapUnavailable`.
+- Evolution lines and checklist evolve text cover gender, beauty, rain, console upside down, Attack vs Defense, a party species or type, and `Trade for {species}`. `_evolution_qualifiers` and `_detail_requirement_count` pick the method with the most requirements. `displayEvolutionCond` and the EN/ES `evo` catalog match.
+
+### Changed
+
+- A species page lists spawn locations for every region, not only the selected map. The map or the unavailable note stays on a narrow screen; `compactSpawns` is gone.
+- `_attach_evolution` prefers live `_evolution_steps` from the cached chain. `_live_evolve_label` rebuilds the checklist evolve sentence from that chain, then falls back to a stored `evolve_label`.
+- Acquisition cache key is `v5`.
+- `--color-bg` is `#fefcfc`. `.blueprint.pk-welcome` is white. `.pk-mon-top` lays out the card-header Poké Ball.
+
 ## [0.7.9] - 2026-09-26
 
 ### Added

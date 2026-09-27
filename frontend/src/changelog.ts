@@ -14,6 +14,31 @@ export type ChangelogRelease = {
 /** Newest player-visible release first. The shipped UI id is frontend/VERSION. */
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: "0.8.0",
+    date: "Sep 27, 2026",
+    title: "Spawn maps and evolutions",
+    intro:
+      "A Pokémon’s page keeps a tab for every region it appears in, and evolution lines name more of the real requirements.",
+    features: [
+      {
+        title: "A tab for every spawn region",
+        body: "On a Pokémon’s page, every region it appears in has a map tab, including on a phone. Alola says the map is not drawn yet and points to the spawn table.",
+      },
+      {
+        title: "Spawn lists stay together",
+        body: "The spawn table lists every region at once, not only the map you have selected.",
+      },
+      {
+        title: "More evolution requirements",
+        body: "An evolution line names more of the real requirements. Malamar is while the console is upside down. Escavalier is a trade for Karrablast. Hitmonlee is when Attack is higher than Defense.",
+      },
+      {
+        title: "A new logo",
+        body: "The header uses a new Retro Pokédex logo, and a few screens get small layout tweaks.",
+      },
+    ],
+  },
+  {
     version: "0.7.9",
     date: "Sep 26, 2026",
     title: "My Collection",

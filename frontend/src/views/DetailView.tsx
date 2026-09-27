@@ -21,6 +21,7 @@ import {
   filterEncountersForGame,
   groupEncounters,
   regionGraphsFromEncounters,
+  spawnMapTabs,
   type WildEncounter,
 } from "../encounters";
 import { dexNum, displayEvolutionCond, navBtnStyle, spriteUrl, title } from "../format";
@@ -344,14 +345,10 @@ function MonBody({
   const gameEnc = filterEncountersForGame(spawns, game);
   const encRegions = groupEncounters(gameEnc);
   const regionMaps = regionGraphsFromEncounters(gameEnc);
+  const mapTabs = spawnMapTabs(encRegions, regionMaps);
   const hasSpawns = gameEnc.length > 0;
   const [mapRegionId, setMapRegionId] = useState<string | null>(null);
-  const [compactSpawns, setCompactSpawns] = useState(false);
-  const activeMap = regionMaps.find((graph) => graph.regionId === mapRegionId) ?? regionMaps[0] ?? null;
-  const visibleEncRegions =
-    !compactSpawns && activeMap
-      ? encRegions.filter((region) => region.region.toLowerCase() === activeMap.label.toLowerCase())
-      : encRegions;
+  const activeTab = mapTabs.find((tab) => tab.regionId === mapRegionId) ?? mapTabs[0] ?? null;
   const showHome = section === "home";
   const showSpawns = section === "spawns";
   const showSpecimens = section === "specimens";
@@ -365,14 +362,6 @@ function MonBody({
   const [aiRefreshError, setAiRefreshError] = useState<string | null>(null);
   const [collectedAbilities, setCollectedAbilities] = useState<string[]>([]);
   const [collectedNatures, setCollectedNatures] = useState<string[]>([]);
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 900px)");
-    const sync = () => setCompactSpawns(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
 
   useEffect(() => {
     if (!signedIn) {
@@ -735,12 +724,17 @@ function MonBody({
             </div>
           ) : hasSpawns ? (
             <>
-              {!compactSpawns && activeMap ? (
-                <RegionMap graph={activeMap} regions={regionMaps} onSelectRegion={setMapRegionId} />
+              {activeTab ? (
+                <RegionMap
+                  graph={activeTab.graph}
+                  regions={mapTabs}
+                  activeRegionId={activeTab.regionId}
+                  onSelectRegion={setMapRegionId}
+                />
               ) : null}
-              {visibleEncRegions.length ? (
+              {encRegions.length ? (
                 <div className="pk-enc-grid">
-                  {visibleEncRegions.map((region) => (
+                  {encRegions.map((region) => (
                     <div key={region.region} className="pk-enc-col">
                       <span className="pk-enc-col-head">
                         <span className="pk-enc-region">{region.region}</span>

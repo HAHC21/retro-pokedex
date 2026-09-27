@@ -130,21 +130,30 @@ export type DexRegion = {
   from: number;
   to: number;
   games: string;
+  /** Signature legendaries shown as homepage mascots. */
+  mascots: number[];
 };
 
 /** Species introduced in a geographic region. Independent of generation. */
 export const REGIONS: DexRegion[] = [
-  { slug: "kanto", name: "Kanto", from: 1, to: 151, games: "Red · Blue · Yellow" },
-  { slug: "johto", name: "Johto", from: 152, to: 251, games: "Gold · Silver · Crystal" },
-  { slug: "hoenn", name: "Hoenn", from: 252, to: 386, games: "Ruby · Sapphire · Emerald · FR/LG" },
-  { slug: "sinnoh", name: "Sinnoh", from: 387, to: 493, games: "Diamond · Pearl · Platinum" },
-  { slug: "unova", name: "Unova", from: 494, to: 649, games: "Black · White · B2/W2" },
-  { slug: "kalos", name: "Kalos", from: 650, to: 721, games: "X · Y" },
-  { slug: "alola", name: "Alola", from: 722, to: 809, games: "Sun · Moon · US/UM" },
-  { slug: "galar", name: "Galar", from: 810, to: 898, games: "Sword · Shield" },
-  { slug: "hisui", name: "Hisui", from: 899, to: 905, games: "Legends: Arceus" },
-  { slug: "paldea", name: "Paldea", from: 906, to: 1025, games: "Scarlet · Violet" },
+  { slug: "kanto", name: "Kanto", from: 1, to: 151, games: "Red · Blue · Yellow", mascots: [144, 145, 146, 150] }, // Articuno, Zapdos, Moltres, Mewtwo
+  { slug: "johto", name: "Johto", from: 152, to: 251, games: "Gold · Silver · Crystal", mascots: [243, 244, 245, 249, 250] }, // Raikou, Entei, Suicune, Lugia, Ho-Oh
+  { slug: "hoenn", name: "Hoenn", from: 252, to: 386, games: "Ruby · Sapphire · Emerald · FR/LG", mascots: [382, 383, 384] }, // Kyogre, Groudon, Rayquaza
+  { slug: "sinnoh", name: "Sinnoh", from: 387, to: 493, games: "Diamond · Pearl · Platinum", mascots: [483, 484, 487] }, // Dialga, Palkia, Giratina
+  { slug: "unova", name: "Unova", from: 494, to: 649, games: "Black · White · B2/W2", mascots: [643, 644, 646] }, // Reshiram, Zekrom, Kyurem
+  { slug: "kalos", name: "Kalos", from: 650, to: 721, games: "X · Y", mascots: [716, 717, 718] }, // Xerneas, Yveltal, Zygarde
+  { slug: "alola", name: "Alola", from: 722, to: 809, games: "Sun · Moon · US/UM", mascots: [791, 792, 800] }, // Solgaleo, Lunala, Necrozma
+  { slug: "galar", name: "Galar", from: 810, to: 898, games: "Sword · Shield", mascots: [888, 889, 890] }, // Zacian, Zamazenta, Eternatus
+  { slug: "hisui", name: "Hisui", from: 899, to: 905, games: "Legends: Arceus", mascots: [905] }, // Enamorus
+  { slug: "paldea", name: "Paldea", from: 906, to: 1025, games: "Scarlet · Violet", mascots: [1007, 1008] }, // Koraidon, Miraidon
 ];
+
+export function randomRegionMascot(region: DexRegion): number | null {
+  if (!region.mascots.length) {
+    return null;
+  }
+  return region.mascots[Math.floor(Math.random() * region.mascots.length)] ?? null;
+}
 
 export function regionBySlug(slug: string | null | undefined): DexRegion | null {
   if (!slug) {

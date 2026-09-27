@@ -5,7 +5,8 @@ import { PkBulkImport } from "../components/PkBulkImport";
 import { PokemonCard } from "../components/PokemonCard";
 import { ProgressBar } from "../components/ProgressBar";
 import { LanguagePrompt } from "../components/LanguagePrompt";
-import { REGIONS, genById } from "../catalog";
+import { PokemonSprite } from "../components/PokemonSprite";
+import { REGIONS, genById, randomRegionMascot } from "../catalog";
 import { filterDexIds } from "../dexList";
 import { dexNum } from "../format";
 import { formDisplayName, formListOf, formSpriteRef, formStorageKey, formsEqual, parseMarkKey, type FormList, type SpeciesForm } from "../forms";
@@ -16,6 +17,12 @@ import { gameLabel, unionFor, unionSets } from "../progress";
 import type { DexIndex, MarkKey, Progress } from "../types";
 
 const MIN_SEARCH_LENGTH = 2;
+
+const WELCOME_MASCOTS = ["/pikachu-pokemon.gif", "/jinx.gif"] as const;
+
+function randomWelcomeMascot(): (typeof WELCOME_MASCOTS)[number] {
+  return WELCOME_MASCOTS[Math.floor(Math.random() * WELCOME_MASCOTS.length)]!;
+}
 
 type OriginBox = {
   key: string;
@@ -88,6 +95,7 @@ export function DashboardView({
 }: DashboardViewProps) {
   const { messages: m, fill } = useI18n();
   const [query, setQuery] = useState("");
+  const [welcomeMascot] = useState(randomWelcomeMascot);
   const ids = Object.keys(index.names).map(Number);
   const total = ids.length || 1025;
   const { caught: uCaught, shiny: uShiny, any: uAny } = unionSets(prog);
@@ -164,6 +172,17 @@ export function DashboardView({
     });
   }, [forms, index, needle, prog, searching]);
 
+  const regionMascots = useMemo(() => {
+    const picks: Record<string, number> = {};
+    REGIONS.forEach((region) => {
+      const mascot = randomRegionMascot(region);
+      if (mascot != null) {
+        picks[region.slug] = mascot;
+      }
+    });
+    return picks;
+  }, []);
+
   const recentIds = recentRows.map((row) => row.item.id);
   useEffect(() => {
     const ids = [...matches.map((hit) => hit.id), ...recentIds];
@@ -176,11 +195,22 @@ export function DashboardView({
     <div className="pk-page pk-dash">
       <LanguagePrompt />
       <Blueprint className="pk-welcome">
-        <div className="pk-welcome-head">
-          <h2>{m.dash.welcome}</h2>
-          <span className="pk-kicker">{m.dash.kicker}</span>
+        <img
+          className="pk-welcome-mascot"
+          src={welcomeMascot}
+          alt=""
+          width={150}
+          height={150}
+          draggable={false}
+          aria-hidden="true"
+        />
+        <div className="pk-welcome-copy">
+          <div className="pk-welcome-head">
+            <h2>{m.dash.welcome}</h2>
+            <span className="pk-kicker">{m.dash.kicker}</span>
+          </div>
+          <p className="pk-welcome-lead">{m.dash.lead}</p>
         </div>
-        <p className="pk-welcome-lead">{m.dash.lead}</p>
         <div className="pk-welcome-grid">
           {[
             { title: m.dash.features.selectorTitle, body: m.dash.features.selectorBody },
@@ -356,6 +386,7 @@ export function DashboardView({
             }
             const n = entry.to - entry.from + 1;
             const pct = Math.round((c / n) * 100);
+            const mascotId = regionMascots[entry.key];
             return (
               <button key={entry.key} type="button" className="blueprint pk-cell pk-nav pk-gen-box" onClick={entry.open}>
                 <i className="corner tl" aria-hidden="true" />
@@ -366,7 +397,12 @@ export function DashboardView({
                   <span className="pk-gen-region">{entry.title}</span>
                   <span className="pk-gen-roman">{entry.subtitle}</span>
                 </span>
-                <span className="pk-gen-pct">{pct}%</span>
+                <span className="pk-gen-pct">
+                  {mascotId != null ? (
+                    <PokemonSprite className="pk-gen-mascot" pokemonId={mascotId} alt="" loading="lazy" aria-hidden="true" />
+                  ) : null}
+                  {pct}%
+                </span>
                 <ProgressBar pct={pct} tall />
                 <span className="pk-gen-box-foot">
                   <span className="pk-gen-frac">

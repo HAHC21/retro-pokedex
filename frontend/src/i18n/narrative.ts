@@ -17,6 +17,29 @@ type ReleaseCopy = {
 };
 
 const CHANGELOG_ES: Record<string, ReleaseCopy> = {
+  "0.8.0": {
+    title: "Mapas y evoluciones",
+    intro:
+      "La página de un Pokémon guarda una pestaña por cada región en la que aparece, y las líneas evolutivas nombran más requisitos reales.",
+    features: [
+      {
+        title: "Una pestaña por cada región de aparición",
+        body: "En la página de un Pokémon, cada región en la que aparece tiene una pestaña de mapa, también en el teléfono. Alola dice que el mapa aún no está dibujado y remite a la tabla de apariciones.",
+      },
+      {
+        title: "Las listas de apariciones juntas",
+        body: "La tabla de apariciones lista todas las regiones a la vez, no solo el mapa que has seleccionado.",
+      },
+      {
+        title: "Más requisitos de evolución",
+        body: "Una línea evolutiva nombra más requisitos reales. Malamar es con la consola boca abajo. Escavalier es un intercambio por Karrablast. Hitmonlee es cuando el Ataque es mayor que la Defensa.",
+      },
+      {
+        title: "Un logotipo nuevo",
+        body: "La cabecera usa un logotipo nuevo de Retro Pokédex, y unas pantallas reciben pequeños ajustes de disposición.",
+      },
+    ],
+  },
   "0.7.9": {
     title: "Mi colección",
     intro: "Una cuadrícula de cada Pokémon que has marcado, de todas las partidas, con filtros de región y de forma.",

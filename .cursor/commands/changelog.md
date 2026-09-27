@@ -44,4 +44,10 @@ Write those two files in plain sentences a player would recognize. Use a Pokémo
 
 ## Check
 
+After the file edits, from `frontend/`, run `npm run build`. That is `tsc -b && vite build`, the same command the hosted UI build runs. It typechecks `src` and `vite.config.ts`. Stop and fix errors if it fails.
+
+Then run `npm ls @types/node`. The hosted install is clean and does not install Vite’s optional `@types/node` peer. If that package is present locally and missing from `package.json`, a green `tsc` can still fail on deploy: Connect’s `IncomingMessage` has no `url`. Do not type a shared `serve` function as taking a custom server whose `use` handler requires `{ url?: string }` — that is not assignable to Vite’s hooks. Attach middleware inside `configureServer` and `configurePreviewServer` and read `req.url` from `object`.
+
+If the release also changed `dashboard/`, run `npm run build` from `dashboard/` as well.
+
 After editing `frontend/src/changelog.ts`, open `/changelog` and confirm each version you touched is on the page with the new text. If no dev server is running, say so.

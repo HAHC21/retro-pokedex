@@ -7,10 +7,6 @@ declare const process: {
   cwd: () => string;
 };
 
-declare module "node:fs" {
-  export function readFileSync(path: string, encoding: "utf8"): string;
-}
-
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8000";
 
 function readFileVersion(): string {
@@ -42,25 +38,43 @@ function shippedFrontendVersion(command: "build" | "serve"): string {
   return shippedVersion;
 }
 
+type VersionJsonResponse = {
+  setHeader: (name: string, value: string) => void;
+  end: (body: string) => void;
+};
+
+function requestPath(req: object): string | undefined {
+  if (!("url" in req) || typeof req.url !== "string") {
+    return undefined;
+  }
+  return req.url.split("?")[0];
+}
+
+function serveVersionJson(req: object, res: VersionJsonResponse, next: () => void, body: string): void {
+  if (requestPath(req) !== "/version.json") {
+    next();
+    return;
+  }
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.end(body);
+}
+
 function versionJsonPlugin(version: string): Plugin {
   const body = JSON.stringify({ version });
-  const serve: Plugin["configureServer"] = (server) => {
-    server.middlewares.use((req, res, next) => {
-      const url = req.url?.split("?")[0];
-      if (url !== "/version.json") {
-        next();
-        return;
-      }
-      res.setHeader("Content-Type", "application/json; charset=utf-8");
-      res.setHeader("Cache-Control", "no-store");
-      res.end(body);
-    });
-  };
 
   return {
     name: "version-json",
-    configureServer: serve,
-    configurePreviewServer: serve,
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        serveVersionJson(req, res as VersionJsonResponse, next, body);
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        serveVersionJson(req, res as VersionJsonResponse, next, body);
+      });
+    },
     generateBundle() {
       this.emitFile({
         type: "asset",

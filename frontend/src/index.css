@@ -19,6 +19,7 @@
   padding: var(--space-4) var(--space-6);
   flex-wrap: wrap;
   border-bottom: 1px solid var(--color-divider);
+  overflow: visible;
 }
 
 .pk-logo {
@@ -28,66 +29,88 @@
   background: transparent;
   font: inherit;
   color: inherit;
-}
-
-.pk-logo--image .pk-wordmark {
-  display: none;
-}
-
-.pk-logo-img {
-  display: block;
-  height: 31px;
-  width: auto;
+  overflow: visible;
 }
 
 .pk-wordmark {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.pk-word,
-.pk-word-solid {
-  font-family: var(--font-logo);
-  font-weight: 700;
-  font-size: 19px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  align-items: center;
+  gap: 0.4em;
+  white-space: nowrap;
 }
 
 .pk-word {
-  background-image: linear-gradient(90deg, #ff4d6d, #ffb400, #35d07f, #2f9bff, #a855f7, #ff4d6d);
-  background-size: 300% 100%;
-  background-position: 0 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-  transition: color 0.25s ease, -webkit-text-stroke-color 0.25s ease;
+  font-family: var(--font-logo);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
-.pk-word-hollow {
-  color: #fff;
-  -webkit-text-stroke: 3.5px var(--color-accent-800);
-  paint-order: stroke fill;
+.pk-word-retro {
+  color: var(--color-logo-ink);
 }
 
-.pk-word-solid {
-  color: var(--color-text);
+.pk-word-pokedex {
+  color: var(--color-logo-red);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12em;
 }
 
-.pk-logo:hover .pk-word {
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: pk-disco 1.4s linear infinite;
+.pk-logo-ball {
+  display: block;
+  width: 1em;
+  height: 1em;
+  width: 1cap;
+  height: 1cap;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
-.pk-logo:hover .pk-word-hollow {
-  -webkit-text-stroke-width: 0;
+.pk-logo-ball-lid,
+.pk-logo-ball-base,
+.pk-logo-ball-flash {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transition: transform 0.42s cubic-bezier(0.22, 1.15, 0.36, 1);
 }
 
-@keyframes pk-disco {
-  to {
-    background-position: -300% 0;
+.pk-logo-ball-flash {
+  opacity: 0;
+  transform: scaleY(0.2);
+  transition: opacity 0.2s ease, transform 0.42s cubic-bezier(0.22, 1.15, 0.36, 1);
+}
+
+.pk-logo:is(:hover, :focus-visible) .pk-logo-ball-lid {
+  transform: translateY(-15%);
+}
+
+.pk-logo:is(:hover, :focus-visible) .pk-logo-ball-base {
+  transform: translateY(11%);
+}
+
+.pk-logo:is(:hover, :focus-visible) .pk-logo-ball-flash {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-logo-ball-lid,
+  .pk-logo-ball-base,
+  .pk-logo-ball-flash {
+    transition: none;
+  }
+
+  .pk-logo:is(:hover, :focus-visible) .pk-logo-ball-lid,
+  .pk-logo:is(:hover, :focus-visible) .pk-logo-ball-base {
+    transform: none;
+  }
+
+  .pk-logo:is(:hover, :focus-visible) .pk-logo-ball-flash {
+    transform: none;
+    opacity: 0;
   }
 }
 
@@ -578,6 +601,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+.pk-mon-open .pk-mon-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 16px;
+}
+
 .pk-name,
 .pk-shortcut-title,
 .pk-evo-cell span:nth-child(2) {
@@ -700,10 +732,35 @@
 }
 
 .pk-welcome {
+  --pk-welcome-mascot-size: 150px;
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.blueprint.pk-welcome {
+  background: #fff;
+}
+
+.pk-welcome-mascot {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: var(--pk-welcome-mascot-size);
+  height: auto;
+  display: block;
+  pointer-events: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.pk-welcome-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: var(--pk-welcome-mascot-size);
+  padding-right: calc(var(--pk-welcome-mascot-size) + var(--space-4));
 }
 
 .pk-welcome-head {
@@ -719,6 +776,7 @@
   font-size: 28px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  overflow-wrap: break-word;
 }
 
 .pk-welcome-lead,
@@ -727,6 +785,10 @@
   font-size: 14px;
   line-height: 1.55;
   color: var(--color-neutral-800);
+}
+
+.pk-welcome-lead {
+  white-space: pre-line;
 }
 
 .pk-welcome-grid {
@@ -888,7 +950,8 @@
   max-width: 28rem;
 }
 
-.pk-collection-legend .pk-pokeball {
+.pk-collection-legend .pk-pokeball,
+.pk-mon-top .pk-pokeball {
   position: static;
   top: auto;
   right: auto;
@@ -2550,6 +2613,10 @@ button.pk-game-tag {
     padding: var(--space-3) var(--space-4);
   }
 
+  .pk-word {
+    font-size: 16px;
+  }
+
   .pk-header-nav-desktop,
   .pk-header-lang {
     display: none;
@@ -2625,12 +2692,22 @@ button.pk-game-tag {
 }
 
 .pk-gen-pct {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   font-family: var(--font-heading);
   font-weight: 600;
   font-size: 52px;
   line-height: 1;
   color: var(--color-accent-800);
   font-variant-numeric: tabular-nums;
+}
+
+.pk-gen-mascot {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
 }
 
 .pk-gen-frac {
@@ -2744,6 +2821,17 @@ button.pk-game-tag {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-accent-800);
+}
+
+.pk-map-unavailable {
+  margin: 0;
+  padding: var(--space-8) var(--space-4);
+  max-width: 36rem;
+  align-self: center;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-neutral-700);
 }
 
 .pk-map {
@@ -3513,6 +3601,10 @@ button.pk-game-tag {
 }
 
 @media (max-width: 560px) {
+  .pk-welcome {
+    --pk-welcome-mascot-size: 80px;
+  }
+
   .pk-welcome-grid {
     grid-template-columns: 1fr;
   }
