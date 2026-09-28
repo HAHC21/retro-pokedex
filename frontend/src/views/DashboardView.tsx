@@ -6,6 +6,7 @@ import { PokemonCard } from "../components/PokemonCard";
 import { ProgressBar } from "../components/ProgressBar";
 import { LanguagePrompt } from "../components/LanguagePrompt";
 import { PokemonSprite } from "../components/PokemonSprite";
+import { ViewLoading } from "../components/ViewLoading";
 import { REGIONS, genById, randomRegionMascot } from "../catalog";
 import { filterDexIds } from "../dexList";
 import { dexNum } from "../format";
@@ -247,7 +248,7 @@ export function DashboardView({
           </label>
           {searching ? (
             indexLoading || (formsLoading && matches.length === 0) ? (
-              <div className="pk-status">{formsLoading && !indexLoading ? m.dash.loadingForms : m.dash.loadingIndex}</div>
+              <ViewLoading>{formsLoading && !indexLoading ? m.dash.loadingForms : m.dash.loadingIndex}</ViewLoading>
             ) : matches.length === 0 ? (
               <div className="pk-status">{m.dash.noResults}</div>
             ) : (

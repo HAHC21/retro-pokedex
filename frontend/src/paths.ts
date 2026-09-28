@@ -270,7 +270,7 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
     return "/roadmap";
   }
   if (path.view === "dash") {
-    return `/${game}`;
+    return game === "home" ? "/" : `/${game}`;
   }
   const region = regionBySlug(path.region)?.slug ?? null;
 

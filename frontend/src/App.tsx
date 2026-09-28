@@ -209,7 +209,7 @@ export default function App() {
       } else if (error) {
         setAuthError("signin_failed");
       }
-      navigate(error ? "/login" : "/home", { replace: true });
+      navigate(error ? "/login" : "/", { replace: true });
     }
     void fetchMe().then(setAuthUser);
   }, [navigate]);
@@ -544,13 +544,12 @@ export default function App() {
     go({ view: "dash", game: view === "signin" || view === "login" ? "home" : game, gen });
   }
 
-  // Normalize bare `/` and unknown/incomplete paths onto a canonical URL.
+  // Auth errors on the root URL go to login; `/` itself is the dashboard.
   if (location.pathname === "/" || location.pathname === "") {
     const params = new URLSearchParams(location.search);
     if (params.get("auth_error")) {
       return <Navigate to={`/login${location.search}`} replace />;
     }
-    return <Navigate to="/home" replace />;
   }
 
   if (view !== "signin" && view !== "login") {

@@ -28,6 +28,7 @@ export type RegionGraphNode = {
   id: string;
   kind: NodeKind;
   isRoute: boolean;
+  isCity: boolean;
   cx: number;
   cy: number;
   r: number;
@@ -69,6 +70,7 @@ export type RegionGraph = {
 const VISUAL_REF_WIDTH = 380;
 const ROUTE_R = 3.6;
 const BOX = ROUTE_R * 1.5;
+const CITY_BOX = ROUTE_R * 2;
 const NODE_SW_ON = 0.55;
 const NODE_SW_OFF = 0.4;
 const EDGE_SW_ON = 0.85;
@@ -269,6 +271,7 @@ export function buildRegionGraph(def: RegionMapDef, hits: Record<string, number>
   const segments = collectEdgeSegments(def);
   const routeR = mapUnit(def, ROUTE_R);
   const box = mapUnit(def, BOX);
+  const cityBox = mapUnit(def, CITY_BOX);
   const nodeSwOn = mapUnit(def, NODE_SW_ON);
   const nodeSwOff = mapUnit(def, NODE_SW_OFF);
   const edgeSwOn = mapUnit(def, EDGE_SW_ON);
@@ -278,27 +281,21 @@ export function buildRegionGraph(def: RegionMapDef, hits: Record<string, number>
     const on = lit(id);
     const numMatch = label.match(/\d+/);
     const isCity = kind === 1;
-    const fill = on
-      ? "var(--color-accent)"
-      : isCity
-        ? "#e4dcee"
-        : "var(--color-neutral-300)";
-    const stroke = on
-      ? "var(--color-accent-900)"
-      : isCity
-        ? "#a898bc"
-        : "var(--color-neutral-400)";
+    const nodeBox = isCity ? cityBox : box;
+    const fill = on ? "var(--color-accent)" : "var(--color-neutral-300)";
+    const stroke = on ? "var(--color-accent-900)" : "var(--color-neutral-400)";
     return {
       id,
       kind,
       isRoute: kind === 0,
+      isCity,
       cx,
       cy,
       r: routeR,
-      x: cx - box / 2,
-      y: cy - box / 2,
-      w: box,
-      h: box,
+      x: cx - nodeBox / 2,
+      y: cy - nodeBox / 2,
+      w: nodeBox,
+      h: nodeBox,
       fill,
       stroke,
       sw: on ? nodeSwOn : nodeSwOff,

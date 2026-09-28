@@ -3,6 +3,7 @@ import { Blueprint } from "../components/Blueprint";
 import { CollectionToolbar } from "../components/CollectionToolbar";
 import { PokeBallIcon } from "../components/PokeBallIcon";
 import { PokemonCard } from "../components/PokemonCard";
+import { ViewLoading } from "../components/ViewLoading";
 import { fetchOwnedIndex, type OwnedIndexRow } from "../collectionApi";
 import { buildCollectionEntries, collectionHeadCopy, filterCollectionEntries } from "../collectionList";
 import { dexNum } from "../format";
@@ -112,7 +113,7 @@ export function CollectionView({
       </div>
 
       {indexLoading || (!ready && grid.length === 0) ? (
-        <div className="pk-status">{m.collection.loading}</div>
+        <ViewLoading>{m.collection.loading}</ViewLoading>
       ) : (
         <div className="pk-grid">
           {grid.map((entry) => (

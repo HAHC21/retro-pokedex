@@ -1,5 +1,6 @@
 import { DexToolbar } from "../components/DexToolbar";
 import { PokemonCard } from "../components/PokemonCard";
+import { ViewLoading } from "../components/ViewLoading";
 import { dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
 import { dexNum } from "../format";
 import { formDisplayName, formListOf, formStorageKey, type FormList, type SpeciesForm } from "../forms";
@@ -128,12 +129,12 @@ export function DexView({
       </div>
 
       {!formList && (indexLoading || (scope === "regional" && regionalLoading)) ? (
-        <div className="pk-status">{scope === "regional" ? m.dex.loadingRegional : m.dex.loadingIndex}</div>
+        <ViewLoading>{scope === "regional" ? m.dex.loadingRegional : m.dex.loadingIndex}</ViewLoading>
       ) : null}
 
       {formList ? (
         formsLoading ? (
-          <div className="pk-status">{m.dex.loadingForms}</div>
+          <ViewLoading>{m.dex.loadingForms}</ViewLoading>
         ) : (
           <div className="pk-grid">
             {formRows.map((entry) => {

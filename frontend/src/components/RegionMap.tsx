@@ -3,6 +3,7 @@ import { useI18n } from "../i18n/context";
 import { localizedRegion } from "../i18n/labels";
 import { fill } from "../i18n/runtime";
 import type { RegionGraph } from "../routeGraph";
+import { LogoPokeBall } from "./LogoPokeBall";
 
 export type RegionTab = {
   regionId: string;
@@ -74,14 +75,35 @@ function RegionMapCanvas({ graph }: { graph: RegionGraph }) {
             strokeLinecap="butt"
           />
         ))}
-        {graph.nodes.map((node) =>
-          node.isRoute ? (
-            <circle key={node.id} cx={node.cx} cy={node.cy} r={node.r} fill={node.fill} stroke={node.stroke} strokeWidth={node.sw} />
-          ) : (
+        {graph.nodes.map((node) => {
+          if (node.isRoute) {
+            return (
+              <circle key={node.id} cx={node.cx} cy={node.cy} r={node.r} fill={node.fill} stroke={node.stroke} strokeWidth={node.sw} />
+            );
+          }
+          if (node.isCity) {
+            return null;
+          }
+          return (
             <rect key={node.id} x={node.x} y={node.y} width={node.w} height={node.h} fill={node.fill} stroke={node.stroke} strokeWidth={node.sw} />
-          ),
-        )}
+          );
+        })}
       </svg>
+      {graph.nodes.map((node) =>
+        node.isCity ? (
+          <span
+            key={`${node.id}-town`}
+            className="pk-map-label pk-map-town"
+            style={{
+              left: node.left,
+              top: node.top,
+              width: `${(node.w / graph.width) * 100}%`,
+            }}
+          >
+            <LogoPokeBall muted={!node.on} />
+          </span>
+        ) : null,
+      )}
       {graph.nodes.map((node) =>
         node.num ? (
           <span

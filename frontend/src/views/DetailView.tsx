@@ -12,6 +12,7 @@ import { MarkToggles } from "../components/MarkToggles";
 import { SpriteImage } from "../components/PokemonSprite";
 import { RegionMap } from "../components/RegionMap";
 import { TypeTag } from "../components/TypeTag";
+import { ViewLoading } from "../components/ViewLoading";
 import { GameTag } from "../components/GameTag";
 import { gamesFromAvailability, versionLabel, versionsForGame } from "../catalog";
 import { useI18n } from "../i18n/context";
@@ -155,7 +156,7 @@ export function DetailView({
       </div>
       )}
 
-      {loading ? <div className="pk-status">{m.detail.loading}</div> : null}
+      {loading ? <ViewLoading>{m.detail.loading}</ViewLoading> : null}
 
       {mon ? (
         <MonBody

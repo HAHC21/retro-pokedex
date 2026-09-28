@@ -4,6 +4,7 @@ import { boxClass } from "../rarity";
 import { DexToolbar } from "../components/DexToolbar";
 import { MarkToggles } from "../components/MarkToggles";
 import { GenderSprites } from "../components/GenderSprites";
+import { ViewLoading } from "../components/ViewLoading";
 import { acquisitionFallback, resolveAcquisitionForIds } from "../acquisition";
 import { versionLabel } from "../catalog";
 import { checklistStatuses, dexCandidateIds, dexHeadCopy, filterDexIds } from "../dexList";
@@ -120,7 +121,7 @@ export function ChecklistView({
       </div>
 
       {indexLoading || (scope === "regional" && regionalLoading) ? (
-        <div className="pk-status">{scope === "regional" ? m.dex.loadingRegional : m.dex.loadingIndex}</div>
+        <ViewLoading>{scope === "regional" ? m.dex.loadingRegional : m.dex.loadingIndex}</ViewLoading>
       ) : null}
 
       <div className="pk-check-list">
@@ -177,7 +178,7 @@ export function ChecklistView({
       </div>
 
       {!indexLoading && !(scope === "regional" && regionalLoading) && exclusivesPending && rows.length === 0 ? (
-        <div className="pk-status">{m.dex.findingExclusives}</div>
+        <ViewLoading>{m.dex.findingExclusives}</ViewLoading>
       ) : null}
 
       {!indexLoading && !(scope === "regional" && regionalLoading) && !exclusivesPending && rows.length === 0 ? (

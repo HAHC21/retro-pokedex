@@ -60,13 +60,26 @@
 }
 
 .pk-logo-ball {
+  --pk-ball-top: var(--color-logo-red);
+  --pk-ball-bottom: #fff;
+  --pk-ball-ink: var(--color-logo-ink);
+  --pk-ball-flash: #ffd84a;
   display: block;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.pk-word-pokedex .pk-logo-ball {
   width: 1em;
   height: 1em;
   width: 1cap;
   height: 1cap;
-  overflow: visible;
-  flex-shrink: 0;
+}
+
+.pk-logo-ball.is-muted {
+  --pk-ball-top: var(--color-neutral-500);
+  --pk-ball-bottom: var(--color-neutral-200);
+  --pk-ball-ink: var(--color-neutral-700);
 }
 
 .pk-logo-ball-lid,
@@ -573,6 +586,58 @@
   color: var(--color-neutral-600);
 }
 
+.pk-status.pk-view-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.pk-view-loading-track {
+  --pk-view-loading-size: 96px;
+  --pk-view-loading-runway: 250px;
+  container-type: inline-size;
+  position: relative;
+  width: var(--pk-view-loading-runway);
+  max-width: 100%;
+  display: flex;
+}
+
+.pk-view-loading-mascot {
+  width: var(--pk-view-loading-size);
+  height: auto;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: pk-view-loading-run 1.8s linear infinite;
+}
+
+@keyframes pk-view-loading-run {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(var(--pk-view-loading-runway) - var(--pk-view-loading-size)));
+    transform: translateX(calc(100cqi - var(--pk-view-loading-size)));
+  }
+}
+
+@media (max-width: 700px) {
+  .pk-view-loading-track {
+    --pk-view-loading-runway: 50vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-view-loading-mascot {
+    animation: none;
+    margin-inline: auto;
+  }
+}
+
 .pk-recent-list {
   display: none;
 }
@@ -713,6 +778,10 @@
 
 .pk-search-box > .pk-status {
   padding: var(--space-4) 0;
+}
+
+.pk-search-box > .pk-view-loading .pk-view-loading-track {
+  --pk-view-loading-size: 72px;
 }
 
 .pk-scope-seg {
@@ -2842,12 +2911,24 @@ button.pk-game-tag {
   overflow: visible;
 }
 
-.pk-map svg {
+.pk-map > svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   overflow: visible;
+}
+
+.pk-map-town {
+  aspect-ratio: 1;
+  display: block;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.pk-map-town .pk-logo-ball {
+  width: 100%;
+  height: 100%;
 }
 
 .pk-map-label {
