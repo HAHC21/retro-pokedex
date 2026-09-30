@@ -22,49 +22,6 @@ export type RoadmapSection = {
 
 export const ROADMAP: RoadmapSection[] = [
   {
-    id: "switch",
-    kicker: "Planned",
-    title: "Switch screenshots",
-    intro:
-      "Mark a box of Pokémon from a picture, on a Switch, Switch 2, or Pokémon HOME. The site only sees the image you upload.",
-    features: [
-      {
-        title: "A PC box or HOME grid",
-        status: "planned",
-        body: "Open Scarlet, Violet, Sword, Shield, or Pokémon HOME and leave the 30-slot grid on screen. One screenshot covers one box. Empty slots are skipped, and a shiny sprite is kept separate from the normal one when the artwork differs.",
-      },
-      {
-        title: "From the console to your phone",
-        status: "planned",
-        body: "Take the shot with the Capture button, then move it off the console before you upload it.",
-        points: [
-          {
-            title: "Nintendo Switch app",
-            body: "Album, then Sharing and Editing, then Upload to Smart Device. In the phone app, open Album, select the shot, and save it.",
-          },
-          {
-            title: "QR code, no app",
-            body: "Album, then Sharing and Editing, then Send to Smartphone. Send a Batch covers up to ten shots. Scan the first code to join the console’s temporary Wi-Fi, then the second code to open the pictures.",
-          },
-          {
-            title: "Already on your computer",
-            body: "A screenshot saved from the console, or a capture-card frame, can be uploaded directly.",
-          },
-        ],
-      },
-      {
-        title: "Check the box before it is saved",
-        status: "planned",
-        body: "Upload Screenshot shows a 30-slot preview. You correct anything that looks wrong, then Confirm & Sync to Living Dex marks those Pokémon caught for the game you have selected.",
-      },
-      {
-        title: "A photo of a 3DS, DS, or Game Boy",
-        status: "planned",
-        body: "A phone photo of a physical screen is tilted, glared, and unevenly lit. You place the four corners of the screen so the grid can be straightened, then you get the same 30-slot preview before anything is saved.",
-      },
-    ],
-  },
-  {
     id: "maps",
     kicker: "Planned",
     title: "Region maps still to draw",

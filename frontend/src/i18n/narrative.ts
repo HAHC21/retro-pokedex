@@ -449,42 +449,6 @@ const CHANGELOG_ES: Record<string, ReleaseCopy> = {
 };
 
 const ROADMAP_ES: Record<string, ReleaseCopy & { kicker?: string }> = {
-  switch: {
-    title: "Capturas de Switch",
-    intro: "Marca una caja de Pokémon a partir de una imagen, en Switch, Switch 2 o Pokémon HOME. El sitio solo ve la imagen que subes.",
-    features: [
-      {
-        title: "Una caja del PC o una cuadrícula de HOME",
-        body: "Abre Escarlata, Púrpura, Espada, Escudo o Pokémon HOME y deja la cuadrícula de 30 huecos en pantalla. Una captura cubre una caja. Los huecos vacíos se omiten, y un sprite variocolor se separa del normal cuando el dibujo es distinto.",
-      },
-      {
-        title: "De la consola al teléfono",
-        body: "Haz la foto con el botón de captura y sácala de la consola antes de subirla.",
-        points: [
-          {
-            title: "Aplicación de Nintendo Switch",
-            body: "Álbum, luego Compartir y editar, luego Enviar a dispositivo inteligente. En la aplicación del teléfono, abre Álbum, elige la foto y guárdala.",
-          },
-          {
-            title: "Código QR, sin aplicación",
-            body: "Álbum, luego Compartir y editar, luego Enviar al teléfono inteligente. Enviar un lote cubre hasta diez fotos. Escanea el primer código para unirte a la red temporal de la consola y el segundo para abrir las imágenes.",
-          },
-          {
-            title: "Ya está en el ordenador",
-            body: "Una captura guardada desde la consola, o un fotograma de una capturadora, se puede subir directamente.",
-          },
-        ],
-      },
-      {
-        title: "Revisar la caja antes de guardarla",
-        body: "Subir captura muestra una vista previa de 30 huecos. Corriges lo que se vea mal y luego Confirmar y sincronizar marca esos Pokémon como capturados en el juego que tienes seleccionado.",
-      },
-      {
-        title: "Una foto de 3DS, DS o Game Boy",
-        body: "Una foto del teléfono a una pantalla física sale inclinada, con reflejos y luz irregular. Colocas las cuatro esquinas de la pantalla para enderezar la cuadrícula y obtienes la misma vista previa de 30 huecos antes de guardar nada.",
-      },
-    ],
-  },
   maps: {
     title: "Mapas de región que faltan por dibujar",
     intro: "Kanto, Johto, Hoenn, Sinnoh, Teselia y Kalos ya iluminan dónde aparece un Pokémon en estado salvaje. Estas regiones todavía no tienen ese mapa.",

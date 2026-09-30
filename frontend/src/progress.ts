@@ -143,6 +143,7 @@ export function moveMark(
   return next;
 }
 
+/** Toggle one gender on the selected save. Other saves keep their own marks. */
 export function toggleGenderMark(
   prog: Progress,
   game: string,
@@ -152,11 +153,18 @@ export function toggleGenderMark(
   form: SpeciesForm | null = null,
 ): Progress {
   const entry = entryFor(prog, game, id, form);
-  if (!entry[key]) {
-    return prog;
-  }
   const field = GENDER_FIELD[key][gender];
-  return patchMark(prog, game, id, { [field]: !entry[field] }, form);
+  const turningOn = !entry[field];
+  return patchMark(
+    prog,
+    game,
+    id,
+    {
+      [field]: turningOn,
+      ...(turningOn && !entry[key] ? { [key]: true, [`${key}At`]: Date.now() } : {}),
+    },
+    form,
+  );
 }
 
 /** Every capturable form the trainer has marked, across all saves. */

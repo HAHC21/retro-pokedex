@@ -31,6 +31,7 @@ import { DexView } from "./views/DexView";
 import { DetailView } from "./views/DetailView";
 import { ChangelogView } from "./views/ChangelogView";
 import { RoadmapView } from "./views/RoadmapView";
+import { ScanView } from "./views/ScanView";
 
 async function monForForm(payload: MonPayload, form: SpeciesForm | null): Promise<MonPayload | null> {
   if (!form) {
@@ -100,6 +101,7 @@ export default function App() {
 
   const [authError, setAuthError] = useState<"confirm_failed" | "signin_failed" | null>(null);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [regional, setRegional] = useState<RegionalDex | null>(null);
   const [regionalLoading, setRegionalLoading] = useState(false);
   const [index, setIndex] = useState<DexIndex>({ names: {}, types: {}, rarity: {} });
@@ -211,7 +213,10 @@ export default function App() {
       }
       navigate(error ? "/login" : "/", { replace: true });
     }
-    void fetchMe().then(setAuthUser);
+    void fetchMe().then((user) => {
+      setAuthUser(user);
+      setAuthReady(true);
+    });
   }, [navigate]);
 
   useEffect(() => {
@@ -402,6 +407,22 @@ export default function App() {
     };
   }, [form?.kind, form?.name, game, go, id, section, view]);
 
+  const persistMany = useCallback(
+    async (next: Progress) => {
+      setProg(next);
+      if (!authUser) {
+        saveProgress(next);
+        return;
+      }
+      const synced = await syncCollectionProgress(next, "merge");
+      if (!synced) {
+        throw new Error("Could not sync collection.");
+      }
+      setProg(synced);
+    },
+    [authUser],
+  );
+
   const persist = useCallback(
     (next: Progress, mark?: { game: string; pokemonId: number; form?: SpeciesForm | null }) => {
       setProg(next);
@@ -536,6 +557,10 @@ export default function App() {
       go({ view: "collection", game: gameKey });
       return;
     }
+    if (view === "scan") {
+      go({ view: "scan", game: gameKey });
+      return;
+    }
     go({ view: "dash", game: gameKey, gen: next.gen });
   }
 
@@ -591,6 +616,9 @@ export default function App() {
         const next = dexContextForGame(game, gen);
         setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope, q: "", status: "all" }));
         go({ view: "checklist", game, gen: next.gen });
+      }}
+      onScan={() => {
+        go({ view: "scan", game });
       }}
       onSignIn={() => go({ view: "signin", game })}
       onLogIn={() => go({ view: "login", game })}
@@ -649,6 +677,19 @@ export default function App() {
             setList((prev) => ({ ...prev, q: "", status: "shiny", scope: "national", region: null }));
             go({ view: "dex", game, gen });
           }}
+        />
+      ) : null}
+      {view === "scan" ? (
+        <ScanView
+          index={index}
+          indexLoading={indexLoading}
+          game={game}
+          prog={prog}
+          signedIn={!!authUser}
+          authReady={authReady}
+          onSignIn={() => go({ view: "signin", game })}
+          onLogIn={() => go({ view: "login", game })}
+          onCommit={persistMany}
         />
       ) : null}
       {view === "dex" ? (

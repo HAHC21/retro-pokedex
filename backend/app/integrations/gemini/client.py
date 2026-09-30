@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from base64 import b64encode
 from dataclasses import dataclass
 from typing import Any
 
@@ -41,6 +42,13 @@ class GeminiTextResult:
     model: str
 
 
+@dataclass(frozen=True)
+class GeminiImageResult:
+    data: dict[str, Any]
+    usage: GeminiUsage
+    model: str
+
+
 class GeminiMovesetClient:
     """Calls Gemini generateContent; returns parsed JSON or raises."""
 
@@ -65,6 +73,96 @@ class GeminiMovesetClient:
         self._model = model
         self._resolved_model = model
         self._http = httpx.AsyncClient(timeout=timeout_seconds, follow_redirects=True)
+
+    async def analyze_image(
+        self,
+        *,
+        prompt: str,
+        image: bytes,
+        mime_type: str,
+    ) -> GeminiImageResult:
+        """Vision JSON call. Thinking is requested off so the reply stays a slot list."""
+        if not self.available:
+            raise RuntimeError("GEMINI_API_KEY is not configured")
+        body = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {"inlineData": {"mimeType": mime_type, "data": _b64(image)}},
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0,
+                "responseMimeType": "application/json",
+                "thinkingConfig": {"thinkingBudget": 0},
+            },
+        }
+        candidates = [self._model, *[m for m in self.FALLBACK_MODELS if m != self._model]]
+        last_error: Exception | None = None
+        for model in candidates:
+            try:
+                payload = await self._post_model(model, body, timeout_seconds=120)
+            except RuntimeError as exc:
+                message = str(exc)
+                if "400" in message and "thinking" in message.lower():
+                    plain = {
+                        **body,
+                        "generationConfig": {
+                            "temperature": 0,
+                            "responseMimeType": "application/json",
+                        },
+                    }
+                    try:
+                        payload = await self._post_model(model, plain, timeout_seconds=120)
+                    except RuntimeError as retry_error:
+                        last_error = retry_error
+                        continue
+                    parsed_payload = payload
+                else:
+                    last_error = exc
+                    if any(code in message for code in ("404", "429")):
+                        continue
+                    if "400" in message:
+                        continue
+                    raise
+            else:
+                parsed_payload = payload
+            try:
+                text = _extract_text(parsed_payload)
+                parsed = json.loads(_strip_fence(text))
+            except (json.JSONDecodeError, RuntimeError) as exc:
+                last_error = exc
+                continue
+            if not isinstance(parsed, dict):
+                last_error = RuntimeError(f"Gemini JSON was not an object for {model}")
+                continue
+            self._resolved_model = model
+            return GeminiImageResult(data=parsed, usage=GeminiUsage.from_payload(parsed_payload), model=model)
+        raise RuntimeError(
+            f"No working Gemini model found (tried {', '.join(candidates)}). Last error: {last_error}"
+        )
+
+    async def _post_model(self, model: str, body: dict[str, Any], *, timeout_seconds: float) -> dict[str, Any]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        response = await self._http.post(
+            url,
+            json=body,
+            headers={"x-goog-api-key": self._api_key},
+            timeout=timeout_seconds,
+        )
+        if response.status_code in {400, 404, 429}:
+            detail = response.text[:300]
+            raise RuntimeError(f"Gemini HTTP {response.status_code} for model {model}: {detail}")
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise RuntimeError(f"Gemini HTTP {exc.response.status_code} for model {model}") from exc
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"Gemini returned a non-object payload for {model}")
+        return payload
 
     @property
     def available(self) -> bool:
@@ -219,6 +317,10 @@ Respond with JSON only:
 
     async def aclose(self) -> None:
         await self._http.aclose()
+
+
+def _b64(image: bytes) -> str:
+    return b64encode(image).decode("ascii")
 
 
 def _later_mechanics_ban(generation: int | None) -> str:

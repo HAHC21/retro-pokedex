@@ -195,6 +195,14 @@ export function parseAppPath(pathname: string, _search = ""): AppPath {
     };
   }
 
+  if (parts[1] === "scan") {
+    return {
+      ...DEFAULT_PATH,
+      view: "scan",
+      game,
+    };
+  }
+
   if (parts[1] === "dex" || parts[1] === "checklist") {
     const listView = parts[1] === "checklist" ? "checklist" : "dex";
     if (listView === "dex" && parts[2] === "forms" && isFormList(parts[3])) {
@@ -276,6 +284,10 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
 
   if (path.view === "collection") {
     return `/${game}/collection`;
+  }
+
+  if (path.view === "scan") {
+    return `/${game}/scan`;
   }
 
   if (path.view === "dex" || path.view === "checklist") {

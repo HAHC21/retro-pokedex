@@ -20,6 +20,7 @@ type AppShellProps = {
   onDex: () => void;
   onCollection: () => void;
   onChecklist: () => void;
+  onScan: () => void;
   listView?: ListView;
   onSignIn: () => void;
   onLogIn: () => void;
@@ -36,6 +37,7 @@ export function AppShell({
   onDex,
   onCollection,
   onChecklist,
+  onScan,
   listView = "dex",
   onSignIn,
   onLogIn,
@@ -99,6 +101,9 @@ export function AppShell({
             </button>
             <button type="button" className="btn pk-nav" style={navBtnStyle(checklistActive)} onClick={onChecklist}>
               {m.nav.checklist}
+            </button>
+            <button type="button" className="btn pk-nav" style={navBtnStyle(view === "scan")} onClick={onScan}>
+              {m.nav.scan}
             </button>
           </span>
           <span className="pk-header-nav pk-header-auth pk-header-nav-desktop">
@@ -170,6 +175,15 @@ export function AppShell({
                   onClick={() => go(onChecklist)}
                 >
                   {m.nav.checklist}
+                </button>
+                <button
+                  type="button"
+                  className="btn pk-nav"
+                  role="menuitem"
+                  style={navBtnStyle(view === "scan")}
+                  onClick={() => go(onScan)}
+                >
+                  {m.nav.scan}
                 </button>
                 <div className="pk-header-menu-divider" />
                 {authUser ? (

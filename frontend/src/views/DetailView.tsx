@@ -49,8 +49,8 @@ import {
   type SmogonMovesetsPayload,
 } from "../pokeapi";
 import { fetchOwnedPokemon } from "../collectionApi";
-import { gameLabel, unionFor, type GenderChoice } from "../progress";
-import type { DexIndex, MarkKey, MonPayload, Progress } from "../types";
+import { entryFor, gameLabel, unionFor, type GenderChoice } from "../progress";
+import type { DexIndex, MarkEntry, MarkKey, MonPayload, Progress } from "../types";
 
 type DetailViewProps = {
   id: number;
@@ -111,6 +111,7 @@ export function DetailView({
 }: DetailViewProps) {
   const { messages: m, fill } = useI18n();
   const marks = unionFor(prog, id, form);
+  const saveMarks = entryFor(prog, game, id, form);
   const prevId = Math.max(1, id - 1);
   const nextId = Math.min(1025, id + 1);
   const navStyle = { ...navBtnStyle(false), padding: "8px 14px", fontSize: 13 };
@@ -162,6 +163,7 @@ export function DetailView({
         <MonBody
           mon={mon}
           marks={marks}
+          saveMarks={saveMarks}
           game={game}
           obtainable={obtainable}
           section={mon.capture === false ? "home" : section}
@@ -194,6 +196,7 @@ export function DetailView({
 type MonBodyProps = {
   mon: MonPayload;
   marks: ReturnType<typeof unionFor>;
+  saveMarks: MarkEntry;
   game: string;
   obtainable?: boolean;
   section: DetailSection;
@@ -289,6 +292,7 @@ function FormPicker({
 function MonBody({
   mon,
   marks,
+  saveMarks,
   game,
   obtainable,
   section,
@@ -479,8 +483,8 @@ function MonBody({
                       pokemonId={spriteId}
                       formName={spriteForm}
                       fallbackId={speciesId}
-                      male={!!marks.caughtMale}
-                      female={!!marks.caughtFemale}
+                      male={!!saveMarks.caughtMale}
+                      female={!!saveMarks.caughtFemale}
                       alt={displayName}
                       className={capturable && !marks.caught ? "is-dim" : undefined}
                     />
@@ -492,8 +496,8 @@ function MonBody({
                       formName={spriteForm}
                       fallbackId={speciesId}
                       shiny
-                      male={!!marks.shinyMale}
-                      female={!!marks.shinyFemale}
+                      male={!!saveMarks.shinyMale}
+                      female={!!saveMarks.shinyFemale}
                       alt={`${displayName} shiny`}
                       className={capturable && !marks.shiny ? "is-dim" : undefined}
                     />
@@ -504,10 +508,10 @@ function MonBody({
                   <MarkToggles
                     caught={!!marks.caught}
                     shiny={!!marks.shiny}
-                    caughtMale={!!marks.caughtMale}
-                    caughtFemale={!!marks.caughtFemale}
-                    shinyMale={!!marks.shinyMale}
-                    shinyFemale={!!marks.shinyFemale}
+                    caughtMale={!!saveMarks.caughtMale}
+                    caughtFemale={!!saveMarks.caughtFemale}
+                    shinyMale={!!saveMarks.shinyMale}
+                    shinyFemale={!!saveMarks.shinyFemale}
                     available={obtainable}
                     unavailableLabel={fill(m.detail.notAvailable, { game: gameName })}
                     onCaught={onToggleCaught}

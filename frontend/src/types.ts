@@ -23,7 +23,7 @@ export type DexIndex = {
   rarity: Record<number, SpeciesRarity>;
 };
 
-export type View = "dash" | "dex" | "checklist" | "collection" | "mon" | "signin" | "login" | "changelog" | "roadmap";
+export type View = "dash" | "dex" | "checklist" | "collection" | "scan" | "mon" | "signin" | "login" | "changelog" | "roadmap";
 
 export type StatusFilter =
   | "all"

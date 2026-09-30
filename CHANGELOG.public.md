@@ -2,6 +2,28 @@
 
 Updates you can see in Retro Pokédex. Releases that only changed hosting, search listings, or internal data are left out.
 
+## 0.9 — September 29, 2026
+
+- Scan is in the header. You have to be logged in. Upload a PC box from Scarlet, Violet, Sword, Shield, Pokémon HOME, or Pokémon Bank.
+- The page explains how to copy the screenshot off the console: the Nintendo Switch app, a QR code, or a file already on this computer.
+- Each of the 30 slots shows the crop beside the matched Pokémon. You can search for a different species, mark it shiny, or clear the slot. Nothing is saved until you confirm.
+- Confirming marks those Pokémon caught on the game in the header. A shiny Charizard is marked shiny. Alolan Vulpix is stored as that form.
+- A new account can scan once. After 48 hours, an account can scan 2 screenshots every 24 hours. A shared daily limit can pause scanning for everyone until the next day.
+- Male and female marks on a Pokémon’s page follow the save in the header. Female Pikachu on one save does not show while you are looking at another.
+- Choosing a gender on a save that is not marked yet also marks that Pokémon caught or shiny on that save.
+
+## 0.8.2 — September 28, 2026
+
+- On a narrow screen, a Pokémon’s page stays inside the window. The name, stats, moves, and sprites wrap instead of scrolling sideways.
+
+## 0.8.1 — September 28, 2026
+
+- Galar has a map. Grookey’s page shows Postwick, the routes, and the cities. The Wild Area is still a gap in the middle.
+- Hoenn’s map follows the official region layout: the west continent, the eastern islands, and the southern sea.
+- Towns on a region map are Poké Balls. A town where that Pokémon appears stays red. The others are gray.
+- While the Pokédex, checklist, collection, a Pokémon’s page, or a home-page search is loading, Pikachu runs across the message.
+- The home page is the site address itself.
+
 ## 0.8.0 — September 27, 2026
 
 - On a Pokémon’s page, every region it appears in has a map tab. Alola says the map is not drawn yet and points to the spawn table.

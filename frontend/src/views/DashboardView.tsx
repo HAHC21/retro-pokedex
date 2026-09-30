@@ -218,6 +218,7 @@ export function DashboardView({
             { title: m.dash.features.dexTitle, body: m.dash.features.dexBody },
             { title: m.dash.features.speciesTitle, body: m.dash.features.speciesBody },
             { title: m.dash.features.specimensTitle, body: m.dash.features.specimensBody },
+            { title: m.dash.features.screenshotsTitle, body: m.dash.features.screenshotsBody },
           ].map((feature) => (
             <Blueprint key={feature.title} className="pk-welcome-box">
               <h3>{feature.title}</h3>

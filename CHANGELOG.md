@@ -2,6 +2,47 @@
 
 All notable changes to Retro Pokédex, taken from the versioned commits on `main`. v0.5 is the first release. Dates are the commit dates.
 
+## [0.9] - 2026-09-29
+
+### Added
+
+- Scan at `/{game}/scan`. `ScanView`, `BoxScanner`, and `DraftReviewGrid`. Header and phone menu use `nav.scan`. `View` includes `"scan"`. A signed-out trainer sees Shinx (`spriteUrl(403)`) and the sign-in and log-in buttons. `authReady` waits for `fetchMe` before that choice.
+- `GET /api/scanner/quota` and `POST /api/scanner/box` (`scanner_router`). PNG, JPEG, WebP, or GIF, max 8 MB. Sources: `home`, `bank`, `sv`, `swsh`, `switch2`, `switch`.
+- `analyze_box_screenshot` asks Gemini for a 6×5 box, species 1–1025, and forms `alola`, `galar`, `hisui`, or `paldea`. Bank stops at 807 and Alolan forms. Empty slots and unidentified slots are not guessed. `BoxScanDocument` is stored in `box_scans`.
+- Limits in `box_scan_service`: one scan for an account younger than 48 hours, then two per rolling 24 hours. Shared spend cap `DAILY_BUDGET_USD` is $1, resetting at the next UTC midnight. `is_staff` skips both caps. A failed read calls `release_scan`. `FORCE_GLOBAL_SCAN_LIMIT` is false.
+- `GeminiMovesetClient.analyze_image` sends the screenshot inline, asks for JSON at temperature 0 with thinking off, and falls back across models on a 120s timeout. `record_scan_cost` stores the model, token counts, and USD on the scan.
+- The page crops the 30 slots locally (`extractBoxTiles`, `regionForSource`; a tall HOME image uses the phone crop) and pairs them with the Gemini slots in `draftsFromGemini`. Review can search, toggle shiny, or clear a slot. `applyDraftToProgress` marks occupied slots caught on the header game, and shiny when the slot is shiny, including a regional form. A signed-in confirm uses `syncCollectionProgress` with `"merge"`.
+- English and Spanish copy under `scanner`.
+- Local sprite hashing is in the tree and not called from `BoxScanner`: `matchTiles`, `loadSpriteHashIndex` (`pk-sprite-dhashes-home-v2`), `dhash.ts`, and `entropy.ts`.
+- Design notes only: `design.md`, `design-styles.css`, and `design/design_handoff_pokedex_collection` (Industry tokens and a collection handoff). The app does not load them.
+
+### Changed
+
+- Gender sprites and the male and female buttons on a species page read `entryFor` for the selected game (`saveMarks`). The caught and shiny pills still use `unionFor`.
+- `toggleGenderMark` sets `caught` or `shiny` on that save when a gender is turned on and that mark is still off.
+
+## [0.8.2] - 2026-09-28
+
+### Fixed
+
+- Narrow screens keep the page inside the window. `.pk-main`, `.pk-page`, `.pk-dex`, `.pk-detail`, and `.pk-bar` set `min-width: 0`. Species, stat, matchup, nature, encounter, move, and game-column grids use `minmax(min(…, 100%), 1fr)`.
+- Sprite frames and the male/female pair scale with `aspect-ratio` and percentage offsets. Type tags, stat labels, evolution names, move names, and game tags wrap. Under 700px the species title drops to 36px, then 28px, detail padding tightens, and stat columns shrink.
+
+## [0.8.1] - 2026-09-28
+
+### Added
+
+- Galar map: `GALAR_MAP` in `frontend/src/maps/galar.ts`, registered on `REGION_MAPS`. Routes 1–10, cities, Glimwood Tangle, the mines, and Slumbering Weald. The Wild Area and the DLC are not drawn. Stadium and station aliases sit on their cities.
+- `ViewLoading` plays `/pikachu_loading.gif` across a track above the loading message. Dex, checklist, collection, the species page, and dashboard search use it. `prefers-reduced-motion` holds Pikachu still.
+- `LogoPokeBall` in `frontend/src/components/LogoPokeBall.tsx`, with `muted`. Colors are `--pk-ball-top`, `--pk-ball-bottom`, `--pk-ball-ink`, and `--pk-ball-flash`.
+
+### Changed
+
+- The dashboard is `/`. `buildAppPath` returns `/` when the game is `home`. A sign-in error on `/` still goes to `/login`, and a finished sign-in returns to `/`.
+- Cities on a region map are Poké Balls. `RegionMap` skips city rects and places `LogoPokeBall`; a city with a spawn keeps the logo colors, and the rest use `.is-muted`. Routes stay circles. Other locations stay rectangles. City nodes use `CITY_BOX`.
+- Hoenn is redrawn to the official layout: west continent, east islands, south sea. `HOENN_MAP.viewBox` is `-16 -16 348 172`.
+- `Wordmark` imports `LogoPokeBall` instead of drawing the ball inline.
+
 ## [0.8.0] - 2026-09-27
 
 ### Added

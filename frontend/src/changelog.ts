@@ -14,6 +14,82 @@ export type ChangelogRelease = {
 /** Newest player-visible release first. The shipped UI id is frontend/VERSION. */
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: "0.9",
+    date: "Sep 29, 2026",
+    title: "Scan a PC box",
+    intro: "Upload a box screenshot, check the 30 slots, and mark them caught on the save in the header.",
+    features: [
+      {
+        title: "Scan in the header",
+        body: "Scan is in the header. You have to be logged in. Upload a PC box from Scarlet, Violet, Sword, Shield, Pokémon HOME, or Pokémon Bank.",
+      },
+      {
+        title: "Copy the screenshot here",
+        body: "The page explains how to copy the screenshot off the console: the Nintendo Switch app, a QR code, or a file already on this computer.",
+      },
+      {
+        title: "Check all 30 slots",
+        body: "Each of the 30 slots shows the crop beside the matched Pokémon. You can search for a different species, mark it shiny, or clear the slot. Nothing is saved until you confirm.",
+      },
+      {
+        title: "Marks land on this save",
+        body: "Confirming marks those Pokémon caught on the game in the header. A shiny Charizard is marked shiny. Alolan Vulpix is stored as that form.",
+      },
+      {
+        title: "A few scans a day",
+        body: "A new account can scan once. After 48 hours, an account can scan 2 screenshots every 24 hours. A shared daily limit can pause scanning for everyone until the next day.",
+      },
+      {
+        title: "Genders follow this save",
+        body: "Male and female marks on a Pokémon’s page follow the save in the header. Female Pikachu on one save does not show while you are looking at another.",
+      },
+      {
+        title: "A gender can mark the catch",
+        body: "Choosing a gender on a save that is not marked yet also marks that Pokémon caught or shiny on that save.",
+      },
+    ],
+  },
+  {
+    version: "0.8.2",
+    date: "Sep 28, 2026",
+    title: "Fits on a narrow screen",
+    intro: "A Pokémon’s page stays inside the window when the screen is narrow.",
+    features: [
+      {
+        title: "No sideways scroll",
+        body: "On a narrow screen, a Pokémon’s page stays inside the window. The name, stats, moves, and sprites wrap instead of scrolling sideways.",
+      },
+    ],
+  },
+  {
+    version: "0.8.1",
+    date: "Sep 28, 2026",
+    title: "Galar map",
+    intro: "Galar has a map, Hoenn’s map matches the official layout, and Pikachu runs while a page loads.",
+    features: [
+      {
+        title: "A map of Galar",
+        body: "Galar has a map. Grookey’s page shows Postwick, the routes, and the cities. The Wild Area is still a gap in the middle.",
+      },
+      {
+        title: "Hoenn redrawn",
+        body: "Hoenn’s map follows the official region layout: the west continent, the eastern islands, and the southern sea.",
+      },
+      {
+        title: "Towns are Poké Balls",
+        body: "Towns on a region map are Poké Balls. A town where that Pokémon appears stays red. The others are gray.",
+      },
+      {
+        title: "Pikachu while loading",
+        body: "While the Pokédex, checklist, collection, a Pokémon’s page, or a home-page search is loading, Pikachu runs across the message.",
+      },
+      {
+        title: "Home at the site address",
+        body: "The home page is the site address itself.",
+      },
+    ],
+  },
+  {
     version: "0.8.0",
     date: "Sep 27, 2026",
     title: "Spawn maps and evolutions",
