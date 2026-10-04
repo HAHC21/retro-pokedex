@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     app_version: str = ""
     commit_hash: str = ""
     cors_origins: list[str] = ["http://localhost:5173"]
-    collection_data_path: str = "data/collection.json"
     pokeapi_base_url: str = "https://pokeapi.co/api/v2/"
     pokeapi_user_agent: str = "pokedex/0.1 (educational; pokeapi.co)"
     pokeapi_cache_ttl_seconds: int = 60 * 60 * 24 * 30  # ~1 month; species data rarely changes
@@ -46,6 +45,18 @@ class Settings(BaseSettings):
     smogon_cache_ttl_seconds: int = 60 * 60 * 24 * 7
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.5-flash-lite"
+    # Admin acquisition. Service account JSON (one line) or a path to the key file.
+    # Invite that account on the GA4 property, Search Console property, and Ads account.
+    google_service_account_json: str = ""
+    google_analytics_property_id: str = ""
+    google_search_console_site_url: str = ""
+    google_ads_customer_id: str = ""
+    google_ads_developer_token: str = ""
+    google_ads_login_customer_id: str = ""
+    google_ads_api_version: str = "v25"
+    # Gap filler. The API process does not read these; the Celery worker does.
+    celery_broker_url: str = "redis://redis:6379/0"
+    fill_gaps_interval_seconds: int = 900
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -21,10 +21,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.catalog.pokemon_form import can_capture, form_key, variant_display_name
-from app.db.documents import PokeApiCacheEntry, PokemonDocument
+from app.db.app.poke_api_cache_entry import PokeApiCacheEntry
+from app.db.app.pokemon_document import PokemonDocument
 from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import get_pokeapi_client, shutdown_external_clients
-from app.repositories.pokemon_form_repository import PokemonRepository, _stats_from_payload, types_from_payload
+from app.repositories.pokemon_form import PokemonRepository, _stats_from_payload, types_from_payload
 
 
 def _trailing_id(url: str) -> int:

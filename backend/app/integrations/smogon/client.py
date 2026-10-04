@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from app.repositories.pokeapi_cache_repository import PokeApiCacheRepository
+from app.repositories.pokeapi_cache import PokeApiCacheRepository
 
 
 class SmogonSetsClient:

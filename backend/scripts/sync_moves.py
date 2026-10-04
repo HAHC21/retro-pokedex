@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import get_pokeapi_client, shutdown_external_clients
-from app.repositories.move_repository import MoveRepository
+from app.repositories.move import MoveRepository
 
 
 async def sync_moves(*, limit: int | None = None, delay_seconds: float = 0.05) -> int:

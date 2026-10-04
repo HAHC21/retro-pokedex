@@ -4052,7 +4052,8 @@ button.pk-game-tag {
 }
 
 .pk-changelog,
-.pk-roadmap {
+.pk-roadmap,
+.pk-legal {
   max-width: 42rem;
   padding: var(--space-8) var(--space-6) var(--space-6);
   gap: 0;

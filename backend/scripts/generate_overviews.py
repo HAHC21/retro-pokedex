@@ -28,8 +28,8 @@ from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import get_gemini_client, get_pokeapi_client, shutdown_external_clients
 from app.integrations.gemini.client import GeminiUsage
 from app.catalog.pokemon_form import form_key, variant_display_name
-from app.repositories.pokemon_form_repository import PokemonRepository, _stats_from_payload, types_from_payload
-from app.repositories.pokemon_overview_repository import PokemonOverviewRepository
+from app.repositories.pokemon_form import PokemonRepository, _stats_from_payload, types_from_payload
+from app.repositories.pokemon_overview import PokemonOverviewRepository
 
 EXAMPLE_OVERVIEW = (
     "Bulbasaur is a dual-type Grass/Poison Pokémon introduced in Generation I as one of "

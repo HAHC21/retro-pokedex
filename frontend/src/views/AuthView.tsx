@@ -19,9 +19,6 @@ type AuthViewProps = {
   onContinue: () => void;
 };
 
-/** Flip to show Google and Microsoft on sign-in and log-in. */
-const SHOW_OAUTH_PROVIDERS = false;
-
 export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
   const { messages: m, fill } = useI18n();
   const copy =
@@ -62,9 +59,6 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
   }, [errorText, mode]);
 
   useEffect(() => {
-    if (!SHOW_OAUTH_PROVIDERS) {
-      return;
-    }
     let cancelled = false;
     fetchProviders().then((next) => {
       if (!cancelled) {
@@ -142,6 +136,9 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
   }
 
   const resetting = Boolean(resetToken && mode === "login");
+  const showGoogle = Boolean(providers?.google.enabled && providers.google.login_url);
+  const showMicrosoft = Boolean(providers?.microsoft.enabled && providers.microsoft.login_url);
+  const showOauth = !resetting && (showGoogle || showMicrosoft);
 
   return (
     <div className="pk-page pk-auth">
@@ -152,17 +149,21 @@ export function AuthView({ mode, error, onAlt, onContinue }: AuthViewProps) {
           <p>{resetting ? m.auth.newPasswordBody : copy.body}</p>
         </div>
 
-        {SHOW_OAUTH_PROVIDERS && !resetting ? (
+        {showOauth ? (
           <>
             <div className="pk-auth-providers">
-              <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("google")}>
-                <GoogleMark />
-                {copy.google}
-              </button>
-              <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("microsoft")}>
-                <MicrosoftMark />
-                {copy.microsoft}
-              </button>
+              {showGoogle ? (
+                <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("google")}>
+                  <GoogleMark />
+                  {copy.google}
+                </button>
+              ) : null}
+              {showMicrosoft ? (
+                <button type="button" className="btn pk-nav pk-auth-provider" onClick={() => startOAuth("microsoft")}>
+                  <MicrosoftMark />
+                  {copy.microsoft}
+                </button>
+              ) : null}
             </div>
             <div className="pk-auth-rule">
               <span />

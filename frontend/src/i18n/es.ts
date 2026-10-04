@@ -44,6 +44,8 @@ export const es: Messages = {
   footer: {
     changelog: "Novedades",
     roadmap: "Hoja de ruta",
+    privacy: "Privacidad",
+    terms: "Términos",
     legal:
       "Retro Pokédex es un panel no oficial hecho por fans y no está afiliado, respaldado ni apoyado por Nintendo, Game Freak ni The Pokémon Company. Pokémon y Pokédex son marcas registradas de Nintendo.",
     data: "Datos de",

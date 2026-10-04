@@ -42,6 +42,8 @@ export const en = {
   footer: {
     changelog: "Changelog",
     roadmap: "Roadmap",
+    privacy: "Privacy",
+    terms: "Terms",
     legal:
       "Retro Pokédex is an unofficial, fan-made dashboard and is not affiliated with, endorsed, or supported by Nintendo, Game Freak, or The Pokémon Company. Pokémon and Pokédex are registered trademarks of Nintendo.",
     data: "Data provided by",

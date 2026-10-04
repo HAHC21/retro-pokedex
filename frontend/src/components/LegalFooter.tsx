@@ -9,6 +9,10 @@ export function LegalFooter() {
         <Link to="/changelog">{m.footer.changelog}</Link>
         <span aria-hidden="true"> · </span>
         <Link to="/roadmap">{m.footer.roadmap}</Link>
+        <span aria-hidden="true"> · </span>
+        <Link to="/privacy">{m.footer.privacy}</Link>
+        <span aria-hidden="true"> · </span>
+        <Link to="/terms">{m.footer.terms}</Link>
       </p>
       <p className="pk-footer-legal">{m.footer.legal}</p>
       <p className="pk-footer-credit">

@@ -14,15 +14,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from mongoengine.connection import get_db
 
-from app.db.documents import (
-    PokemonAiMovesetDocument,
-    PokemonDetailViewDocument,
-    PokemonEvolutionDocument,
-    PokemonSpawnsDocument,
-    UserCollectionMarkDocument,
-)
+from app.db.app.pokemon_ai_moveset_document import PokemonAiMovesetDocument
+from app.db.app.pokemon_detail_view_document import PokemonDetailViewDocument
+from app.db.app.pokemon_evolution_document import PokemonEvolutionDocument
+from app.db.app.pokemon_spawns_document import PokemonSpawnsDocument
+from app.db.app.user_collection_mark_document import UserCollectionMarkDocument
 from app.db.mongo import connect_mongo, disconnect_mongo
-from app.repositories.pokemon_form_repository import types_from_payload
+from app.repositories.pokemon_form import types_from_payload
 
 _COLLECTIONS = (
     "pokemon_detail_view",

@@ -24,6 +24,7 @@ services:
       API_PROXY_TARGET: http://backend:8000
     ports:
       - "5120:5173"
+      - "5173:5173"
     depends_on:
       backend:
         condition: service_healthy
@@ -37,3 +38,16 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+  redis:
+    image: redis:7
+
+  worker:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: celery -A app.celery_app worker --beat --loglevel=info --concurrency=1
+    depends_on:
+      - redis

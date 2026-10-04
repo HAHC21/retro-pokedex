@@ -34,7 +34,7 @@ from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import get_pokeapi_cache_repository, get_pokeapi_client, shutdown_external_clients
 from app.integrations.pokeapi.client import PokeApiClient
 from app.integrations.pokeapi.mapper import pokemon_id_from_url
-from app.repositories.pokeapi_cache_repository import PokeApiCacheRepository
+from app.repositories.pokeapi_cache import PokeApiCacheRepository
 
 DEFAULT_LIMIT = 1025
 RETRY_WAIT_SECONDS = 30.0

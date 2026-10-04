@@ -165,6 +165,12 @@ export function parseAppPath(pathname: string, _search = ""): AppPath {
   if (path === "/roadmap") {
     return { ...DEFAULT_PATH, view: "roadmap" };
   }
+  if (path === "/privacy") {
+    return { ...DEFAULT_PATH, view: "privacy" };
+  }
+  if (path === "/terms") {
+    return { ...DEFAULT_PATH, view: "terms" };
+  }
 
   const parts = path.split("/").filter(Boolean);
   if (!parts.length) {
@@ -276,6 +282,12 @@ export function buildAppPath(path: Partial<AppPath> & Pick<AppPath, "view" | "ga
   }
   if (path.view === "roadmap") {
     return "/roadmap";
+  }
+  if (path.view === "privacy") {
+    return "/privacy";
+  }
+  if (path.view === "terms") {
+    return "/terms";
   }
   if (path.view === "dash") {
     return game === "home" ? "/" : `/${game}`;

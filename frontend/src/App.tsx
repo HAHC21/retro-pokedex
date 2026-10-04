@@ -30,6 +30,7 @@ import { ChecklistView } from "./views/ChecklistView";
 import { DexView } from "./views/DexView";
 import { DetailView } from "./views/DetailView";
 import { ChangelogView } from "./views/ChangelogView";
+import { LegalView } from "./views/LegalView";
 import { RoadmapView } from "./views/RoadmapView";
 import { ScanView } from "./views/ScanView";
 
@@ -831,6 +832,7 @@ export default function App() {
       ) : null}
       {view === "changelog" ? <ChangelogView /> : null}
       {view === "roadmap" ? <RoadmapView /> : null}
+      {view === "privacy" || view === "terms" ? <LegalView page={view} /> : null}
       {view === "signin" || view === "login" ? (
         <AuthView
           mode={view}

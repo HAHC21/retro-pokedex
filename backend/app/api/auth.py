@@ -21,7 +21,8 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     UserRead,
 )
-from app.services.auth_service import AuthError, AuthService
+from app.errors import AuthError
+from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

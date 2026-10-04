@@ -3,29 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.domain.collection import CaughtPokemon
 from app.domain.owned_pokemon import OwnedPokemon
-
-
-class CatchWrite(BaseModel):
-    normal: bool
-    shiny: bool
-
-
-class CaughtPokemonRead(BaseModel):
-    pokemon_id: int
-    caught_at: datetime
-    normal: bool
-    shiny: bool
-
-    @classmethod
-    def from_domain(cls, entry: CaughtPokemon) -> "CaughtPokemonRead":
-        return cls(
-            pokemon_id=entry.pokemon_id,
-            caught_at=entry.caught_at,
-            normal=entry.normal,
-            shiny=entry.shiny,
-        )
 
 
 class MarkEntryWrite(BaseModel):

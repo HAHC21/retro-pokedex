@@ -21,7 +21,7 @@ from mongoengine.connection import get_db
 from app.catalog.pokemon_form import form_key
 from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import get_pokeapi_client, shutdown_external_clients
-from app.repositories.pokemon_form_repository import PokemonRepository, _stats_from_payload, types_from_payload
+from app.repositories.pokemon_form import PokemonRepository, _stats_from_payload, types_from_payload
 
 
 def _id_from_url(url: str) -> int:
@@ -77,7 +77,7 @@ async def link() -> None:
         )
         linked += 1
         print(f"  #{pokedex_id} {form} ({name.encode('ascii', 'replace').decode()})")
-    from app.db.documents import PokemonOverviewDocument
+    from app.db.app.pokemon_overview_document import PokemonOverviewDocument
 
     PokemonOverviewDocument.ensure_indexes()
     try:

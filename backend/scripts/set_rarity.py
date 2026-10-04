@@ -16,9 +16,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.catalog.starters import STARTER_IDS
-from app.db.documents import PokemonDocument
+from app.db.app.pokemon_document import PokemonDocument
 from app.db.mongo import connect_mongo, disconnect_mongo
-from app.repositories.pokeapi_cache_repository import PokeApiCacheRepository
+from app.repositories.pokeapi_cache import PokeApiCacheRepository
 
 _LIMIT = 1025
 

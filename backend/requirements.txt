@@ -10,3 +10,6 @@ mongoengine>=0.29.0
 dnspython>=2.6.0
 bcrypt>=4.2.0
 email-validator>=2.2.0
+google-auth>=2.40.0
+celery>=5.4.0
+redis>=5.0.0

@@ -48,7 +48,14 @@ export function AppShell({
   const dexActive = view === "dex" || (view === "mon" && listView === "dex");
   const collectionActive = view === "collection" || (view === "mon" && listView === "collection");
   const checklistActive = view === "checklist" || (view === "mon" && listView === "checklist");
-  const showGamePicker = view !== "signin" && view !== "login" && view !== "changelog" && view !== "roadmap" && view !== "collection";
+  const showGamePicker =
+    view !== "signin" &&
+    view !== "login" &&
+    view !== "changelog" &&
+    view !== "roadmap" &&
+    view !== "privacy" &&
+    view !== "terms" &&
+    view !== "collection";
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();

@@ -12,6 +12,8 @@ Does **not** call PokéAPI. Rebuilds:
 - ``pokemon_acquisition``
 - ``ability_effects``
 - ``pokemon_detail_view``
+- ``pokemon_learnsets``
+- ``games``, ``generations``, ``regions``
 
 Run after a warehouse warm (``sync_pokeapi``), or whenever derived schemas change.
 PokéAPI itself should only be re-synced ~every 6 months or when a new game ships.
@@ -38,9 +40,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.db.mongo import connect_mongo, disconnect_mongo
-from app.dependencies import get_pokeapi_client, get_poke_proxy_service, shutdown_external_clients
-from app.repositories.pokedex_entry_repository import PokedexEntryRepository
-from app.services.poke_proxy_service import unique_regional_pokedex_names
+from app.dependencies import get_pokeapi_client, shutdown_external_clients
+from app.repositories.pokedex_entry import PokedexEntryRepository
+from app.services.poke_compile import PokeCompileService
+from app.services.poke_compile.helpers import unique_regional_pokedex_names
 
 DEFAULT_LIMIT = 1025
 
@@ -69,7 +72,11 @@ async def compile_tables(*, limit: int, force: bool) -> dict[str, int]:
     print("Flattening regional Pokédex rows…")
     flattened, flatten_skipped = await flatten_pokedexes(force=force)
 
-    service = get_poke_proxy_service()
+    client = get_pokeapi_client()
+    service = PokeCompileService(client)
+
+    print("Seeding games, generations, and regions…")
+    seeded = await asyncio.to_thread(service.seed_static_lists)
 
     print("Compiling pokemon names…")
     name_map = await service.rebuild_name_index(limit=limit)
@@ -96,7 +103,10 @@ async def compile_tables(*, limit: int, force: bool) -> dict[str, int]:
     ability_count = await service.rebuild_ability_effects(limit=limit)
 
     print("Compiling pokemon detail views…")
-    detail_count = await service.rebuild_pokemon_detail_views(limit=limit)
+    detail_count = await service.compile_detail_views()
+
+    print("Compiling learnsets…")
+    learnset_count = await service.compile_learnsets()
 
     stats = {
         "pokedex_flattened": flattened,
@@ -111,6 +121,10 @@ async def compile_tables(*, limit: int, force: bool) -> dict[str, int]:
         "acquisition": acquisition_count,
         "ability_effects": ability_count,
         "detail_views": detail_count,
+        "learnsets": learnset_count,
+        "games": seeded["games"],
+        "generations": seeded["generations"],
+        "regions": seeded["regions"],
     }
     print(
         "Done.",

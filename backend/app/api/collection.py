@@ -20,8 +20,8 @@ from app.schemas.collection import (
     ProgressRead,
     ProgressWrite,
 )
-from app.services.owned_pokemon_service import OwnedPokemonService
-from app.services.user_collection_service import UserCollectionService
+from app.services.owned_pokemon import OwnedPokemonService
+from app.services.user_collection import UserCollectionService
 
 logger = logging.getLogger("uvicorn.error")
 

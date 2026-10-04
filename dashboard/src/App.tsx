@@ -1,5 +1,15 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { AdminOverview, LoginEvent, SessionUser, fetchMe, fetchOverview, login, logout } from "./api";
+import { AdminOverview, SessionUser, fetchMe, fetchOverview, login, logout } from "./api";
+import { AcquisitionBoard, ActivityBoard, OverviewBoard, SignInBoard } from "./stats";
+
+type BoardId = "overview" | "activity" | "acquisition" | "sign-ins";
+
+const BOARDS: { id: BoardId; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "activity", label: "Activity" },
+  { id: "acquisition", label: "Acquisition" },
+  { id: "sign-ins", label: "Sign-ins" },
+];
 
 function isStaff(user: SessionUser | null): boolean {
   return user?.role === "admin" || user?.role === "developer";
@@ -9,30 +19,10 @@ function displayName(user: SessionUser): string {
   return user.name || user.email || "Account";
 }
 
-function formatWhen(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function dayKey(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value.slice(0, 10);
-  }
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
 export function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [board, setBoard] = useState<BoardId>("overview");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [query, setQuery] = useState("");
@@ -107,6 +97,7 @@ export function App() {
     setUser(null);
     setOverview(null);
     setQuery("");
+    setBoard("overview");
     window.history.replaceState({}, "", "/login");
   }
 
@@ -145,14 +136,32 @@ export function App() {
   return (
     <div className="canvas">
       <div className="shell">
-        <IconRail />
-        <SideNav />
+        <IconRail board={board} onBoard={setBoard} />
+        <SideNav board={board} onBoard={setBoard} />
         <div className="workspace">
-          <TopBar query={query} onQuery={setQuery} user={user} onLogout={onLogout} />
+          <TopBar
+            query={query}
+            onQuery={setQuery}
+            showSearch={board === "sign-ins"}
+            user={user}
+            onLogout={onLogout}
+          />
           <div className="content">
             {error ? <p className="error">{error}</p> : null}
             {!overview ? <StaffNotice user={user} /> : null}
-            {overview ? <OverviewPanel overview={overview} logins={filteredLogins} /> : null}
+            {overview && board === "overview" ? (
+              <OverviewBoard activity={overview.activity} google={overview.google} />
+            ) : null}
+            {overview && board === "activity" ? <ActivityBoard activity={overview.activity} /> : null}
+            {overview && board === "acquisition" ? <AcquisitionBoard google={overview.google} /> : null}
+            {overview && board === "sign-ins" ? (
+              <SignInBoard
+                userCount={overview.user_count}
+                loginsToday={overview.logins_today}
+                loginsWeek={overview.logins_last_7_days}
+                logins={filteredLogins}
+              />
+            ) : null}
           </div>
         </div>
       </div>
@@ -160,35 +169,48 @@ export function App() {
   );
 }
 
-function IconRail() {
+function IconRail({ board, onBoard }: { board: BoardId; onBoard: (board: BoardId) => void }) {
   return (
     <aside className="rail" aria-label="Primary">
       <span className="brand-mark" aria-hidden="true">
         <DexMark />
       </span>
       <nav>
-        <button type="button" className="rail-btn is-active" aria-label="Overview" title="Overview">
-          <HomeIcon />
-        </button>
-        <button type="button" className="rail-btn" aria-label="Sign-ins" title="Sign-ins">
-          <UsersIcon />
-        </button>
+        {BOARDS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={item.id === board ? "rail-btn is-active" : "rail-btn"}
+            aria-label={item.label}
+            aria-current={item.id === board ? "page" : undefined}
+            title={item.label}
+            onClick={() => onBoard(item.id)}
+          >
+            <BoardIcon id={item.id} />
+          </button>
+        ))}
       </nav>
     </aside>
   );
 }
 
-function SideNav() {
+function SideNav({ board, onBoard }: { board: BoardId; onBoard: (board: BoardId) => void }) {
   return (
     <aside className="sidenav">
       <p className="product">Admin</p>
       <nav>
-        <a className="nav-item is-active" href="#overview">
-          <GridIcon /> Overview
-        </a>
-        <a className="nav-item" href="#sign-ins">
-          <UsersIcon /> Sign-ins
-        </a>
+        {BOARDS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={item.id === board ? "nav-item is-active" : "nav-item"}
+            aria-current={item.id === board ? "page" : undefined}
+            onClick={() => onBoard(item.id)}
+          >
+            <BoardIcon id={item.id} size={16} />
+            {item.label}
+          </button>
+        ))}
       </nav>
     </aside>
   );
@@ -197,11 +219,13 @@ function SideNav() {
 function TopBar({
   query,
   onQuery,
+  showSearch,
   user,
   onLogout,
 }: {
   query: string;
   onQuery: (value: string) => void;
+  showSearch: boolean;
   user: SessionUser;
   onLogout: () => void;
 }) {
@@ -212,15 +236,19 @@ function TopBar({
   });
   return (
     <header className="topbar">
-      <label className="search">
-        <SearchIcon />
-        <input
-          value={query}
-          onChange={(event) => onQuery(event.target.value)}
-          placeholder="Search sign-ins..."
-          aria-label="Search sign-ins"
-        />
-      </label>
+      {showSearch ? (
+        <label className="search">
+          <SearchIcon />
+          <input
+            value={query}
+            onChange={(event) => onQuery(event.target.value)}
+            placeholder="Search sign-ins..."
+            aria-label="Search sign-ins"
+          />
+        </label>
+      ) : (
+        <span className="topbar-title">Site statistics</span>
+      )}
       <div className="topbar-actions">
         <span className="date-pill">{today}</span>
         <button type="button" className="primary" onClick={onLogout}>
@@ -234,7 +262,6 @@ function TopBar({
 
 function Profile({ user }: { user: SessionUser }) {
   const name = displayName(user);
-  const role = user.role;
   const initial = name.slice(0, 1).toUpperCase();
   return (
     <div className="profile">
@@ -243,7 +270,7 @@ function Profile({ user }: { user: SessionUser }) {
       </span>
       <span>
         <strong>{name}</strong>
-        <small>{role}</small>
+        <small>{user.role}</small>
       </span>
     </div>
   );
@@ -312,131 +339,17 @@ function StaffNotice({ user }: { user: SessionUser }) {
   );
 }
 
-function OverviewPanel({ overview, logins }: { overview: AdminOverview; logins: LoginEvent[] }) {
-  return (
-    <>
-      <div className="page-head" id="overview">
-        <h1>Site statistics</h1>
-        <div className="tabs" role="tablist">
-          <span className="tab is-active">Overview</span>
-        </div>
-      </div>
-      <section className="stat-row">
-        <StatCard label="Users" value={overview.user_count} note="Accounts" tone="neutral" />
-        <StatCard label="Logins today" value={overview.logins_today} note="UTC day" tone="blue" />
-        <StatCard label="Last 7 days" value={overview.logins_last_7_days} note="Rolling" tone="green" />
-        <StatCard label="Shown" value={overview.recent_logins.length} note="Latest events" tone="amber" />
-      </section>
-      <section className="split">
-        <article className="panel chart-card">
-          <div className="panel-head">
-            <h2>Sign-ins</h2>
-            <span className="legend">
-              <i className="swatch" /> Recent
-            </span>
-          </div>
-          <LoginChart events={overview.recent_logins} />
-        </article>
-        <div className="mini-grid">
-          <MiniStat label="Password" value={countMethod(overview.recent_logins, "password")} />
-          <MiniStat label="Google" value={countMethod(overview.recent_logins, "google")} />
-          <MiniStat label="Microsoft" value={countMethod(overview.recent_logins, "microsoft")} />
-          <MiniStat label="Other" value={countOther(overview.recent_logins)} />
-        </div>
-      </section>
-      <section className="panel table-card" id="sign-ins">
-        <div className="panel-head">
-          <h2>Recent sign-ins</h2>
-        </div>
-        {logins.length === 0 ? (
-          <p className="muted empty">No sign-ins recorded yet. New logins are stored as they happen.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Email</th>
-                <th>Method</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logins.map((event) => (
-                <tr key={event.event_id}>
-                  <td>{formatWhen(event.occurred_at)}</td>
-                  <td>{event.email ?? event.user_id}</td>
-                  <td>
-                    <span className="tag">{event.method}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-    </>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  note,
-  tone,
-}: {
-  label: string;
-  value: number;
-  note: string;
-  tone: "neutral" | "blue" | "green" | "amber";
-}) {
-  return (
-    <article className="panel stat">
-      <h2>{label}</h2>
-      <p className="stat-value">{value}</p>
-      <p className={`note note-${tone}`}>{note}</p>
-    </article>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: number }) {
-  return (
-    <article className="panel mini">
-      <h2>{label}</h2>
-      <p className="stat-value">{value}</p>
-    </article>
-  );
-}
-
-function LoginChart({ events }: { events: LoginEvent[] }) {
-  const buckets = new Map<string, number>();
-  for (const event of [...events].reverse()) {
-    const key = dayKey(event.occurred_at);
-    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+function BoardIcon({ id, size = 18 }: { id: BoardId; size?: number }) {
+  if (id === "overview") {
+    return <GridIcon size={size} />;
   }
-  const rows = [...buckets.entries()].slice(-6);
-  const max = Math.max(1, ...rows.map(([, count]) => count));
-  if (rows.length === 0) {
-    return <p className="muted empty">Sign-ins will appear here after the next login.</p>;
+  if (id === "activity") {
+    return <UsersIcon size={size} />;
   }
-  return (
-    <div className="bars" role="img" aria-label="Recent sign-ins by day">
-      {rows.map(([label, count]) => (
-        <div className="bar-col" key={label}>
-          <div className="bar-track">
-            <span style={{ height: `${Math.round((count / max) * 100)}%` }} />
-          </div>
-          <small>{label}</small>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function countMethod(events: LoginEvent[], method: string): number {
-  return events.filter((event) => event.method === method).length;
-}
-
-function countOther(events: LoginEvent[]): number {
-  return events.filter((event) => !["password", "google", "microsoft"].includes(event.method)).length;
+  if (id === "acquisition") {
+    return <ChartIcon size={size} />;
+  }
+  return <RowsIcon size={size} />;
 }
 
 function DexMark() {
@@ -448,17 +361,9 @@ function DexMark() {
   );
 }
 
-function HomeIcon() {
+function UsersIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z" />
-    </svg>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8">
       <circle cx="9" cy="9" r="3" />
       <path d="M4 19c.6-2.6 2.5-4 5-4s4.4 1.4 5 4" />
       <circle cx="17" cy="10" r="2.2" />
@@ -467,13 +372,30 @@ function UsersIcon() {
   );
 }
 
-function GridIcon() {
+function GridIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8">
       <rect x="4" y="4" width="7" height="7" rx="1.5" />
       <rect x="13" y="4" width="7" height="7" rx="1.5" />
       <rect x="4" y="13" width="7" height="7" rx="1.5" />
       <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+function ChartIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 19V5M4 19h16" />
+      <path d="M8 15l3.5-4 2.5 2.5L19 8" />
+    </svg>
+  );
+}
+
+function RowsIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M5 7h14M5 12h14M5 17h14" />
     </svg>
   );
 }

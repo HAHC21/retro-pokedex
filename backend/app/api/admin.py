@@ -4,8 +4,9 @@ from app.dependencies import SESSION_USER_KEY, get_admin_stats_service, get_auth
 from app.domain.user import User
 from app.schemas.admin import AdminOverviewRead
 from app.schemas.auth import LoginRequest, UserRead
-from app.services.admin_stats_service import AdminStatsService
-from app.services.auth_service import AuthError, AuthService
+from app.errors import AuthError
+from app.services.admin_stats import AdminStatsService
+from app.services.auth import AuthService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

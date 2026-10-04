@@ -7,25 +7,30 @@ from app.domain.roles import is_staff
 from app.domain.user import User
 from app.integrations.email.sender import build_email_sender
 from app.integrations.gemini.client import GeminiMovesetClient
+from app.integrations.google.insights import GoogleInsightsClient
 from app.integrations.oidc import OidcClientRegistry
 from app.integrations.pokeapi.client import PokeApiClient
 from app.integrations.smogon.client import SmogonSetsClient
-from app.repositories.login_event_repository import LoginEventRepository
-from app.repositories.json_collection_repository import JsonFileCollectionRepository
-from app.repositories.mongo_user_repository import MongoUserRepository
-from app.repositories.pokeapi_cache_repository import PokeApiCacheRepository
-from app.repositories.pokeapi_pokemon_repository import PokeApiPokemonRepository
-from app.repositories.owned_pokemon_repository import OwnedPokemonRepository
-from app.repositories.pokemon_ai_moveset_repository import PokemonAiMovesetRepository
-from app.repositories.pokemon_overview_repository import PokemonOverviewRepository
-from app.repositories.user_collection_repository import UserCollectionRepository
-from app.services.admin_stats_service import AdminStatsService
-from app.services.auth_service import AuthService
-from app.services.moveset_service import MovesetService
-from app.services.owned_pokemon_service import OwnedPokemonService
-from app.services.poke_proxy_service import PokeProxyService
-from app.services.pokemon_service import CollectionService, PokemonService
-from app.services.user_collection_service import UserCollectionService
+from app.repositories.login_event import LoginEventRepository
+from app.repositories.site_activity import SiteActivityRepository
+from app.repositories.mongo_user import MongoUserRepository
+from app.repositories.pokeapi_cache import PokeApiCacheRepository
+from app.repositories.owned_pokemon import OwnedPokemonRepository
+from app.repositories.pokemon_ai_moveset import PokemonAiMovesetRepository
+from app.repositories.pokemon_overview import PokemonOverviewRepository
+from app.repositories.user_collection import UserCollectionRepository
+from app.services.acquisition import AcquisitionService
+from app.services.admin_stats import AdminStatsService
+from app.services.auth import AuthService
+from app.services.box_scan import BoxScanService
+from app.services.catalog import CatalogService
+from app.services.moveset import MovesetService
+from app.services.obtainability import ObtainabilityService
+from app.services.owned_pokemon import OwnedPokemonService
+from app.services.pokemon_detail import PokemonDetailService
+from app.services.pokemon_learnset import PokemonLearnsetService
+from app.services.spawns import SpawnsService
+from app.services.user_collection import UserCollectionService
 
 SESSION_USER_KEY = "user_id"
 
@@ -67,21 +72,10 @@ def get_ai_moveset_repository() -> PokemonAiMovesetRepository:
 @lru_cache
 def get_moveset_service() -> MovesetService:
     return MovesetService(
-        get_pokeapi_client(),
         get_smogon_client(),
         get_gemini_client(),
         ai_movesets=get_ai_moveset_repository(),
     )
-
-
-@lru_cache
-def get_pokemon_repository() -> PokeApiPokemonRepository:
-    return PokeApiPokemonRepository(get_pokeapi_client())
-
-
-@lru_cache
-def get_collection_repository() -> JsonFileCollectionRepository:
-    return JsonFileCollectionRepository(settings.collection_data_path)
 
 
 @lru_cache
@@ -109,17 +103,32 @@ def get_pokemon_overview_repository() -> PokemonOverviewRepository:
     return PokemonOverviewRepository()
 
 
-@lru_cache
-def get_poke_proxy_service() -> PokeProxyService:
-    return PokeProxyService(get_pokeapi_client(), overviews=get_pokemon_overview_repository())
+def get_catalog_service() -> CatalogService:
+    return CatalogService()
 
 
-def get_pokemon_service() -> PokemonService:
-    return PokemonService(get_pokemon_repository(), get_collection_repository())
+def get_pokemon_detail_service() -> PokemonDetailService:
+    return PokemonDetailService()
 
 
-def get_collection_service() -> CollectionService:
-    return CollectionService(get_pokemon_repository(), get_collection_repository())
+def get_spawns_service() -> SpawnsService:
+    return SpawnsService()
+
+
+def get_learnset_service() -> PokemonLearnsetService:
+    return PokemonLearnsetService()
+
+
+def get_obtainability_service() -> ObtainabilityService:
+    return ObtainabilityService()
+
+
+def get_acquisition_service() -> AcquisitionService:
+    return AcquisitionService()
+
+
+def get_box_scan_service() -> BoxScanService:
+    return BoxScanService()
 
 
 def get_user_collection_service() -> UserCollectionService:
@@ -135,8 +144,17 @@ def get_login_event_repository() -> LoginEventRepository:
     return LoginEventRepository()
 
 
+@lru_cache
+def get_google_insights_client() -> GoogleInsightsClient:
+    return GoogleInsightsClient(settings)
+
+
 def get_admin_stats_service() -> AdminStatsService:
-    return AdminStatsService(get_login_event_repository())
+    return AdminStatsService(
+        get_login_event_repository(),
+        SiteActivityRepository(),
+        get_google_insights_client(),
+    )
 
 
 def get_auth_service() -> AuthService:
@@ -168,19 +186,16 @@ def require_staff(user: User = Depends(get_current_user)) -> User:
 
 
 async def shutdown_external_clients() -> None:
-    await get_pokeapi_client().aclose()
     await get_smogon_client().aclose()
     await get_gemini_client().aclose()
-    get_pokeapi_client.cache_clear()
     get_smogon_client.cache_clear()
     get_gemini_client.cache_clear()
     get_moveset_service.cache_clear()
     get_ai_moveset_repository.cache_clear()
-    get_pokemon_repository.cache_clear()
     get_oidc_registry.cache_clear()
     get_user_repository.cache_clear()
     get_user_collection_repository.cache_clear()
     get_owned_pokemon_repository.cache_clear()
     get_pokemon_overview_repository.cache_clear()
     get_pokeapi_cache_repository.cache_clear()
-    get_poke_proxy_service.cache_clear()
+    get_google_insights_client.cache_clear()
