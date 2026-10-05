@@ -1921,6 +1921,10 @@
   min-width: 0;
 }
 
+.pk-stats .pk-stat-row {
+  grid-template-columns: 6rem minmax(0, 1fr) 2.5rem;
+}
+
 .pk-stat-row > span:first-child {
   font-size: 11px;
   letter-spacing: 0.12em;
