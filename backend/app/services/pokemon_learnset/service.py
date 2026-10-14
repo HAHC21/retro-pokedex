@@ -9,7 +9,7 @@ from app.repositories.data_gap import FORM, LEARNSET, DataGapRepository
 from app.repositories.move import MoveRepository
 from app.repositories.pokemon_form import PokemonRepository
 from app.repositories.pokemon_learnset import PokemonLearnsetRepository
-from app.services.poke_compile.helpers import stores_learnset
+from app.catalog.pokemon_form import stores_learnset
 
 
 class PokemonLearnsetService:

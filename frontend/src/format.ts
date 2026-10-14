@@ -156,7 +156,7 @@ export function navBtnStyle(active: boolean): CSSProperties {
   return active
     ? {
         background: "var(--color-accent)",
-        color: "#fff",
+        color: "var(--color-on-accent)",
         border: "1px solid var(--color-accent-700)",
       }
     : {
@@ -178,10 +178,10 @@ export function pillStyle(active: boolean, strong: boolean, extra?: CSSPropertie
     borderRadius: 0,
   };
   if (active && strong) {
-    return { ...base, background: "var(--color-accent-900)", color: "#fff", border: "1px solid var(--color-accent-900)", ...extra };
+    return { ...base, background: "var(--color-accent-900)", color: "var(--color-bg)", border: "1px solid var(--color-accent-900)", ...extra };
   }
   if (active) {
-    return { ...base, background: "var(--color-accent)", color: "#fff", border: "1px solid var(--color-accent-700)", ...extra };
+    return { ...base, background: "var(--color-accent)", color: "var(--color-on-accent)", border: "1px solid var(--color-accent-700)", ...extra };
   }
   return { ...base, background: "transparent", color: "var(--color-neutral-700)", border: "1px solid var(--color-divider)", ...extra };
 }
@@ -192,7 +192,7 @@ export function kindStyle(kind: "Normal" | "Shiny"): CSSProperties {
         fontSize: 10,
         letterSpacing: "0.12em",
         background: "var(--color-accent-900)",
-        color: "#fff",
+        color: "var(--color-bg)",
         border: "1px solid var(--color-accent-900)",
       }
     : {

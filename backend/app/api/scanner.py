@@ -4,6 +4,7 @@ from app.dependencies import get_box_scan_service, get_current_user, get_gemini_
 from app.domain.user import User
 from app.errors import BoxScanError, ScanBudgetError, ScanLimitError
 from app.integrations.gemini.client import GeminiMovesetClient
+from app.schemas.scanner import BoxScanRead, ScanQuotaRead
 from app.services.box_scan import BoxScanService
 from app.services.box_scan.const import SOURCES
 
@@ -19,22 +20,22 @@ ALLOWED_TYPES = {
 }
 
 
-@router.get("/quota")
+@router.get("/quota", response_model=ScanQuotaRead)
 def read_quota(
     user: User = Depends(get_current_user),
     scans: BoxScanService = Depends(get_box_scan_service),
-) -> dict:
+) -> ScanQuotaRead:
     return scans.scan_quota(user)
 
 
-@router.post("/box")
+@router.post("/box", response_model=BoxScanRead)
 async def analyze_box(
     source: str = Form(...),
     image: UploadFile = File(...),
     user: User = Depends(get_current_user),
     gemini: GeminiMovesetClient = Depends(get_gemini_client),
     scans: BoxScanService = Depends(get_box_scan_service),
-) -> dict:
+) -> BoxScanRead:
     mime = ALLOWED_TYPES.get((image.content_type or "").split(";")[0].strip().lower())
     if mime is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose a PNG, JPEG, or WebP screenshot.")

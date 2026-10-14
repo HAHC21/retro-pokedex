@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.services.poke_compile.fill import fill_open_gaps
+from scripts.poke_compile.fill import fill_open_gaps
 
 
 def main() -> None:

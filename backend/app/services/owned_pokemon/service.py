@@ -1,4 +1,4 @@
-"""Create / update / list concrete owned Pokémon and sync dex marks."""
+"""Create, update, and list concrete owned Pokémon."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from uuid import uuid4
 
 from app.domain.owned_pokemon import OwnedPokemon
 from app.repositories.owned_pokemon import OwnedPokemonRepository
-from app.repositories.user_collection import UserCollectionRepository
 from app.services.owned_pokemon.helpers import (
     _calc_stats_from_payload,
     _clamp_stat,
@@ -22,13 +21,8 @@ from app.services.owned_pokemon.helpers import (
 
 
 class OwnedPokemonService:
-    def __init__(
-        self,
-        owned: OwnedPokemonRepository | None = None,
-        marks: UserCollectionRepository | None = None,
-    ) -> None:
+    def __init__(self, owned: OwnedPokemonRepository | None = None) -> None:
         self._owned = owned or OwnedPokemonRepository()
-        self._marks = marks or UserCollectionRepository()
 
     def list_for_species(self, user_id: str, pokemon_id: int, *, game_key: str | None = None) -> list[OwnedPokemon]:
         return self._owned.list_owned(user_id, pokemon_id=pokemon_id, game_key=game_key)
@@ -63,11 +57,16 @@ class OwnedPokemonService:
             raw_format=raw_format,
         )
         saved = self._owned.upsert_owned(owned)
-        if saved.game_key:
-            self._sync_mark(user_id, saved.game_key, saved.pokemon_id)
         return saved
 
-    def create_batch(self, user_id: str, payloads: list[dict[str, Any]], *, filename: str | None = None) -> dict[str, Any]:
+    def create_batch(
+        self,
+        user_id: str,
+        payloads: list[dict[str, Any]],
+        *,
+        filename: str | None = None,
+        indexes: list[int] | None = None,
+    ) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
         imported = self._owned.create_import(
             user_id=user_id,
@@ -77,8 +76,8 @@ class OwnedPokemonService:
         )
         saved = 0
         errors: list[dict[str, Any]] = []
-        keys: set[tuple[str, int]] = set()
-        for index, payload in enumerate(payloads):
+        for position, payload in enumerate(payloads):
+            index = indexes[position] if indexes is not None else position
             try:
                 owned = self._owned_from_payload(
                     user_id,
@@ -90,8 +89,6 @@ class OwnedPokemonService:
                 )
                 self._owned.upsert_owned(owned)
                 saved += 1
-                if owned.game_key:
-                    keys.add((owned.game_key, owned.pokemon_id))
             except Exception as exc:
                 errors.append(
                     {
@@ -106,8 +103,6 @@ class OwnedPokemonService:
             status="parsed" if saved else "failed",
             error_message=None if saved else "No Pokémon could be saved from this batch.",
         )
-        for game_key, pokemon_id in keys:
-            self._sync_mark(user_id, game_key, pokemon_id)
         return {
             "import_id": imported.import_id,
             "saved": saved,
@@ -220,19 +215,13 @@ class OwnedPokemonService:
             slot_index=existing.slot_index,
         )
         saved = self._owned.upsert_owned(updated)
-        games = {g for g in (existing.game_key, saved.game_key) if g}
-        for game in games:
-            self._sync_mark(user_id, game, existing.pokemon_id)
         return saved
 
     def delete(self, user_id: str, owned_id: str) -> bool:
         existing = self._owned.get_owned(owned_id)
         if existing is None or existing.user_id != user_id:
             return False
-        ok = self._owned.delete_owned(owned_id, user_id=user_id)
-        if ok and existing.game_key:
-            self._sync_mark(user_id, existing.game_key, existing.pokemon_id)
-        return ok
+        return self._owned.delete_owned(owned_id, user_id=user_id)
 
     def collected_traits(self, user_id: str, pokemon_id: int, *, game_key: str | None = None) -> dict[str, list[str]]:
         owned = self.list_for_species(user_id, pokemon_id, game_key=game_key)
@@ -245,27 +234,3 @@ class OwnedPokemonService:
         )
         natures = sorted({(entry.nature or "").strip().casefold() for entry in owned if entry.nature})
         return {"abilities": abilities, "natures": natures}
-
-    def _sync_mark(self, user_id: str, game_key: str, pokemon_id: int) -> None:
-        owned = self._owned.list_owned(user_id, game_key=game_key, pokemon_id=pokemon_id)
-        has_normal = any(not entry.shiny for entry in owned)
-        has_shiny = any(entry.shiny for entry in owned)
-        caught_male = any(not entry.shiny and entry.gender == "male" for entry in owned)
-        caught_female = any(not entry.shiny and entry.gender == "female" for entry in owned)
-        shiny_male = any(entry.shiny and entry.gender == "male" for entry in owned)
-        shiny_female = any(entry.shiny and entry.gender == "female" for entry in owned)
-        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
-        existing = (self._marks.list_progress(user_id).get(game_key) or {}).get(str(pokemon_id)) or {}
-        self._marks.upsert_mark(
-            user_id=user_id,
-            game=game_key,
-            pokemon_id=pokemon_id,
-            caught=has_normal,
-            caught_at=existing.get("caughtAt") or (now_ms if has_normal else None),
-            caught_male=caught_male,
-            caught_female=caught_female,
-            shiny=has_shiny,
-            shiny_at=existing.get("shinyAt") or (now_ms if has_shiny else None),
-            shiny_male=shiny_male,
-            shiny_female=shiny_female,
-        )

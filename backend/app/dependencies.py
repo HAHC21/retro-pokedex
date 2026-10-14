@@ -132,11 +132,11 @@ def get_box_scan_service() -> BoxScanService:
 
 
 def get_user_collection_service() -> UserCollectionService:
-    return UserCollectionService(get_user_collection_repository())
+    return UserCollectionService(get_user_collection_repository(), get_owned_pokemon_repository())
 
 
 def get_owned_pokemon_service() -> OwnedPokemonService:
-    return OwnedPokemonService(get_owned_pokemon_repository(), get_user_collection_repository())
+    return OwnedPokemonService(get_owned_pokemon_repository())
 
 
 @lru_cache

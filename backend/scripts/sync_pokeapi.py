@@ -39,7 +39,7 @@ from app.dependencies import get_pokeapi_cache_repository, get_pokeapi_client, s
 from app.integrations.pokeapi.client import PokeApiClient
 from app.integrations.pokeapi.mapper import pokemon_id_from_url
 from app.repositories.pokeapi_cache import PokeApiCacheRepository
-from app.services.poke_compile.helpers import unique_regional_pokedex_names
+from scripts.poke_compile.helpers import unique_regional_pokedex_names
 
 DEFAULT_END = 1025
 SPECIES_LIST_PARAMS = {"limit": DEFAULT_END, "offset": 0}

@@ -198,6 +198,29 @@ class OwnedPokemonRepository:
             )
         return rows
 
+    def list_mark_sources(self, user_id: str) -> list[dict[str, Any]]:
+        """Fields a specimen contributes to the catch mark for its save."""
+        docs = OwnedPokemonDocument.objects(user_id=user_id).only(
+            "pokemon_id", "game_key", "form_slug", "shiny", "gender"
+        )
+        sources: list[dict[str, Any]] = []
+        for doc in docs:
+            game_key = (doc.game_key or "").strip()
+            if not game_key:
+                continue
+            form = (doc.form_slug or "base").strip() or "base"
+            gender = (doc.gender or "").strip().lower()
+            sources.append(
+                {
+                    "pokemon_id": int(doc.pokemon_id),
+                    "game_key": game_key,
+                    "form": form,
+                    "shiny": bool(doc.shiny),
+                    "gender": gender if gender in {"male", "female"} else None,
+                }
+            )
+        return sources
+
     def get_owned(self, owned_id: str) -> OwnedPokemon | None:
         doc = OwnedPokemonDocument.objects(owned_id=owned_id).first()
         return self._to_owned(doc) if doc else None

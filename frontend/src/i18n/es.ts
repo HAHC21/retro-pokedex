@@ -27,6 +27,11 @@ export const es: Messages = {
     english: "Inglés",
     spanish: "Español",
   },
+  theme: {
+    group: "Apariencia",
+    night: "Modo noche",
+    day: "Modo día",
+  },
   prompt: {
     title: "¿Cambiar a español?",
     body: "Parece que estás en {country}. Retro Pokédex puede mostrarse en español.",
@@ -134,13 +139,6 @@ export const es: Messages = {
     formsSub: "Megaevoluciones, Gigamax y formas regionales",
     formsCount: "{count} formas",
     noneStored: "Ninguna guardada",
-    shortcut: "Atajo",
-    resumeTitle: "Seguir donde lo dejé",
-    resumeBody: "Abrir la generación {roman}.",
-    missingTitle: "Ver lo que falta",
-    missingBody: "Abrir la Pokédex Nacional filtrada a especies sin marca.",
-    shiniesTitle: "Mis variocolor",
-    shiniesBody: "Abrir la Pokédex Nacional filtrada a variocolor registrados.",
   },
   dex: {
     scope: "Alcance",
@@ -237,7 +235,7 @@ export const es: Messages = {
     natures: "Naturalezas",
     defensive: "Debilidades",
     offensive: "Cobertura ofensiva",
-    spawns: "Dónde aparece",
+    spawns: "Apariciones",
     spawnsSub: "Encuentros salvajes en {game}",
     loadingSpawns: "Cargando lugares de aparición…",
     noSpawns: "No hay apariciones en el juego seleccionado. Revisa la sección Juegos más abajo.",
@@ -346,7 +344,7 @@ export const es: Messages = {
   },
   import: {
     title: "Importar archivos PK",
-    body: "Elige una carpeta o varios archivos. Cada espécimen se asigna al juego en el que se encontró. Se omiten copias con el mismo nombre y tamaño.",
+    body: "Elige una carpeta o varios archivos. Cada espécimen se asigna al juego en el que se encontró. Otra copia con el mismo nombre y tamaño también se guarda.",
     files: "Elegir archivos",
     folder: "Elegir carpeta",
     reading: "Leyendo {done} / {total}",

@@ -1,4 +1,11 @@
 import { API_ORIGIN } from "./apiBase";
+import type {
+  OwnedIndexResponse,
+  OwnedPokemonBatchResponse,
+  OwnedPokemonListResponse,
+  OwnedPokemonResponse,
+  ProgressResponse,
+} from "./schemas/collection";
 import type { MarkEntry, Progress } from "./types";
 
 const API = `${API_ORIGIN}/api/collection`;
@@ -12,7 +19,7 @@ export async function fetchCollectionProgress(): Promise<Progress | null> {
     if (!response.ok) {
       throw new Error("Could not load collection.");
     }
-    const payload = (await response.json()) as { progress?: Progress };
+    const payload = (await response.json()) as ProgressResponse;
     return payload.progress || {};
   } catch {
     return null;
@@ -35,7 +42,7 @@ export async function syncCollectionProgress(
   if (!response.ok) {
     throw new Error("Could not sync collection.");
   }
-  const payload = (await response.json()) as { progress?: Progress };
+  const payload = (await response.json()) as ProgressResponse;
   return payload.progress || {};
 }
 
@@ -169,7 +176,7 @@ export async function fetchOwnedIndex(): Promise<OwnedIndexRow[] | null> {
     if (!response.ok) {
       throw new Error("Could not load collection.");
     }
-    const payload = (await response.json()) as { items?: OwnedIndexRow[] };
+    const payload = (await response.json()) as OwnedIndexResponse;
     return payload.items || [];
   } catch {
     return null;
@@ -191,7 +198,7 @@ export async function fetchOwnedPokemon(
   if (!response.ok) {
     throw new Error("Could not load owned Pokémon.");
   }
-  return (await response.json()) as OwnedPokemonList;
+  return (await response.json()) as OwnedPokemonListResponse;
 }
 
 export async function createOwnedPokemon(input: OwnedPokemonInput): Promise<OwnedPokemon> {
@@ -205,7 +212,7 @@ export async function createOwnedPokemon(input: OwnedPokemonInput): Promise<Owne
   if (!response.ok) {
     throw new Error(typeof payload.detail === "string" ? payload.detail : "Could not add Pokémon.");
   }
-  return payload as OwnedPokemon;
+  return payload as OwnedPokemonResponse;
 }
 
 export async function deleteOwnedPokemon(ownedId: string): Promise<void> {
@@ -240,7 +247,7 @@ export async function uploadParsedOwnedPokemon(
   if (!response.ok) {
     throw new Error(typeof payload.detail === "string" ? payload.detail : "Could not save uploaded Pokémon.");
   }
-  return payload as OwnedPokemon;
+  return payload as OwnedPokemonResponse;
 }
 
 export type OwnedPokemonBatchResult = {
@@ -270,7 +277,7 @@ export async function uploadParsedOwnedPokemonBatch(
     if (!response.ok) {
       throw new Error(typeof payload.detail === "string" ? payload.detail : "Could not save uploaded Pokémon.");
     }
-    const result = payload as OwnedPokemonBatchResult;
+    const result = payload as OwnedPokemonBatchResponse;
     totals.import_id = result.import_id || totals.import_id;
     totals.saved += result.saved;
     totals.failed += result.failed;

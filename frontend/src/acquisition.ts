@@ -1,6 +1,7 @@
 import { API, gameByKey, isAvailableInGame, isEventObtainableInGame } from "./catalog";
 import { fill, getMessages } from "./i18n/runtime";
 import { gameLabel } from "./progress";
+import type { AcquisitionResponse } from "./schemas/acquisition";
 
 const cache = new Map<string, string>();
 const inflight = new Map<string, Promise<string>>();
@@ -21,7 +22,7 @@ async function fetchAcquisitionText(pokemonId: number, gameKey: string): Promise
   }
   const task = (async () => {
     try {
-      const payload = await (await fetch(`${API}/pokemon/${pokemonId}/acquisition?game=${encodeURIComponent(gameKey)}`)).json();
+      const payload = (await (await fetch(`${API}/pokemon/${pokemonId}/acquisition?game=${encodeURIComponent(gameKey)}`)).json()) as AcquisitionResponse;
       const text = typeof payload.text === "string" ? payload.text : "";
       cache.set(key, text);
       return text;

@@ -10,7 +10,7 @@ from app.repositories.data_gap import DETAIL, FORM, DataGapRepository
 from app.repositories.pokemon_detail_view import PokemonDetailViewRepository
 from app.repositories.pokemon_form import PokemonRepository
 from app.repositories.pokemon_overview import PokemonOverviewRepository, overview_texts
-from app.services.poke_compile.helpers import _apply_stored_stats
+from app.services.pokemon_detail.helpers import apply_stored_stats
 
 
 class PokemonDetailService:
@@ -48,4 +48,4 @@ class PokemonDetailService:
             data = dict(payload.get("data") or {})
             data["types"] = [{"type": {"name": name}} for name in record.types]
             payload = {**payload, "data": data}
-        return _apply_stored_stats(payload, record)
+        return apply_stored_stats(payload, record)

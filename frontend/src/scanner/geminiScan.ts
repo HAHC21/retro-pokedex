@@ -1,13 +1,9 @@
 import { apiUrl } from "../apiBase";
+import type { BoxScanResponse, BoxSlot, ScanQuotaResponse } from "../schemas/scanner";
 import type { BoxSourceId, BoxTile, SlotScanDraft } from "./types";
 
-export type GeminiSlot = {
-  empty: boolean;
-  pokemon_id: number | null;
-  form: string | null;
-  shiny: boolean;
-  identified: boolean;
-};
+export type GeminiSlot = BoxSlot;
+export type ScanQuota = ScanQuotaResponse;
 
 const FORM_LABEL: Record<string, string> = {
   alola: "Alola",
@@ -24,18 +20,8 @@ export async function fetchScanQuota(): Promise<ScanQuota | null> {
   if (!response.ok) {
     throw new Error("quota");
   }
-  return (await response.json()) as ScanQuota;
+  return (await response.json()) as ScanQuotaResponse;
 }
-
-export type ScanQuota = {
-  allowance: number;
-  used: number;
-  remaining: number;
-  new_account: boolean;
-  next_available_at: string | null;
-  global_limit_reached: boolean;
-  exempt?: boolean;
-};
 
 export async function analyzeBoxScreenshot(file: File, source: BoxSourceId): Promise<GeminiSlot[]> {
   const body = new FormData();
@@ -57,7 +43,7 @@ export async function analyzeBoxScreenshot(file: File, source: BoxSourceId): Pro
     }
     throw new Error(typeof detail === "string" ? detail : "");
   }
-  const payload = (await response.json()) as { slots?: GeminiSlot[] };
+  const payload = (await response.json()) as BoxScanResponse;
   return Array.isArray(payload.slots) ? payload.slots : [];
 }
 

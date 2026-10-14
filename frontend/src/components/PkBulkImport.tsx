@@ -28,39 +28,39 @@ export function PkBulkImport({ isStaff, game, onImported }: PkBulkImportProps) {
     if (!list?.length) {
       return;
     }
-    const unique = uniquePkFiles([...list]);
+    const selected = pkFiles([...list]);
     const copy = getMessages().import;
-    if (!unique.length) {
+    if (!selected.length) {
       setError(copy.none);
       return;
     }
     setError(null);
     setPhase("parsing");
-    setProgress(fill(copy.reading, { done: 0, total: unique.length }));
+    setProgress(fill(copy.reading, { done: 0, total: selected.length }));
     const items: Array<OwnedPokemonInput & { filename?: string }> = [];
-    for (let index = 0; index < unique.length; index += 1) {
-      const file = unique[index];
+    for (let index = 0; index < selected.length; index += 1) {
+      const file = selected[index];
       try {
         const parsed = await parsePkFile(file, game);
         items.push({ ...parsed, filename: file.name });
       } catch {
         /* skip unreadable dumps */
       }
-      if (index === unique.length - 1 || index % 20 === 19) {
-        setProgress(fill(getMessages().import.reading, { done: index + 1, total: unique.length }));
+      if (index === selected.length - 1 || index % 20 === 19) {
+        setProgress(fill(getMessages().import.reading, { done: index + 1, total: selected.length }));
         await yieldUi();
       }
     }
     if (!items.length) {
       setPhase("idle");
-      setError(fill(getMessages().import.noneParsed, { count: unique.length }));
+      setError(fill(getMessages().import.noneParsed, { count: selected.length }));
       return;
     }
     setPhase("saving");
     setProgress(fill(getMessages().import.savingCount, { count: items.length }));
     try {
-      const result = await uploadParsedOwnedPokemonBatch(items, `${unique.length} pk files`);
-      const skipped = unique.length - items.length + result.failed;
+      const result = await uploadParsedOwnedPokemonBatch(items, `${selected.length} pk files`);
+      const skipped = selected.length - items.length + result.failed;
       setPhase("done");
       const copy = getMessages().import;
       setProgress(
@@ -120,21 +120,8 @@ export function PkBulkImport({ isStaff, game, onImported }: PkBulkImportProps) {
   );
 }
 
-function uniquePkFiles(files: File[]): File[] {
-  const seen = new Set<string>();
-  const next: File[] = [];
-  files.forEach((file) => {
-    if (!isPkFilename(file.name)) {
-      return;
-    }
-    const key = `${file.name}:${file.size}`;
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    next.push(file);
-  });
-  return next;
+function pkFiles(files: File[]): File[] {
+  return files.filter((file) => isPkFilename(file.name));
 }
 
 function yieldUi(): Promise<void> {

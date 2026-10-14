@@ -1,4 +1,5 @@
 import { API, gameByKey, introGenForId, isAvailableInGame, isEventObtainableInGame, versionsForGame } from "./catalog";
+import type { ObtainIndexResponse, ObtainMetaResponse } from "./schemas/obtainability";
 
 const OBTAIN_VERSIONS_KEY = "pokedex-obtain-versions-v1";
 const EVOLVES_FROM_KEY = "pokedex-evolves-from-v1";
@@ -104,11 +105,7 @@ export async function ensureObtainIndex(limit = 1025): Promise<void> {
       if (!response.ok) {
         throw new Error("Could not load obtainability index.");
       }
-      const payload = (await response.json()) as {
-        versions?: Record<string, string[]>;
-        evolves_from?: Record<string, number | null>;
-        count?: number;
-      };
+      const payload = (await response.json()) as ObtainIndexResponse;
       const count = Math.max(1, Number(payload.count) || limit);
       // Slim payload omits empty version lists and null parents — fill defaults.
       for (let id = 1; id <= count; id += 1) {
@@ -180,9 +177,9 @@ async function fetchObtainMeta(pokemonId: number): Promise<{ versions: string[];
   }
   const task = (async () => {
     try {
-      const meta = await (await fetch(`${API}/pokemon/${pokemonId}/obtain`)).json();
-      const versions = (meta.versions || []) as string[];
-      const parent = (meta.evolves_from ?? null) as number | null;
+      const meta = (await (await fetch(`${API}/pokemon/${pokemonId}/obtain`)).json()) as ObtainMetaResponse;
+      const versions = meta.versions || [];
+      const parent = meta.evolves_from ?? null;
       obtainVersions.set(pokemonId, versions);
       evolvesFrom.set(pokemonId, parent);
       schedulePersist();

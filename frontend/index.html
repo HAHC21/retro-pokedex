@@ -17,8 +17,33 @@
     <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large" />
     <meta name="application-name" content="Retro Pokédex" />
     <meta name="apple-mobile-web-app-title" content="Retro Pokédex" />
-    <meta name="theme-color" content="#f2f2f3" />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#fefcfc" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (function () {
+        var theme = "light";
+        try {
+          var stored = localStorage.getItem("pokedex-theme");
+          if (stored === "light" || stored === "dark") {
+            theme = stored;
+          } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            theme = "dark";
+          }
+        } catch (error) {
+          /* private mode */
+        }
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", theme === "dark" ? "#14161a" : "#fefcfc");
+      })();
+    </script>
+    <style>
+      html[data-theme="dark"] {
+        background: #14161a;
+        color: #e8eaed;
+      }
+    </style>
     <link rel="canonical" id="canonical" href="/" vite-ignore />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />

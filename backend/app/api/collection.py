@@ -121,12 +121,22 @@ def create_owned_from_pk(
     return OwnedPokemonRead.from_domain(created)
 
 
-def _payloads_from_pk_batch(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    payloads: list[dict[str, Any]] = []
+def _item_error(exc: ValidationError) -> str:
+    parts: list[str] = []
+    for err in exc.errors():
+        loc = ".".join(str(part) for part in err.get("loc", ()))
+        msg = str(err.get("msg") or "Invalid value")
+        parts.append(f"{loc}: {msg}" if loc else msg)
+    return "; ".join(parts) or "Invalid item"
+
+
+def _split_pk_batch(items: list[dict[str, Any]]) -> tuple[list[tuple[int, dict[str, Any]]], list[dict[str, Any]]]:
+    """Keep readable items. A bad item is reported and does not discard the rest."""
+    payloads: list[tuple[int, dict[str, Any]]] = []
     failures: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         try:
-            payloads.append(OwnedPokemonWrite.model_validate(item).model_dump())
+            payloads.append((index, OwnedPokemonWrite.model_validate(item).model_dump()))
         except ValidationError as exc:
             errors = exc.errors()
             logger.error(
@@ -140,10 +150,8 @@ def _payloads_from_pk_batch(items: list[dict[str, Any]]) -> list[dict[str, Any]]
                 json.dumps(errors, default=str),
                 json.dumps(item, default=str),
             )
-            failures.append({"index": index, "filename": item.get("filename"), "errors": errors, "item": item})
-    if failures:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=failures)
-    return payloads
+            failures.append({"index": index, "filename": item.get("filename"), "error": _item_error(exc)})
+    return payloads, failures
 
 
 @router.post("/owned/from-pk-batch", response_model=OwnedPokemonBatchRead, status_code=status.HTTP_201_CREATED)
@@ -152,8 +160,16 @@ def create_owned_from_pk_batch(
     user: User = Depends(require_staff),
     service: OwnedPokemonService = Depends(get_owned_pokemon_service),
 ) -> OwnedPokemonBatchRead:
-    payloads = _payloads_from_pk_batch(body.items)
-    result = service.create_batch(user.id, payloads, filename=body.filename)
+    indexed, skipped = _split_pk_batch(body.items)
+    result = service.create_batch(
+        user.id,
+        [payload for _, payload in indexed],
+        filename=body.filename,
+        indexes=[index for index, _ in indexed],
+    )
+    errors = [*skipped, *result["errors"]]
+    result["failed"] = len(skipped) + result["failed"]
+    result["errors"] = errors[:50]
     return OwnedPokemonBatchRead.model_validate(result)
 
 

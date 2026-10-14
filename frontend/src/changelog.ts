@@ -14,8 +14,72 @@ export type ChangelogRelease = {
 /** Newest player-visible release first. The shipped UI id is frontend/VERSION. */
 export const CHANGELOG: ChangelogRelease[] = [
   {
+    version: "0.9.2",
+    date: "Oct 13, 2026",
+    title: "Night mode",
+    intro: "The site can run dark, a phone folds a Pokémon’s page, and a specimen adds its mark without erasing the ones you set.",
+    features: [
+      {
+        title: "Night mode",
+        body: "Night mode is in the header. The moon turns the site dark, and the sun turns it back. The first visit follows the device. The choice is still there the next time you open the site. On a phone, Night mode and Day mode are in the menu. Privacy says this choice stays in the browser.",
+      },
+      {
+        title: "Shinx on the home page",
+        body: "The home page shows Shinx.",
+      },
+      {
+        title: "Home shortcuts are gone",
+        body: "The home page no longer offers shortcuts to resume a generation, list what is missing, or list shinies.",
+      },
+      {
+        title: "A phone folds the page",
+        body: "On a phone, Charizard’s page starts with the overview, the Pokédex entry, evolution, games, stats, traits, forms, and matchups closed. Tap a heading to open it. The back button names Pokédex, Checklist, or My Collection. The Pokémon on either side show their number, and Charizard shows its name.",
+      },
+      {
+        title: "Spawns",
+        body: "The places a Pokémon appears are titled Spawns.",
+      },
+      {
+        title: "A specimen adds its mark",
+        body: "Uploading a specimen adds its mark on that save and leaves the marks you set yourself. A normal female Charizard in Red stays when you upload a shiny male from Platinum. Platinum shows that shiny male, and a normal female already marked in Platinum stays too. Removing the specimen takes away only the marks that came from it.",
+      },
+      {
+        title: "Another PK copy is saved",
+        body: "Importing PK files saves another copy of the same name and size. A file that cannot be read is skipped, and the other files are still saved.",
+      },
+    ],
+  },
+  {
+    version: "0.9.1.1",
+    date: "Oct 5, 2026",
+    title: "Stat bars line up",
+    intro: "On a Pokémon’s page, the stat names, bars, and numbers stay in three columns.",
+    features: [
+      {
+        title: "Names and numbers share a width",
+        body: "On a Pokémon’s page, the stat names, bars, and numbers line up. Charizard’s Attack uses the same name width as HP, and the number stays on the right.",
+      },
+    ],
+  },
+  {
+    version: "0.9.1",
+    date: "Oct 4, 2026",
+    title: "Privacy, terms, and sign-in",
+    intro: "The footer links to Privacy and Terms, and sign-in can offer Google and Microsoft.",
+    features: [
+      {
+        title: "Privacy and Terms",
+        body: "The footer links to Privacy and Terms, in English and Spanish. The game selector stays off those pages.",
+      },
+      {
+        title: "Google and Microsoft",
+        body: "Sign-in and log-in can offer Google and Microsoft when those are turned on.",
+      },
+    ],
+  },
+  {
     version: "0.9",
-    date: "Sep 29, 2026",
+    date: "Sep 30, 2026",
     title: "Scan a PC box",
     intro: "Upload a box screenshot, check the 30 slots, and mark them caught on the save in the header.",
     features: [
@@ -46,6 +110,18 @@ export const CHANGELOG: ChangelogRelease[] = [
       {
         title: "A gender can mark the catch",
         body: "Choosing a gender on a save that is not marked yet also marks that Pokémon caught or shiny on that save.",
+      },
+      {
+        title: "PC screenshots on the home page",
+        body: "The home page lists PC screenshots among the things you can do while signed in.",
+      },
+      {
+        title: "The read can miss",
+        body: "The scan page says the read can miss a Pokémon. Pokémon Bank is marked as experimental.",
+      },
+      {
+        title: "Switch screenshots leave the roadmap",
+        body: "The roadmap no longer lists Switch box screenshots.",
       },
     ],
   },

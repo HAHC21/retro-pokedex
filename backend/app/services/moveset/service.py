@@ -23,7 +23,7 @@ from app.services.moveset.helpers import (
     species_name_candidates,
     title,
 )
-from app.services.poke_compile.helpers import stores_learnset
+from app.catalog.pokemon_form import stores_learnset
 
 
 def _slug(name: str) -> str:

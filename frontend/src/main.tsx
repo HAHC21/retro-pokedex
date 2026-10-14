@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { initAnalytics } from "./analytics";
 import { I18nProvider } from "./i18n/context";
+import { ThemeProvider } from "./theme/context";
 import { startVersionWatch } from "./versionWatch";
 import "./industry.css";
 import "./index.css";
@@ -14,9 +15,11 @@ startVersionWatch();
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <I18nProvider>
-        <App />
-      </I18nProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

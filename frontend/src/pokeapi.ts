@@ -2,6 +2,11 @@ import { API, IDX_KEY } from "./catalog";
 import { formFromStorageKey, type SpeciesForm } from "./forms";
 import { rememberEvolvesFrom, rememberObtainVersions } from "./obtainability";
 import type { WildEncounter } from "./encounters";
+import type { CatalogResponse, FormsResponse, RegionalDexResponse } from "./schemas/catalog";
+import type { LearnsetGroup, LearnsetMove, LearnsetResponse } from "./schemas/learnset";
+import type { AiMovesetsResponse, SmogonMovesetsResponse } from "./schemas/moveset";
+import type { PokemonDetailResponse } from "./schemas/pokemonDetail";
+import type { SpawnsResponse } from "./schemas/spawns";
 import type { DexIndex, EvolutionStep, MonPayload } from "./types";
 
 export function loadCachedIndex(): DexIndex | null {
@@ -27,7 +32,7 @@ export function saveIndex(index: DexIndex) {
 
 /** One request: National Dex names + pokemon_id → type names (replaces /index + N× /types). */
 export async function fetchCatalog(): Promise<DexIndex> {
-  const payload = await (await fetch(`${API}/catalog`)).json();
+  const payload = (await (await fetch(`${API}/catalog`)).json()) as CatalogResponse;
   const names: Record<number, string> = {};
   Object.entries(payload.names || {}).forEach(([id, name]) => {
     names[Number(id)] = String(name);
@@ -87,10 +92,10 @@ export type CatalogForm = {
 };
 
 export async function fetchForms(): Promise<CatalogForm[]> {
-  const payload = await (await fetch(`${API}/forms`)).json();
+  const payload = (await (await fetch(`${API}/forms`)).json()) as FormsResponse;
   const rows = Array.isArray(payload.forms) ? payload.forms : [];
   const forms: CatalogForm[] = [];
-  rows.forEach((row: { pokedex_id?: number; form?: string; resource_id?: number; types?: string[]; capture?: boolean; sprite_form?: string | null }) => {
+  rows.forEach((row) => {
     const form = formFromStorageKey(String(row.form || ""));
     const pokedexId = Number(row.pokedex_id);
     const resourceId = Number(row.resource_id);
@@ -131,7 +136,7 @@ function overviewFromPayload(value: unknown): MonPayload["overview"] {
 }
 
 export async function fetchMon(id: number): Promise<MonPayload> {
-  const payload = await (await fetch(`${API}/pokemon/${id}`)).json();
+  const payload = (await (await fetch(`${API}/pokemon/${id}`)).json()) as PokemonDetailResponse;
   rememberObtainVersions(id, payload.obtain_versions || []);
   rememberEvolvesFrom(id, payload.evolves_from ?? null);
   return {
@@ -146,36 +151,15 @@ export async function fetchMon(id: number): Promise<MonPayload> {
 }
 
 export async function fetchSpawns(id: number): Promise<WildEncounter[]> {
-  const payload = await (await fetch(`${API}/pokemon/${id}/spawns`)).json();
-  return (payload.enc || []) as WildEncounter[];
+  const payload = (await (await fetch(`${API}/pokemon/${id}/spawns`)).json()) as SpawnsResponse;
+  return payload.enc || [];
 }
 
-export type LearnsetMove = {
-  id: number;
-  name: string;
-  level: number;
-  type: string | null;
-  damage_class: string | null;
-  power: number | null;
-  accuracy: number | null;
-  pp: number | null;
-  priority: number;
-};
-
-export type LearnsetGroup = {
-  method: string;
-  label: string;
-  moves: LearnsetMove[];
-};
-
-export type LearnsetPayload = {
-  game: string;
-  groups: LearnsetGroup[];
-  catalog_count: number;
-};
+export type { LearnsetGroup, LearnsetMove };
+export type LearnsetPayload = LearnsetResponse;
 
 export async function fetchLearnset(id: number, gameKey: string): Promise<LearnsetPayload> {
-  const payload = await (await fetch(`${API}/pokemon/${id}/moves?game=${encodeURIComponent(gameKey)}`)).json();
+  const payload = (await (await fetch(`${API}/pokemon/${id}/moves?game=${encodeURIComponent(gameKey)}`)).json()) as LearnsetResponse;
   return {
     game: payload.game || gameKey,
     groups: (payload.groups || []) as LearnsetGroup[],
@@ -183,33 +167,12 @@ export async function fetchLearnset(id: number, gameKey: string): Promise<Learns
   };
 }
 
-export type MovesetCard = {
-  name: string;
-  role?: string | null;
-  moves: string[];
-  notes?: string | null;
-  format?: string;
-  source: string;
-};
-
-export type SmogonMovesetsPayload = {
-  game: string;
-  sets: MovesetCard[];
-  attribution: string;
-  attribution_url: string;
-  format: string | null;
-};
-
-export type AiMovesetsPayload = {
-  game: string;
-  available: boolean;
-  provider: string | null;
-  message: string | null;
-  sets: MovesetCard[];
-};
+export type MovesetCard = AiMovesetsResponse["sets"][number];
+export type SmogonMovesetsPayload = SmogonMovesetsResponse;
+export type AiMovesetsPayload = AiMovesetsResponse;
 
 export async function fetchSmogonMovesets(id: number, gameKey: string): Promise<SmogonMovesetsPayload> {
-  const payload = await (await fetch(`${API}/pokemon/${id}/movesets/smogon?game=${encodeURIComponent(gameKey)}`)).json();
+  const payload = (await (await fetch(`${API}/pokemon/${id}/movesets/smogon?game=${encodeURIComponent(gameKey)}`)).json()) as SmogonMovesetsResponse;
   return {
     game: payload.game || gameKey,
     sets: (payload.sets || []) as MovesetCard[],
@@ -225,7 +188,7 @@ export const GEMINI_UNAVAILABLE_MESSAGE =
 export async function fetchAiMovesets(id: number, gameKey: string): Promise<AiMovesetsPayload> {
   try {
     const response = await fetch(`${API}/pokemon/${id}/movesets/ai?game=${encodeURIComponent(gameKey)}`);
-    const payload = await response.json().catch(() => ({}));
+    const payload = (await response.json().catch(() => ({}))) as Partial<AiMovesetsResponse> & { detail?: unknown };
     if (!response.ok) {
       return {
         game: gameKey,
@@ -258,7 +221,7 @@ export async function refreshAiMovesets(id: number, gameKey: string): Promise<Ai
     `${API}/pokemon/${id}/movesets/ai/refresh?game=${encodeURIComponent(gameKey)}`,
     { method: "POST", credentials: "include" },
   );
-  const payload = await response.json().catch(() => ({}));
+  const payload = (await response.json().catch(() => ({}))) as Partial<AiMovesetsResponse> & { detail?: unknown };
   if (!response.ok) {
     throw new Error(
       typeof payload.detail === "string" ? payload.detail : GEMINI_UNAVAILABLE_MESSAGE,
@@ -281,9 +244,9 @@ export type RegionalDex = {
 };
 
 export async function fetchRegionalDex(gameKey: string): Promise<RegionalDex> {
-  const payload = await (await fetch(`${API}/regional/${gameKey}`)).json();
+  const payload = (await (await fetch(`${API}/regional/${gameKey}`)).json()) as RegionalDexResponse;
   const numbers: Record<number, number> = {};
-  (payload.entries || []).forEach((entry: { id: number; number: number }) => {
+  (payload.entries || []).forEach((entry) => {
     numbers[entry.id] = entry.number;
   });
   return {

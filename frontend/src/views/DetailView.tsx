@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { isStaffRole, type AuthUser } from "../auth";
 import { Blueprint } from "../components/Blueprint";
+import { Fold } from "../components/Fold";
 import { InfoTip } from "../components/InfoTip";
 import { boxClass, rarityLabel, rarityNote } from "../rarity";
 import { MatchupPanel } from "../components/MatchupPanel";
@@ -114,22 +115,28 @@ export function DetailView({
   const saveMarks = entryFor(prog, game, id, form);
   const prevId = Math.max(1, id - 1);
   const nextId = Math.min(1025, id + 1);
-  const navStyle = { ...navBtnStyle(false), padding: "8px 14px", fontSize: 13 };
+  const navStyle = navBtnStyle(false);
+  const listLabel = listView === "checklist" ? m.nav.checklist : listView === "collection" ? m.nav.collection : m.nav.pokedex;
+  const currentName = form ? formDisplayName(names[id] || "", form) : names[id] || "";
 
   return (
     <div className="pk-page pk-detail">
       <div className="pk-detail-actions">
-        <button type="button" className="btn pk-nav" style={navStyle} onClick={onBack}>
-          ← {fill(m.detail.back, { view: listView === "checklist" ? m.nav.checklist : listView === "collection" ? m.nav.collection : m.nav.pokedex })}
+        <button type="button" className="btn pk-nav pk-detail-back" style={navStyle} onClick={onBack}>
+          <span className="pk-detail-back-full">← {fill(m.detail.back, { view: listLabel })}</span>
+          <span className="pk-detail-back-short">← {listLabel}</span>
         </button>
-        <button type="button" className="btn pk-nav" style={navStyle} onClick={onPrev}>
-          ← {dexNum(prevId)} {names[prevId] || ""}
+        <button type="button" className="btn pk-nav pk-detail-step" style={navStyle} onClick={onPrev}>
+          ← {dexNum(prevId)}
+          {names[prevId] ? <span className="pk-detail-nav-name"> {names[prevId]}</span> : null}
         </button>
-        <span className="btn pk-nav pk-current-entry" style={{ ...navBtnStyle(true), padding: "8px 14px", fontSize: 13 }}>
-          {dexNum(id)} {form ? formDisplayName(names[id] || "", form) : names[id] || ""}
+        <span className="btn pk-nav pk-current-entry" style={navBtnStyle(true)}>
+          <span className="pk-detail-nav-num">{dexNum(id)}</span>
+          {currentName ? <span className="pk-detail-nav-name"> {currentName}</span> : null}
         </span>
-        <button type="button" className="btn pk-nav" style={navStyle} onClick={onNext}>
-          {dexNum(nextId)} {names[nextId] || ""} →
+        <button type="button" className="btn pk-nav pk-detail-step" style={navStyle} onClick={onNext}>
+          {dexNum(nextId)}
+          {names[nextId] ? <span className="pk-detail-nav-name"> {names[nextId]}</span> : null} →
         </button>
       </div>
 
@@ -141,8 +148,8 @@ export function DetailView({
             type="button"
             role="tab"
             aria-selected={section === item.id}
-            className="btn pk-nav"
-            style={{ ...navBtnStyle(section === item.id), padding: "8px 14px", fontSize: 13 }}
+            className="btn pk-nav pk-detail-tab"
+            style={navBtnStyle(section === item.id)}
             onClick={() => onSection(item.id)}
           >
             {item.id === "home"
@@ -249,8 +256,7 @@ function FormPicker({
   const both = groups.length > 1;
 
   return (
-    <Blueprint className="pk-forms">
-      {both ? <h3>{copy.forms}</h3> : <h3>{groups[0]?.label ?? copy.forms}</h3>}
+    <Fold title={both ? copy.forms : groups[0]?.label ?? copy.forms} className="pk-forms">
       <div className="pk-form-groups">
         {groups.map((group) => (
           <div key={group.id} className="pk-form-group">
@@ -285,7 +291,7 @@ function FormPicker({
           </div>
         ))}
       </div>
-    </Blueprint>
+    </Fold>
   );
 }
 
@@ -545,15 +551,13 @@ function MonBody({
               </Blueprint>
 
               {overview ? (
-                <Blueprint className="pk-dex-entry pk-overview">
-                  <h3>{getMessages().detail.overview}</h3>
+                <Fold title={getMessages().detail.overview} className="pk-dex-entry pk-overview">
                   <p className="pk-dex-entry-text">{overview}</p>
-                </Blueprint>
+                </Fold>
               ) : null}
 
               {capturable ? (
-              <Blueprint className="pk-dex-entry">
-                <h3>{getMessages().detail.entry}</h3>
+              <Fold title={getMessages().detail.entry} className="pk-dex-entry">
                 {dexEntries.length ? (
                   dexEntries.map((entry) => (
                     <div key={entry.version || entry.source} className="pk-dex-entry-block">
@@ -564,12 +568,11 @@ function MonBody({
                 ) : (
                   <p className="pk-none">{fill(getMessages().detail.noEntry, { game: gameName })}</p>
                 )}
-              </Blueprint>
+              </Fold>
               ) : null}
 
               {mon.evo.length > 1 ? (
-                <Blueprint className="pk-evo">
-                  <h3>{getMessages().detail.evolution}</h3>
+                <Fold title={getMessages().detail.evolution} className="pk-evo">
                   <div className="pk-evo-row">
                     {mon.evo.map((step) => (
                       <button key={step.id} type="button" className="pk-nav pk-evo-cell" onClick={() => onOpen(step.id)}>
@@ -580,11 +583,10 @@ function MonBody({
                       </button>
                     ))}
                   </div>
-                </Blueprint>
+                </Fold>
               ) : null}
 
-              <Blueprint className="pk-forms">
-                <h3>{getMessages().detail.games}</h3>
+              <Fold title={getMessages().detail.games} className="pk-forms">
                 <div className="pk-game-columns">
                   {gameLines.map((row) => (
                     <div key={row.gen} className="pk-game-column">
@@ -603,12 +605,11 @@ function MonBody({
                 <span className="pk-none">
                   {gameLines.length ? "" : m.detail.noWays}
                 </span>
-              </Blueprint>
+              </Fold>
             </div>
 
             <div className="pk-side-stack">
-              <Blueprint className="pk-stats">
-                <h3>{getMessages().detail.stats}</h3>
+              <Fold title={getMessages().detail.stats} className="pk-stats">
                 {stats.map((stat) => (
                   <div key={stat.label} className="pk-stat-row">
                     <span>{stat.label}</span>
@@ -626,11 +627,10 @@ function MonBody({
                   <span>{fill(getMessages().detail.height, { value: (data.height / 10).toFixed(1) })}</span>
                   <span>{fill(getMessages().detail.weight, { value: (data.weight / 10).toFixed(1) })}</span>
                 </div>
-              </Blueprint>
+              </Fold>
 
               {capturable ? (
-              <Blueprint className="pk-traits">
-                <h3>{getMessages().detail.traits}</h3>
+              <Fold title={getMessages().detail.traits} className="pk-traits">
                 <div className="pk-traits-block">
                   <span className="pk-traits-label">{getMessages().detail.abilities}</span>
                   {abilities.length ? (
@@ -669,7 +669,7 @@ function MonBody({
                     })}
                   </div>
                 </div>
-              </Blueprint>
+              </Fold>
               ) : null}
 
               <MatchupPanel title={getMessages().detail.defensive} groups={defense} />

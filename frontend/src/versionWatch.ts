@@ -1,4 +1,5 @@
 import { apiUrl } from "./apiBase";
+import type { VersionResponse } from "./schemas/system";
 import { FRONTEND_VERSION } from "./version";
 
 const POLL_MS = 60_000;
@@ -73,7 +74,7 @@ function versionFrom(body: unknown): string | null {
   if (!body || typeof body !== "object" || !("version" in body)) {
     return null;
   }
-  const version = (body as { version: unknown }).version;
+  const version = (body as VersionResponse).version;
   if (typeof version !== "string") {
     return null;
   }

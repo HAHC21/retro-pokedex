@@ -19,6 +19,7 @@ from app.schemas.auth import (
     RegisterResponse,
     ResendConfirmationRequest,
     ResetPasswordRequest,
+    LogoutRead,
     UserRead,
 )
 from app.errors import AuthError
@@ -137,8 +138,8 @@ def confirm_email(
     return _frontend_redirect(signed_in="1")
 
 
-@router.post("/logout")
-def logout(request: Request) -> dict[str, bool]:
+@router.post("/logout", response_model=LogoutRead)
+def logout(request: Request) -> LogoutRead:
     request.session.clear()
     return {"ok": True}
 

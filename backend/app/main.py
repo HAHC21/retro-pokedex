@@ -13,6 +13,7 @@ from app.core.version import backend_version
 from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import shutdown_external_clients
 from app.integrations.email.sender import uses_outbound_email
+from app.schemas.system import HealthRead, VersionRead
 
 logger = logging.getLogger("pokedex")
 
@@ -59,12 +60,12 @@ def create_app() -> FastAPI:
     )
     app.include_router(api_router, prefix=settings.api_prefix)
 
-    @app.get("/api/health")
-    def health() -> dict[str, str]:
+    @app.get("/api/health", response_model=HealthRead)
+    def health() -> HealthRead:
         return {"status": "ok"}
 
-    @app.get(f"{settings.api_prefix}/version")
-    def version(response: Response) -> dict[str, str]:
+    @app.get(f"{settings.api_prefix}/version", response_model=VersionRead)
+    def version(response: Response) -> VersionRead:
         response.headers["Cache-Control"] = "no-store"
         return {"version": backend_version()}
 

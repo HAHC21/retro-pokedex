@@ -12,10 +12,9 @@ export function typeTagStyle(type: string): CSSProperties {
   return {
     fontSize: 10,
     letterSpacing: "0.1em",
-    background: colors[0],
-    color: colors[1],
-    border: `1px solid ${colors[1]}`,
-  };
+    "--tag-fill": colors[0],
+    "--tag-ink": colors[1],
+  } as CSSProperties;
 }
 
 export function typeLabel(type: string) {
@@ -24,7 +23,7 @@ export function typeLabel(type: string) {
 
 export function TypeTag({ type }: TypeTagProps) {
   return (
-    <span className="tag" style={typeTagStyle(type)}>
+    <span className="tag pk-type-tag" style={typeTagStyle(type)}>
       {typeLabel(type)}
     </span>
   );

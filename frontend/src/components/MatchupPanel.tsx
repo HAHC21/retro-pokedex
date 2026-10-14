@@ -1,4 +1,4 @@
-import { Blueprint } from "./Blueprint";
+import { Fold } from "./Fold";
 import { TypeTag } from "./TypeTag";
 import { getMessages } from "../i18n/runtime";
 import type { MatchupGroup } from "../matchups";
@@ -10,8 +10,7 @@ type MatchupPanelProps = {
 
 export function MatchupPanel({ title, groups }: MatchupPanelProps) {
   return (
-    <Blueprint className="pk-matchups">
-      <h3>{title}</h3>
+    <Fold title={title} className="pk-matchups">
       <div className="pk-matchup-grid">
         {groups.map((group) => (
           <div key={group.label}>
@@ -25,6 +24,6 @@ export function MatchupPanel({ title, groups }: MatchupPanelProps) {
           </div>
         ))}
       </div>
-    </Blueprint>
+    </Fold>
   );
 }

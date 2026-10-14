@@ -25,6 +25,11 @@ export const en = {
     english: "English",
     spanish: "Spanish",
   },
+  theme: {
+    group: "Appearance",
+    night: "Night mode",
+    day: "Day mode",
+  },
   prompt: {
     title: "Switch to English?",
     body: "It looks like you're in {country}. Retro Pokédex can run in English.",
@@ -132,13 +137,6 @@ export const en = {
     formsSub: "Mega Evolutions, Gigantamax, and regional forms",
     formsCount: "{count} forms",
     noneStored: "None stored",
-    shortcut: "Shortcut",
-    resumeTitle: "Pick up where I left off",
-    resumeBody: "Open generation {roman}.",
-    missingTitle: "See what is missing",
-    missingBody: "Open the National Dex filtered to species with no mark yet.",
-    shiniesTitle: "My shinies",
-    shiniesBody: "Open the National Dex filtered to recorded shinies.",
   },
   dex: {
     scope: "Dex scope",
@@ -235,7 +233,7 @@ export const en = {
     natures: "Natures",
     defensive: "Defensive matchups",
     offensive: "Offensive matchups",
-    spawns: "Where it spawns",
+    spawns: "Spawns",
     spawnsSub: "Wild encounters in {game}",
     loadingSpawns: "Loading spawn locations…",
     noSpawns: "No available spawns for selected game. Please check the Games section further below.",
@@ -344,7 +342,7 @@ export const en = {
   },
   import: {
     title: "Import PK files",
-    body: "Choose a folder or many files. Each specimen is assigned to the game it was met in. Duplicate copies of the same filename and size are skipped.",
+    body: "Choose a folder or many files. Each specimen is assigned to the game it was met in. Another copy of the same filename and size is saved again.",
     files: "Choose files",
     folder: "Choose folder",
     reading: "Reading {done} / {total}",

@@ -1,0 +1,18 @@
+---
+description: Keep API schemas in separate files by feature
+alwaysApply: true
+---
+
+# Schema files
+
+Each API feature has its own schema file. Do not add a model to a file that describes a different feature.
+
+Backend models live in `backend/app/schemas/`. Frontend wire types live in `frontend/src/schemas/` and `dashboard/src/schemas/`. Match the feature name on both sides.
+
+- Catalog, forms, and regional dex stay in `catalog`.
+- The species page stays in `pokemon_detail` / `pokemonDetail`.
+- Spawns, learnsets, movesets, obtainability, and acquisition each have their own file.
+- Box scanner stays in `scanner`. It does not share a file with Pokédex models.
+- Auth, collection, admin, and health/version stay in their own files.
+
+A response and the request that belongs to it live with that feature. Nested types used only by that response stay in the same file.

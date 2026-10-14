@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { API_ORIGIN } from "./apiBase";
 import { localizedVersion } from "./i18n/labels";
 import { getMessages } from "./i18n/runtime";
@@ -415,16 +416,15 @@ export function versionGen(name: string) {
   return VERSIONS[name]?.[0];
 }
 
-export function versionTagStyle(versionKey: string): { background: string; color: string; borderColor: string } | undefined {
+export function versionTagStyle(versionKey: string): CSSProperties | undefined {
   const colors = VERSION_COLORS[versionKey];
   if (!colors) {
     return undefined;
   }
   return {
-    background: colors[0],
-    color: colors[1],
-    borderColor: colors[1],
-  };
+    "--tag-fill": colors[0],
+    "--tag-ink": colors[1],
+  } as CSSProperties;
 }
 
 export function gameByKey(key: string) {

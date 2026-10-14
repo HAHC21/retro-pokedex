@@ -635,7 +635,6 @@ export default function App() {
           index={index}
           prog={prog}
           game={game}
-          gen={gen}
           isStaff={isStaffRole(authUser?.role)}
           onImported={refreshProgressFromServer}
           onOpen={open}
@@ -664,19 +663,6 @@ export default function App() {
           }}
           onMoveGame={(pokemonId, nextForm, fromGame, toGame) => {
             moveCaughtGame(pokemonId, nextForm, fromGame, toGame);
-          }}
-          onOpenDex={() => {
-            const next = dexContextForGame(game, gen);
-            setList((prev) => ({ ...prev, gen: next.gen, region: null, scope: next.scope, q: "", status: "all" }));
-            go({ view: "dex", game, gen: next.gen });
-          }}
-          onOpenMissing={() => {
-            setList((prev) => ({ ...prev, q: "", status: "missing", scope: "national", region: null }));
-            go({ view: "dex", game, gen });
-          }}
-          onOpenShinies={() => {
-            setList((prev) => ({ ...prev, q: "", status: "shiny", scope: "national", region: null }));
-            go({ view: "dex", game, gen });
           }}
         />
       ) : null}

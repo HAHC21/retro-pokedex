@@ -1,37 +1,24 @@
 import { apiUrl } from "./apiBase";
+import type {
+  AuthProvidersResponse,
+  ProviderStatus,
+  RegisterResponse,
+  UserResponse,
+} from "./schemas/auth";
 
-export type UserRole = "user" | "developer" | "admin";
+export type { UserRole } from "./schemas/auth";
 
-export type AuthUser = {
-  id: string;
-  email: string | null;
-  name: string | null;
-  avatar_url: string | null;
-  email_verified?: boolean;
-  role?: UserRole | string;
-};
+export type AuthUser = UserResponse;
 
 export function isStaffRole(role: string | null | undefined): boolean {
   return role === "admin" || role === "developer";
 }
 
-export type ProviderStatus = {
-  enabled: boolean;
-  login_url: string | null;
-};
+export type { ProviderStatus };
 
-export type AuthProviders = {
-  google: ProviderStatus;
-  microsoft: ProviderStatus;
-  password?: boolean;
-};
+export type AuthProviders = AuthProvidersResponse;
 
-export type RegisterResult = {
-  ok: boolean;
-  email: string;
-  message: string;
-  confirm_url: string | null;
-};
+export type RegisterResult = RegisterResponse;
 
 const DISABLED: AuthProviders = {
   google: { enabled: false, login_url: null },
@@ -45,7 +32,7 @@ export async function fetchMe(): Promise<AuthUser | null> {
     if (!response.ok) {
       return null;
     }
-    return (await response.json()) as AuthUser;
+    return (await response.json()) as UserResponse;
   } catch {
     return null;
   }
@@ -57,7 +44,7 @@ export async function fetchProviders(): Promise<AuthProviders> {
     if (!response.ok) {
       return DISABLED;
     }
-    const providers = (await response.json()) as AuthProviders;
+    const providers = (await response.json()) as AuthProvidersResponse;
     for (const provider of [providers.google, providers.microsoft]) {
       if (provider?.login_url && !provider.login_url.startsWith("http")) {
         provider.login_url = apiUrl(provider.login_url);
@@ -80,7 +67,7 @@ export async function registerWithEmail(email: string, password: string, name?: 
   if (!response.ok) {
     throw new Error(payload.detail || "Could not create account.");
   }
-  return payload as RegisterResult;
+  return payload as RegisterResponse;
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<AuthUser> {
@@ -94,7 +81,7 @@ export async function loginWithEmail(email: string, password: string): Promise<A
   if (!response.ok) {
     throw new Error(payload.detail || "Could not log in.");
   }
-  return payload as AuthUser;
+  return payload as UserResponse;
 }
 
 export async function resendConfirmation(email: string): Promise<RegisterResult> {
@@ -108,7 +95,7 @@ export async function resendConfirmation(email: string): Promise<RegisterResult>
   if (!response.ok) {
     throw new Error(payload.detail || "Could not resend confirmation.");
   }
-  return payload as RegisterResult;
+  return payload as RegisterResponse;
 }
 
 export async function requestPasswordReset(email: string): Promise<RegisterResult> {
@@ -122,7 +109,7 @@ export async function requestPasswordReset(email: string): Promise<RegisterResul
   if (!response.ok) {
     throw new Error(payload.detail || "Could not start password reset.");
   }
-  return payload as RegisterResult;
+  return payload as RegisterResponse;
 }
 
 export async function resetPassword(token: string, password: string): Promise<AuthUser> {
@@ -136,7 +123,7 @@ export async function resetPassword(token: string, password: string): Promise<Au
   if (!response.ok) {
     throw new Error(payload.detail || "Could not reset password.");
   }
-  return payload as AuthUser;
+  return payload as UserResponse;
 }
 
 export async function logout(): Promise<void> {

@@ -9,6 +9,7 @@ import type { View } from "../types";
 import type { ListView } from "../paths";
 import { LegalFooter } from "./LegalFooter";
 import { InfoTip } from "./InfoTip";
+import { ThemeToggle } from "./ThemeToggle";
 import { Wordmark } from "./Wordmark";
 
 type AppShellProps = {
@@ -92,7 +93,7 @@ export function AppShell({
   }
 
   return (
-    <div className="pk-app">
+    <div className={view === "mon" ? "pk-app is-species" : "pk-app"}>
       <header className="nav pk-header">
         <Wordmark onClick={onDash} />
         <div className="pk-header-tools">
@@ -128,6 +129,7 @@ export function AppShell({
             )}
           </span>
           <LanguageSwitch locale={locale} onChange={setLocale} label={m.lang.group} enLabel={m.lang.en} esLabel={m.lang.es} english={m.lang.english} spanish={m.lang.spanish} />
+          <ThemeToggle />
 
           <div className="pk-header-menu" ref={menuRef}>
             <button
@@ -254,6 +256,8 @@ export function AppShell({
                 >
                   {m.lang.spanish}
                 </button>
+                <div className="pk-header-menu-divider" />
+                <ThemeToggle variant="menu" onPick={() => setMenuOpen(false)} />
               </div>
             ) : null}
           </div>

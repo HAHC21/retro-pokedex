@@ -7,7 +7,7 @@ import { ProgressBar } from "../components/ProgressBar";
 import { LanguagePrompt } from "../components/LanguagePrompt";
 import { PokemonSprite } from "../components/PokemonSprite";
 import { ViewLoading } from "../components/ViewLoading";
-import { REGIONS, genById, randomRegionMascot } from "../catalog";
+import { REGIONS, randomRegionMascot } from "../catalog";
 import { filterDexIds } from "../dexList";
 import { dexNum } from "../format";
 import { formDisplayName, formListOf, formSpriteRef, formStorageKey, formsEqual, parseMarkKey, type FormList, type SpeciesForm } from "../forms";
@@ -19,11 +19,7 @@ import type { DexIndex, MarkKey, Progress } from "../types";
 
 const MIN_SEARCH_LENGTH = 2;
 
-const WELCOME_MASCOTS = ["/pikachu-pokemon.gif", "/jinx.gif"] as const;
-
-function randomWelcomeMascot(): (typeof WELCOME_MASCOTS)[number] {
-  return WELCOME_MASCOTS[Math.floor(Math.random() * WELCOME_MASCOTS.length)]!;
-}
+const WELCOME_MASCOT = "/jinx.gif";
 
 type OriginBox = {
   key: string;
@@ -49,7 +45,6 @@ type DashboardViewProps = {
   index: DexIndex;
   prog: Progress;
   game: string;
-  gen: number;
   isStaff: boolean;
   onImported: () => void;
   onOpen: (id: number) => void;
@@ -65,16 +60,12 @@ type DashboardViewProps = {
   onToggleShiny: (id: number) => void;
   onToggleForm: (id: number, form: SpeciesForm, key: MarkKey) => void;
   onMoveGame: (id: number, form: SpeciesForm | null, fromGame: string, toGame: string) => void;
-  onOpenDex: () => void;
-  onOpenMissing: () => void;
-  onOpenShinies: () => void;
 };
 
 export function DashboardView({
   index,
   prog,
   game,
-  gen,
   isStaff,
   onImported,
   onOpen,
@@ -90,13 +81,9 @@ export function DashboardView({
   onToggleShiny,
   onToggleForm,
   onMoveGame,
-  onOpenDex,
-  onOpenMissing,
-  onOpenShinies,
 }: DashboardViewProps) {
   const { messages: m, fill } = useI18n();
   const [query, setQuery] = useState("");
-  const [welcomeMascot] = useState(randomWelcomeMascot);
   const ids = Object.keys(index.names).map(Number);
   const total = ids.length || 1025;
   const { caught: uCaught, shiny: uShiny, any: uAny } = unionSets(prog);
@@ -105,7 +92,6 @@ export function DashboardView({
   const registered = Object.keys(uAny).length;
   const activeProg = prog[game] || {};
   const activeCaught = Object.keys(activeProg).filter((id) => activeProg[id].caught || activeProg[id].shiny).length;
-  const currentGen = genById(gen);
 
   const kpis = [
     { label: m.dash.registered, value: String(registered), sub: fill(m.dash.registeredSub, { total }) },
@@ -198,7 +184,7 @@ export function DashboardView({
       <Blueprint className="pk-welcome">
         <img
           className="pk-welcome-mascot"
-          src={welcomeMascot}
+          src={WELCOME_MASCOT}
           alt=""
           width={150}
           height={150}
@@ -459,24 +445,6 @@ export function DashboardView({
           })}
         </div>
       </section>
-
-      <div className="pk-shortcut-grid">
-        {[
-          { title: m.dash.resumeTitle, body: fill(m.dash.resumeBody, { roman: currentGen.roman }), go: onOpenDex },
-          { title: m.dash.missingTitle, body: m.dash.missingBody, go: onOpenMissing },
-          { title: m.dash.shiniesTitle, body: m.dash.shiniesBody, go: onOpenShinies },
-        ].map((item) => (
-          <button key={item.title} type="button" className="blueprint pk-cell pk-nav pk-shortcut" onClick={item.go}>
-            <i className="corner tl" aria-hidden="true" />
-            <i className="corner tr" aria-hidden="true" />
-            <i className="corner bl" aria-hidden="true" />
-            <i className="corner br" aria-hidden="true" />
-            <span className="pk-kicker">{m.dash.shortcut}</span>
-            <span className="pk-shortcut-title">{item.title}</span>
-            <span className="pk-shortcut-body">{item.body}</span>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

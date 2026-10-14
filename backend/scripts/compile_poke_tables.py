@@ -42,8 +42,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.db.mongo import connect_mongo, disconnect_mongo
 from app.dependencies import get_pokeapi_client, shutdown_external_clients
 from app.repositories.pokedex_entry import PokedexEntryRepository
-from app.services.poke_compile import PokeCompileService
-from app.services.poke_compile.helpers import unique_regional_pokedex_names
+from scripts.poke_compile import PokeCompiler
+from scripts.poke_compile.helpers import unique_regional_pokedex_names
 
 DEFAULT_LIMIT = 1025
 
@@ -73,40 +73,40 @@ async def compile_tables(*, limit: int, force: bool) -> dict[str, int]:
     flattened, flatten_skipped = await flatten_pokedexes(force=force)
 
     client = get_pokeapi_client()
-    service = PokeCompileService(client)
+    compiler = PokeCompiler(client)
 
     print("Seeding games, generations, and regions…")
-    seeded = await asyncio.to_thread(service.seed_static_lists)
+    seeded = await asyncio.to_thread(compiler.seed_static_lists)
 
     print("Compiling pokemon names…")
-    name_map = await service.rebuild_name_index(limit=limit)
+    name_map = await compiler.rebuild_name_index(limit=limit)
 
     print("Compiling type membership…")
-    type_map = await service.rebuild_type_membership()
+    type_map = await compiler.rebuild_type_membership()
 
     print("Rebuilding slim obtain index…")
-    obtain_payload = await service.rebuild_obtain_index(limit=limit)
+    obtain_payload = await compiler.rebuild_obtain_index(limit=limit)
 
     print("Compiling location meta…")
-    location_count = await service.rebuild_location_meta(limit=limit)
+    location_count = await compiler.rebuild_location_meta(limit=limit)
 
     print("Compiling pokemon evolution…")
-    evolution_count = await service.rebuild_pokemon_evolution(limit=limit)
+    evolution_count = await compiler.rebuild_pokemon_evolution(limit=limit)
 
     print("Compiling pokemon spawns…")
-    spawns_count = await service.rebuild_pokemon_spawns(limit=limit)
+    spawns_count = await compiler.rebuild_pokemon_spawns(limit=limit)
 
     print("Compiling pokemon acquisition…")
-    acquisition_count = await service.rebuild_pokemon_acquisition(limit=limit)
+    acquisition_count = await compiler.rebuild_pokemon_acquisition(limit=limit)
 
     print("Compiling ability effects…")
-    ability_count = await service.rebuild_ability_effects(limit=limit)
+    ability_count = await compiler.rebuild_ability_effects(limit=limit)
 
     print("Compiling pokemon detail views…")
-    detail_count = await service.compile_detail_views()
+    detail_count = await compiler.compile_detail_views()
 
     print("Compiling learnsets…")
-    learnset_count = await service.compile_learnsets()
+    learnset_count = await compiler.compile_learnsets()
 
     stats = {
         "pokedex_flattened": flattened,

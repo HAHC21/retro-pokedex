@@ -70,3 +70,7 @@ class RegisterResponse(BaseModel):
     email: str
     message: str
     confirm_url: str | None = None
+
+
+class LogoutRead(BaseModel):
+    ok: bool

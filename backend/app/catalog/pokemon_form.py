@@ -86,6 +86,12 @@ def can_capture(form: str) -> bool:
     return True
 
 
+def stores_learnset(form: str) -> bool:
+    """Base species and regional forms keep a learnset. Mega and Gigantamax use the base row."""
+    text = str(form or "")
+    return text == "base" or text.startswith("regional")
+
+
 def is_untracked_slug(pokemon_slug: str) -> bool:
     """True when this variety is a battle transform, totem, primal, ride mode, or costume."""
     slug = pokemon_slug.lower()

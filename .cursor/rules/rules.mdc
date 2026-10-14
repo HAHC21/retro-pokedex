@@ -1,0 +1,18 @@
+---
+description: Project structure and design principles
+alwaysApply: true
+---
+
+# Structure
+
+Always follow DRY.
+
+Always follow SOLID.
+
+Separation of concerns is a priority.
+
+Do not place different types of structures in a single file. Constants, helper functions, objects, schemas, services, and similar pieces each live in a file dedicated to that kind of structure.
+
+Apply a layered approach. Always use folders to represent services, endpoints, and the other layers.
+
+Static information must always be stored in the database and retrieved from there.

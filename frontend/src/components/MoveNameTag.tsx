@@ -14,7 +14,7 @@ export function MoveNameTag({ name, type, damageClass }: MoveNameTagProps) {
   const borderColor =
     type && TYPE_COLORS[type as PokemonType] ? TYPE_COLORS[type as PokemonType][1] : "var(--color-neutral-800)";
   return (
-    <span className="tag pk-move-name" style={typeStyle} title={type || undefined}>
+    <span className={`tag pk-move-name${type ? " pk-type-tag" : ""}`} style={typeStyle} title={type || undefined}>
       <span className="pk-move-type-code" style={{ background: borderColor }}>
         {type ? <TypeIcon type={type} /> : null}
       </span>
